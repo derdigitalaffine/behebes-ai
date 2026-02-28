@@ -90,6 +90,8 @@ tmp/
 temp/
 .cache/
 .next/cache/
+.dev/pids/
+ops/dist-debug/
 
 # ============================================
 # API Keys, Credentials & Secrets (NEVER COMMIT)
