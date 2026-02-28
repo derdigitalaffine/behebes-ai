@@ -66,6 +66,7 @@ Docker Compose reicht diese als Build-Args an alle Images durch. Frontends nutze
 - Keine serverseitige Shell-Ausführung durch die API.
 - Das Admin-Frontend zeigt nur Preflight und kopierbare Runbook-Kommandos.
 - Ohne frisches Backup blockiert der Preflight das Update.
+- `GET /api/admin/maintenance/backup` speichert zusätzlich ein Server-Artefakt unter `backups/`, damit das Backup-Gate direkt erfüllt werden kann.
 
 ## Runbook-Referenz (Compose-first)
 

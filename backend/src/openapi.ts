@@ -1692,6 +1692,44 @@ export const openApiSpec: Record<string, any> = {
         },
       },
     },
+    '/api/admin/maintenance/backup': {
+      get: {
+        tags: ['System'],
+        operationId: 'downloadMaintenanceBackup',
+        summary: 'Erzeugt einen SQL-Dump und speichert parallel ein Backup-Artefakt im Serververzeichnis `backups/`.',
+        security: securedAdmin,
+        responses: {
+          '200': {
+            description: 'Backup erfolgreich erzeugt.',
+            headers: {
+              'Content-Disposition': {
+                description: 'Dateiname des SQL-Dumps.',
+                schema: { type: 'string' },
+              },
+              'X-Backup-Artifact-Stored': {
+                description: 'Zeigt an, ob das Server-Artefakt unter `backups/` gespeichert wurde.',
+                schema: { type: 'string', enum: ['true', 'false'] },
+              },
+              'X-Backup-Artifact-Path': {
+                description: 'Relativer Pfad des serverseitig gespeicherten Backup-Artefakts (falls vorhanden).',
+                schema: { type: 'string' },
+              },
+            },
+            content: {
+              'application/sql': {
+                schema: {
+                  type: 'string',
+                  format: 'binary',
+                },
+              },
+            },
+          },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '500': { $ref: '#/components/responses/InternalError' },
+        },
+      },
+    },
     '/api/admin/mobile/dashboard': {
       get: {
         tags: ['Ops Mobile'],
