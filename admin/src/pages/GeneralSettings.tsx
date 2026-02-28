@@ -237,6 +237,35 @@ interface UpdateRunbook {
   notes: string[];
 }
 
+interface UpdateHistoryItem {
+  id: string;
+  createdAt: string | null;
+  username: string | null;
+  adminUserId: string | null;
+  report: UpdatePreflightReport;
+}
+
+const UPDATE_PREFLIGHT_CHECK_LABELS: Record<string, string> = {
+  dbReachable: 'Datenbank erreichbar',
+  composePresent: 'Compose-Dateien vorhanden',
+  backupFresh: 'Backup aktuell',
+  migrationsConsistent: 'Migrationen konsistent',
+  gitAvailable: 'Git-Metadaten verfügbar',
+};
+
+const formatDateTimeSafe = (value: unknown): string => {
+  const raw = String(value || '').trim();
+  if (!raw) return '—';
+  const parsed = Date.parse(raw);
+  if (!Number.isFinite(parsed)) return raw;
+  return new Date(parsed).toLocaleString('de-DE');
+};
+
+const resolveUpdateCheckLabel = (checkKey: string): string => {
+  if (UPDATE_PREFLIGHT_CHECK_LABELS[checkKey]) return UPDATE_PREFLIGHT_CHECK_LABELS[checkKey];
+  return checkKey.replace(/([A-Z])/g, ' $1').replace(/^./, (char) => char.toUpperCase());
+};
+
 const sanitizeAnnouncementText = (value: unknown, maxLength: number): string => {
   if (typeof value !== 'string') return '';
   const trimmed = value.trim();
@@ -741,10 +770,11 @@ const [config, setConfig] = useState<GeneralConfig>({
   const [updatePreflight, setUpdatePreflight] = useState<UpdatePreflightReport | null>(null);
   const [updateHistoryLoading, setUpdateHistoryLoading] = useState(false);
   const [updateHistoryError, setUpdateHistoryError] = useState('');
-  const [updateHistory, setUpdateHistory] = useState<Array<{ id: string; createdAt: string | null; report: UpdatePreflightReport }>>([]);
+  const [updateHistory, setUpdateHistory] = useState<UpdateHistoryItem[]>([]);
   const [updateRunbookLoading, setUpdateRunbookLoading] = useState(false);
   const [updateRunbookError, setUpdateRunbookError] = useState('');
   const [updateRunbook, setUpdateRunbook] = useState<UpdateRunbook | null>(null);
+  const [updateRunbookCopied, setUpdateRunbookCopied] = useState<'idle' | 'success' | 'error'>('idle');
   const [updateTargetTag, setUpdateTargetTag] = useState('');
   const [geofenceSourcePlaces, setGeofenceSourcePlaces] = useState('');
   const [geofenceGenerateLoading, setGeofenceGenerateLoading] = useState(false);
@@ -798,6 +828,15 @@ const [config, setConfig] = useState<GeneralConfig>({
     view === 'all'
       ? 'Kategorisiert nach System, Bürgerfrontend, Workflow-Betrieb, Sprachen und Wartung.'
       : 'Teilbereich der allgemeinen Konfiguration.';
+  const updatePreflightCheckEntries = Object.entries(updatePreflight?.checks || {});
+  const backupHealth = !updateStatus?.backup?.available
+    ? 'missing'
+    : updateStatus.backup.isFresh
+      ? 'healthy'
+      : 'stale';
+  const migrationHealth = updateStatus?.migrations?.consistent ? 'healthy' : 'error';
+  const gitHealth = !updateStatus?.git?.available ? 'error' : updateStatus.git.dirty ? 'warning' : 'healthy';
+  const preflightHealth = !updatePreflight ? 'idle' : updatePreflight.ok ? 'healthy' : 'error';
 
   const normalizeConfiguredLanguages = (
     baseLanguages: LanguageConfig[]
@@ -1160,8 +1199,11 @@ const [config, setConfig] = useState<GeneralConfig>({
     }
   };
 
-  const runUpdatePreflight = async () => {
-    setUpdatePreflightLoading(true);
+  const runUpdatePreflight = async (options?: { silent?: boolean }) => {
+    const silent = options?.silent === true;
+    if (!silent) {
+      setUpdatePreflightLoading(true);
+    }
     setUpdatePreflightError('');
     try {
       const response = await axios.post(
@@ -1177,13 +1219,16 @@ const [config, setConfig] = useState<GeneralConfig>({
     } catch (error: any) {
       setUpdatePreflightError(error?.response?.data?.message || 'Preflight konnte nicht ausgeführt werden.');
     } finally {
-      setUpdatePreflightLoading(false);
+      if (!silent) {
+        setUpdatePreflightLoading(false);
+      }
     }
   };
 
   const fetchUpdateRunbook = async () => {
     setUpdateRunbookLoading(true);
     setUpdateRunbookError('');
+    setUpdateRunbookCopied('idle');
     try {
       const response = await axios.get('/api/admin/system/update/runbook', {
         headers: { Authorization: `Bearer ${getAdminToken()}` },
@@ -1215,6 +1260,8 @@ const [config, setConfig] = useState<GeneralConfig>({
         items.map((entry: any) => ({
           id: String(entry?.id || ''),
           createdAt: entry?.createdAt ? String(entry.createdAt) : null,
+          username: entry?.username ? String(entry.username) : null,
+          adminUserId: entry?.adminUserId ? String(entry.adminUserId) : null,
           report: (entry?.report || {}) as UpdatePreflightReport,
         }))
       );
@@ -1225,6 +1272,18 @@ const [config, setConfig] = useState<GeneralConfig>({
       if (!silent) {
         setUpdateHistoryLoading(false);
       }
+    }
+  };
+
+  const copyUpdateRunbook = async () => {
+    if (!updateRunbook?.commands?.length) return;
+    try {
+      await navigator.clipboard.writeText(updateRunbook.commands.join('\n'));
+      setUpdateRunbookCopied('success');
+      window.setTimeout(() => setUpdateRunbookCopied('idle'), 2200);
+    } catch {
+      setUpdateRunbookCopied('error');
+      window.setTimeout(() => setUpdateRunbookCopied('idle'), 2200);
     }
   };
 
@@ -2367,7 +2426,15 @@ const [config, setConfig] = useState<GeneralConfig>({
       link.click();
       link.remove();
       window.URL.revokeObjectURL(url);
-      setBackupMessage('SQL-Dump erfolgreich heruntergeladen.');
+      const backupArtifactPath = String(response.headers?.['x-backup-artifact-path'] || '').trim();
+      if (backupArtifactPath) {
+        setBackupMessage(
+          `SQL-Dump erfolgreich heruntergeladen. Server-Backup gespeichert unter "${backupArtifactPath}".`
+        );
+      } else {
+        setBackupMessage('SQL-Dump erfolgreich heruntergeladen.');
+      }
+      await runUpdatePreflight({ silent: true });
     } catch (error: any) {
       setBackupError(error.response?.data?.message || 'Export fehlgeschlagen');
     } finally {
@@ -4472,6 +4539,24 @@ const [config, setConfig] = useState<GeneralConfig>({
               <p className="text-sm text-emerald-800">
                 Manuelles Update mit Preflight, Backup-Gate und Runbook. Es werden keine Server-Kommandos automatisch ausgeführt.
               </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                <span
+                  className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${
+                    preflightHealth === 'healthy'
+                      ? 'border-emerald-300 bg-emerald-100 text-emerald-800'
+                      : preflightHealth === 'error'
+                        ? 'border-red-300 bg-red-100 text-red-800'
+                        : 'border-slate-300 bg-white text-slate-700'
+                  }`}
+                >
+                  <i className={`fa-solid ${preflightHealth === 'healthy' ? 'fa-circle-check' : preflightHealth === 'error' ? 'fa-circle-xmark' : 'fa-circle-dot'}`} />
+                  Preflight {preflightHealth === 'healthy' ? 'freigegeben' : preflightHealth === 'error' ? 'blockiert' : 'ausstehend'}
+                </span>
+                <span className="inline-flex items-center gap-1 rounded-full border border-slate-300 bg-white px-2 py-0.5 text-xs font-semibold text-slate-700">
+                  <i className="fa-solid fa-clock" />
+                  Status geprüft: {formatDateTimeSafe(updateStatus?.checkedAt)}
+                </span>
+              </div>
             </div>
             <div className="flex flex-wrap gap-2">
               <button type="button" className="btn btn-secondary" onClick={() => void fetchUpdateStatus()} disabled={updateStatusLoading}>
@@ -4483,33 +4568,53 @@ const [config, setConfig] = useState<GeneralConfig>({
               <button type="button" className="btn btn-secondary" onClick={() => void fetchUpdateRunbook()} disabled={updateRunbookLoading}>
                 {updateRunbookLoading ? <span><i className="fa-solid fa-spinner fa-spin" /> Lade...</span> : <span><i className="fa-solid fa-list-check" /> Runbook</span>}
               </button>
+              {updateRunbook?.commands?.length ? (
+                <button type="button" className="btn btn-secondary" onClick={() => void copyUpdateRunbook()}>
+                  <i className="fa-solid fa-copy" /> {updateRunbookCopied === 'success' ? 'Kopiert' : updateRunbookCopied === 'error' ? 'Kopieren fehlgeschlagen' : 'Kopieren'}
+                </button>
+              ) : null}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-3">
             <div className="rounded-lg border border-emerald-200 bg-white p-3">
               <div className="text-xs text-slate-500">Aktuelle Version</div>
               <div className="text-sm font-semibold text-slate-900">{updateStatus?.currentVersion || '—'}</div>
-            </div>
-            <div className="rounded-lg border border-emerald-200 bg-white p-3">
-              <div className="text-xs text-slate-500">Letzter Tag</div>
-              <div className="text-sm font-semibold text-slate-900">{updateStatus?.latestTagVersion || '—'}</div>
+              <div className="mt-1 text-xs text-slate-500">Tag: {updateStatus?.latestTagVersion || '—'}</div>
             </div>
             <div className="rounded-lg border border-emerald-200 bg-white p-3">
               <div className="text-xs text-slate-500">Git</div>
-              <div className="text-sm font-semibold text-slate-900">
+              <div className={`text-sm font-semibold ${gitHealth === 'healthy' ? 'text-emerald-700' : gitHealth === 'warning' ? 'text-amber-700' : 'text-red-700'}`}>
                 {updateStatus?.git?.available ? `${updateStatus.git.branch || '—'}${updateStatus.git.dirty ? ' (dirty)' : ''}` : 'nicht verfügbar'}
               </div>
+              <div className="mt-1 text-xs text-slate-500">{updateStatus?.git?.headCommit || '—'}</div>
             </div>
             <div className="rounded-lg border border-emerald-200 bg-white p-3">
               <div className="text-xs text-slate-500">Backup-Status</div>
-              <div className="text-sm font-semibold text-slate-900">
+              <div className={`text-sm font-semibold ${backupHealth === 'healthy' ? 'text-emerald-700' : backupHealth === 'stale' ? 'text-amber-700' : 'text-red-700'}`}>
                 {updateStatus?.backup?.available
                   ? updateStatus.backup.isFresh
                     ? `OK (${updateStatus.backup.ageHours}h)`
                     : `zu alt (${updateStatus.backup.ageHours}h)`
                   : 'fehlt'}
               </div>
+              <div className="mt-1 text-xs text-slate-500">{formatDateTimeSafe(updateStatus?.backup?.latestAt)}</div>
+            </div>
+            <div className="rounded-lg border border-emerald-200 bg-white p-3">
+              <div className="text-xs text-slate-500">Migrationen</div>
+              <div className={`text-sm font-semibold ${migrationHealth === 'healthy' ? 'text-emerald-700' : 'text-red-700'}`}>
+                {updateStatus?.migrations?.appliedCount ?? 0} / {updateStatus?.migrations?.migrationFilesCount ?? 0}
+              </div>
+              <div className="mt-1 text-xs text-slate-500">
+                Pending: {updateStatus?.migrations?.pendingCount ?? 0}
+              </div>
+            </div>
+            <div className="rounded-lg border border-emerald-200 bg-white p-3">
+              <div className="text-xs text-slate-500">Preflight</div>
+              <div className={`text-sm font-semibold ${preflightHealth === 'healthy' ? 'text-emerald-700' : preflightHealth === 'error' ? 'text-red-700' : 'text-slate-900'}`}>
+                {preflightHealth === 'healthy' ? 'freigegeben' : preflightHealth === 'error' ? 'blockiert' : 'noch nicht gelaufen'}
+              </div>
+              <div className="mt-1 text-xs text-slate-500">{formatDateTimeSafe(updatePreflight?.checkedAt)}</div>
             </div>
           </div>
 
@@ -4524,8 +4629,13 @@ const [config, setConfig] = useState<GeneralConfig>({
                 className="mt-1 w-full px-3 py-2 border border-emerald-300 rounded-lg"
               />
             </label>
-            <div className="md:col-span-2 text-xs text-emerald-900 bg-white border border-emerald-200 rounded-lg px-3 py-2">
-              Runtime: <strong>{updateStatus?.runtimeType || '—'}</strong> · Migrations: <strong>{updateStatus?.migrations?.appliedCount ?? 0}</strong> angewendet / <strong>{updateStatus?.migrations?.migrationFilesCount ?? 0}</strong> Dateien
+            <div className="md:col-span-2 text-xs text-emerald-900 bg-white border border-emerald-200 rounded-lg px-3 py-2 space-y-1">
+              <div>
+                Runtime: <strong>{updateStatus?.runtimeType || '—'}</strong> · Ziel: <strong>{updateTargetTag.trim() || updateStatus?.latestTagVersion || '—'}</strong>
+              </div>
+              <div>
+                Backup-Pfad: <span className="font-mono">{updateStatus?.backup?.latestPath || '—'}</span>
+              </div>
             </div>
           </div>
 
@@ -4565,15 +4675,37 @@ const [config, setConfig] = useState<GeneralConfig>({
               <div className="mt-2 text-xs text-slate-600">
                 Dauer: {updatePreflight.durationMs} ms · geprüft: {updatePreflight.checkedAt ? new Date(updatePreflight.checkedAt).toLocaleString('de-DE') : '—'}
               </div>
+              {updatePreflightCheckEntries.length > 0 ? (
+                <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-2">
+                  {updatePreflightCheckEntries.map(([checkKey, checkValue]) => (
+                    <div key={checkKey} className="rounded border border-slate-200 bg-white px-2 py-2">
+                      <div className={`text-xs font-semibold ${checkValue?.ok ? 'text-emerald-700' : 'text-red-700'}`}>
+                        <i className={`fa-solid ${checkValue?.ok ? 'fa-circle-check' : 'fa-circle-xmark'}`} />{' '}
+                        {resolveUpdateCheckLabel(checkKey)}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-600">{checkValue?.detail || '—'}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           )}
 
           {updateRunbook?.commands?.length ? (
             <div className="rounded-lg border border-emerald-200 bg-white p-3">
-              <div className="text-sm font-semibold text-slate-900 mb-2">Runbook-Kommandos</div>
+              <div className="text-sm font-semibold text-slate-900 mb-2">
+                Runbook-Kommandos ({updateRunbook.runtimeType}) · generiert: {formatDateTimeSafe(updateRunbook.generatedAt)}
+              </div>
               <pre className="text-xs bg-slate-900 text-slate-100 rounded-lg p-3 overflow-auto max-h-80">
 {updateRunbook.commands.join('\n')}
               </pre>
+              {Array.isArray(updateRunbook.notes) && updateRunbook.notes.length > 0 ? (
+                <div className="mt-3 rounded border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
+                  {updateRunbook.notes.map((note, index) => (
+                    <div key={`${note}-${index}`}>- {note}</div>
+                  ))}
+                </div>
+              ) : null}
             </div>
           ) : null}
 
@@ -4592,6 +4724,9 @@ const [config, setConfig] = useState<GeneralConfig>({
                   <div key={entry.id} className="rounded border border-slate-200 px-2 py-2 text-xs">
                     <div className="font-semibold text-slate-800">
                       {entry.createdAt ? new Date(entry.createdAt).toLocaleString('de-DE') : '—'} · {entry.report?.ok ? 'OK' : 'BLOCKIERT'}
+                    </div>
+                    <div className="text-slate-500 mt-0.5">
+                      Nutzer: {entry.username || '—'} · Admin-ID: {entry.adminUserId || '—'}
                     </div>
                     {Array.isArray(entry.report?.blockedReasons) && entry.report.blockedReasons.length > 0 ? (
                       <div className="text-red-700 mt-1">

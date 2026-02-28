@@ -7,7 +7,7 @@
 
 import express, { Request, Response } from 'express';
 import { execFileSync } from 'node:child_process';
-import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import crypto from 'crypto';
@@ -2958,6 +2958,16 @@ async function buildSqlDump(): Promise<string> {
     lines.push('PRAGMA foreign_keys=ON;');
   }
   return lines.join('\n');
+}
+
+function persistSqlBackupArtifact(sql: string, stamp: string): { absolutePath: string; relativePath: string } {
+  const backupRoot = path.resolve(WORKSPACE_ROOT, 'backups');
+  mkdirSync(backupRoot, { recursive: true });
+  const fileName = `behebes-ai-backup-${stamp}.sql`;
+  const absolutePath = path.resolve(backupRoot, fileName);
+  writeFileSync(absolutePath, sql, 'utf-8');
+  const relativePath = path.relative(WORKSPACE_ROOT, absolutePath) || fileName;
+  return { absolutePath, relativePath };
 }
 
 function serializeSqlValue(value: any): string {
@@ -11162,8 +11172,19 @@ router.get('/maintenance/backup', adminOnly, async (_req: Request, res: Response
   try {
     const sql = await buildSqlDump();
     const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
+    let backupArtifactPath = '';
+    try {
+      const persisted = persistSqlBackupArtifact(sql, stamp);
+      backupArtifactPath = persisted.relativePath;
+    } catch (error) {
+      console.warn('[maintenance/backup] Backup-Artefakt konnte nicht gespeichert werden:', error);
+    }
     res.setHeader('Content-Type', 'application/sql; charset=utf-8');
     res.setHeader('Content-Disposition', `attachment; filename="behebes-ai-backup-${stamp}.sql"`);
+    res.setHeader('X-Backup-Artifact-Stored', backupArtifactPath ? 'true' : 'false');
+    if (backupArtifactPath) {
+      res.setHeader('X-Backup-Artifact-Path', backupArtifactPath);
+    }
     res.send(sql);
   } catch (error: any) {
     res.status(500).json({ message: 'Fehler beim Export', error: error?.message || String(error) });
