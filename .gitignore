@@ -135,3 +135,6 @@ dev-manager.sh
 # PWA
 sw.js
 sw.js.map
+
+#CSV
+csv/

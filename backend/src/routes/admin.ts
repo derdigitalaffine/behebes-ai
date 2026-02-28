@@ -139,6 +139,12 @@ import {
   loadAdminAccessContext,
   resolveAdminEffectiveRole,
 } from '../services/rbac.js';
+import type {
+  SystemUpdateStatus,
+  UpdateBackupSnapshot,
+  UpdateMigrationSnapshot,
+  UpdatePreflightReport,
+} from '../models/system-update.js';
 import { getRegisteredMigrationCount } from '../db/migrations/index.js';
 import { formatSqlDateTime } from '../utils/sql-date.js';
 import { broadcastCitizenMessage } from '../services/citizen-messages.js';
@@ -1305,6 +1311,7 @@ const PACKAGE_METADATA = {
   backend: loadPackageMetadata(path.resolve(BACKEND_ROOT, 'package.json')),
   admin: loadPackageMetadata(path.resolve(WORKSPACE_ROOT, 'admin', 'package.json')),
   frontend: loadPackageMetadata(path.resolve(WORKSPACE_ROOT, 'frontend', 'package.json')),
+  ops: loadPackageMetadata(path.resolve(WORKSPACE_ROOT, 'ops', 'package.json')),
 };
 
 let gitMetadataCache: { expiresAt: number; snapshot: GitMetadataSnapshot } | null = null;
@@ -1383,40 +1390,6 @@ function loadGitMetadata(limit = 30): GitMetadataSnapshot {
   };
   gitMetadataCache = { snapshot, expiresAt: now + 30_000 };
   return snapshot;
-}
-
-interface UpdateBackupSnapshot {
-  available: boolean;
-  latestPath: string | null;
-  latestAt: string | null;
-  ageHours: number | null;
-  artifactCount: number;
-  requiredMaxAgeHours: number;
-  isFresh: boolean;
-}
-
-interface UpdateMigrationSnapshot {
-  schemaMigrationsTable: boolean;
-  appliedCount: number;
-  migrationFilesCount: number;
-  pendingCount: number;
-  consistent: boolean;
-}
-
-interface SystemUpdateStatusSnapshot {
-  currentVersion: string;
-  latestTagVersion: string | null;
-  git: {
-    available: boolean;
-    branch: string | null;
-    headCommit: string | null;
-    describe: string | null;
-    dirty: boolean;
-  };
-  runtimeType: 'docker-compose' | 'node';
-  backup: UpdateBackupSnapshot;
-  migrations: UpdateMigrationSnapshot;
-  checkedAt: string;
 }
 
 function detectRuntimeType(): 'docker-compose' | 'node' {
@@ -1643,7 +1616,7 @@ function buildUpdateRunbook(input: {
   ];
 }
 
-async function loadSystemUpdateStatus(db: AppDatabase): Promise<SystemUpdateStatusSnapshot> {
+async function loadSystemUpdateStatus(db: AppDatabase): Promise<SystemUpdateStatus> {
   const gitMetadata = loadGitMetadata(20);
   const latestTagVersion = loadLatestGitTag();
   const runtimeType = detectRuntimeType();
@@ -4536,6 +4509,7 @@ router.get('/system-info', adminOnly, async (_req: Request, res: Response) => {
     if (!gitMetadata.available) warnings.push('Git-Historie ist nicht verfügbar.');
     if (!PACKAGE_METADATA.admin.available) warnings.push('admin/package.json konnte nicht gelesen werden.');
     if (!PACKAGE_METADATA.frontend.available) warnings.push('frontend/package.json konnte nicht gelesen werden.');
+    if (!PACKAGE_METADATA.ops.available) warnings.push('ops/package.json konnte nicht gelesen werden.');
 
     return res.json({
       generatedAt: new Date().toISOString(),
@@ -4602,6 +4576,7 @@ router.get('/system-info', adminOnly, async (_req: Request, res: Response) => {
         backend: PACKAGE_METADATA.backend,
         admin: PACKAGE_METADATA.admin,
         frontend: PACKAGE_METADATA.frontend,
+        ops: PACKAGE_METADATA.ops,
       },
       build: {
         envBuildId:
@@ -4712,7 +4687,7 @@ router.post('/system/update/preflight', adminOnly, async (req: Request, res: Res
   if (!migrationConsistent) blockedReasons.push('Migrationsstatus ist inkonsistent.');
   if (!backupFresh) blockedReasons.push(backupBlockingReason || 'Backup-Prüfung fehlgeschlagen.');
 
-  const report = {
+  const report: UpdatePreflightReport = {
     ok: blockedReasons.length === 0,
     blockedReasons,
     checks: {

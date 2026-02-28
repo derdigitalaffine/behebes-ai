@@ -171,6 +171,7 @@ interface SystemInfoResponse {
     backend: PackageMetadata;
     admin: PackageMetadata;
     frontend: PackageMetadata;
+    ops: PackageMetadata;
   };
   build: {
     envBuildId: string | null;
@@ -394,6 +395,7 @@ const SystemInfos: React.FC = () => {
               <strong>{formatInteger(data.databaseStructure.tableCount)}</strong>
               <small>
                 Backend: {renderPackageVersion(data.versions.backend)} | Admin: {renderPackageVersion(data.versions.admin)}
+                {' · '}Frontend: {renderPackageVersion(data.versions.frontend)} · Ops: {renderPackageVersion(data.versions.ops)}
               </small>
             </article>
           </section>
@@ -457,6 +459,7 @@ const SystemInfos: React.FC = () => {
                   <div><dt>Backend</dt><dd>{renderPackageVersion(data.versions.backend)}</dd></div>
                   <div><dt>Admin</dt><dd>{renderPackageVersion(data.versions.admin)}</dd></div>
                   <div><dt>Frontend</dt><dd>{renderPackageVersion(data.versions.frontend)}</dd></div>
+                  <div><dt>Ops</dt><dd>{renderPackageVersion(data.versions.ops)}</dd></div>
                   <div><dt>Build-ID</dt><dd>{data.build.envBuildId || '–'}</dd></div>
                   <div><dt>Build-Zeit</dt><dd>{formatDateTime(data.build.envBuildTime)}</dd></div>
                   <div><dt>Commit (ENV)</dt><dd>{data.build.envCommitRef || '–'}</dd></div>
