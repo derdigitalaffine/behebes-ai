@@ -193,6 +193,12 @@ interface DatabaseStructureSummary {
 interface UpdateStatusSnapshot {
   currentVersion: string;
   latestTagVersion: string | null;
+  build: {
+    appVersion: string;
+    envBuildId: string | null;
+    envBuildTime: string | null;
+    envCommitRef: string | null;
+  };
   git: {
     available: boolean;
     branch: string | null;
@@ -221,6 +227,7 @@ interface UpdateStatusSnapshot {
 }
 
 interface UpdatePreflightReport {
+  kind?: 'status_check' | 'preflight';
   ok: boolean;
   blockedReasons: string[];
   checks: Record<string, { ok: boolean; detail: string }>;
@@ -264,6 +271,12 @@ const formatDateTimeSafe = (value: unknown): string => {
 const resolveUpdateCheckLabel = (checkKey: string): string => {
   if (UPDATE_PREFLIGHT_CHECK_LABELS[checkKey]) return UPDATE_PREFLIGHT_CHECK_LABELS[checkKey];
   return checkKey.replace(/([A-Z])/g, ' $1').replace(/^./, (char) => char.toUpperCase());
+};
+
+const resolveUpdateReportKindLabel = (kind: UpdatePreflightReport['kind']): string => {
+  if (kind === 'status_check') return 'Status-Check';
+  if (kind === 'preflight') return 'Preflight';
+  return 'Prüfung';
 };
 
 const sanitizeAnnouncementText = (value: unknown, maxLength: number): string => {
@@ -1175,7 +1188,14 @@ const [config, setConfig] = useState<GeneralConfig>({
     }
   };
 
-  const fetchUpdateStatus = async (silent = false) => {
+  const fetchUpdateStatus = async (
+    options?: {
+      silent?: boolean;
+      record?: boolean;
+    }
+  ) => {
+    const silent = options?.silent === true;
+    const record = options?.record === true;
     if (!silent) {
       setUpdateStatusLoading(true);
     }
@@ -1183,11 +1203,15 @@ const [config, setConfig] = useState<GeneralConfig>({
     try {
       const response = await axios.get('/api/admin/system/update/status', {
         headers: { Authorization: `Bearer ${getAdminToken()}` },
+        params: record ? { record: true } : undefined,
       });
       setUpdateStatus(response.data as UpdateStatusSnapshot);
       const suggestedTag = String(response.data?.latestTagVersion || '').trim();
       if (suggestedTag && !updateTargetTag.trim()) {
         setUpdateTargetTag(suggestedTag);
+      }
+      if (record) {
+        await fetchUpdateHistory(true);
       }
     } catch (error: any) {
       setUpdateStatusError(error?.response?.data?.message || 'Update-Status konnte nicht geladen werden.');
@@ -1214,7 +1238,7 @@ const [config, setConfig] = useState<GeneralConfig>({
         }
       );
       setUpdatePreflight(response.data as UpdatePreflightReport);
-      await fetchUpdateStatus(true);
+      await fetchUpdateStatus({ silent: true });
       await fetchUpdateHistory(true);
     } catch (error: any) {
       setUpdatePreflightError(error?.response?.data?.message || 'Preflight konnte nicht ausgeführt werden.');
@@ -1458,7 +1482,7 @@ const [config, setConfig] = useState<GeneralConfig>({
       }
       if (showMaintenance) {
         void fetchDatabaseStructure();
-        void fetchUpdateStatus(true);
+        void fetchUpdateStatus({ silent: true });
         void fetchUpdateHistory(true);
       }
     } catch (error) {
@@ -4559,7 +4583,12 @@ const [config, setConfig] = useState<GeneralConfig>({
               </div>
             </div>
             <div className="flex flex-wrap gap-2">
-              <button type="button" className="btn btn-secondary" onClick={() => void fetchUpdateStatus()} disabled={updateStatusLoading}>
+              <button
+                type="button"
+                className="btn btn-secondary"
+                onClick={() => void fetchUpdateStatus({ record: true })}
+                disabled={updateStatusLoading}
+              >
                 {updateStatusLoading ? <span><i className="fa-solid fa-spinner fa-spin" /> Lade...</span> : <span><i className="fa-solid fa-rotate" /> Status</span>}
               </button>
               <button type="button" className="btn btn-secondary" onClick={() => void runUpdatePreflight()} disabled={updatePreflightLoading}>
@@ -4581,6 +4610,7 @@ const [config, setConfig] = useState<GeneralConfig>({
               <div className="text-xs text-slate-500">Aktuelle Version</div>
               <div className="text-sm font-semibold text-slate-900">{updateStatus?.currentVersion || '—'}</div>
               <div className="mt-1 text-xs text-slate-500">Tag: {updateStatus?.latestTagVersion || '—'}</div>
+              <div className="mt-1 text-xs text-slate-500">Build: {updateStatus?.build?.envBuildId || '—'}</div>
             </div>
             <div className="rounded-lg border border-emerald-200 bg-white p-3">
               <div className="text-xs text-slate-500">Git</div>
@@ -4636,6 +4666,10 @@ const [config, setConfig] = useState<GeneralConfig>({
               <div>
                 Backup-Pfad: <span className="font-mono">{updateStatus?.backup?.latestPath || '—'}</span>
               </div>
+              <div>
+                Commit: <span className="font-mono">{updateStatus?.build?.envCommitRef || updateStatus?.git?.headCommit || '—'}</span> · Build-Zeit:{' '}
+                <strong>{formatDateTimeSafe(updateStatus?.build?.envBuildTime)}</strong>
+              </div>
             </div>
           </div>
 
@@ -4663,7 +4697,7 @@ const [config, setConfig] = useState<GeneralConfig>({
           {updatePreflight && (
             <div className={`rounded-lg border px-3 py-3 ${updatePreflight.ok ? 'border-emerald-300 bg-white' : 'border-red-300 bg-red-50'}`}>
               <div className="text-sm font-semibold mb-1">
-                Preflight: {updatePreflight.ok ? 'freigegeben' : 'blockiert'}
+                {resolveUpdateReportKindLabel(updatePreflight.kind)}: {updatePreflight.ok ? 'freigegeben' : 'blockiert'}
               </div>
               {updatePreflight.blockedReasons?.length > 0 && (
                 <ul className="list-disc ml-5 text-sm text-red-700">
@@ -4723,7 +4757,8 @@ const [config, setConfig] = useState<GeneralConfig>({
                 {updateHistory.map((entry) => (
                   <div key={entry.id} className="rounded border border-slate-200 px-2 py-2 text-xs">
                     <div className="font-semibold text-slate-800">
-                      {entry.createdAt ? new Date(entry.createdAt).toLocaleString('de-DE') : '—'} · {entry.report?.ok ? 'OK' : 'BLOCKIERT'}
+                      {entry.createdAt ? new Date(entry.createdAt).toLocaleString('de-DE') : '—'} · {resolveUpdateReportKindLabel(entry.report?.kind)} ·{' '}
+                      {entry.report?.ok ? 'OK' : 'BLOCKIERT'}
                     </div>
                     <div className="text-slate-500 mt-0.5">
                       Nutzer: {entry.username || '—'} · Admin-ID: {entry.adminUserId || '—'}

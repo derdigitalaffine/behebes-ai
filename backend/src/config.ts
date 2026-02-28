@@ -24,6 +24,7 @@ export interface Config {
   trustProxy: boolean | number;
   databaseClient: 'sqlite' | 'mysql';
   databasePath: string;
+  legacySchemaBootstrap: boolean;
   mysql: {
     host: string;
     port: number;
@@ -158,6 +159,7 @@ export function loadConfig(): Config {
     trustProxy: parseTrustProxy(process.env.EXPRESS_TRUST_PROXY),
     databaseClient,
     databasePath,
+    legacySchemaBootstrap: process.env.DB_LEGACY_SCHEMA_BOOTSTRAP !== 'false',
     mysql: {
       host: process.env.MYSQL_HOST || 'localhost',
       port: parseInt(process.env.MYSQL_PORT || '3306'),

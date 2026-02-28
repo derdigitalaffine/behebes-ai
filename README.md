@@ -179,6 +179,9 @@ NODE_ENV=development
 PORT=3001
 FRONTEND_URL=http://localhost:5173
 ADMIN_URL=http://localhost:5174
+
+# DB-Migrationsmodus (Übergangsphase)
+DB_LEGACY_SCHEMA_BOOTSTRAP=true
 ```
 
 ## Lizenz

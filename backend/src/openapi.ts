@@ -295,6 +295,15 @@ export const openApiSpec: Record<string, any> = {
         properties: {
           currentVersion: { type: 'string' },
           latestTagVersion: { type: 'string', nullable: true },
+          build: {
+            type: 'object',
+            properties: {
+              appVersion: { type: 'string' },
+              envBuildId: { type: 'string', nullable: true },
+              envBuildTime: { type: 'string', nullable: true },
+              envCommitRef: { type: 'string', nullable: true },
+            },
+          },
           checkedAt: { type: 'string', format: 'date-time' },
           runtimeType: { type: 'string', enum: ['docker-compose', 'node'] },
           git: {
@@ -334,6 +343,7 @@ export const openApiSpec: Record<string, any> = {
       SystemUpdatePreflightReport: {
         type: 'object',
         properties: {
+          kind: { type: 'string', enum: ['status_check', 'preflight'], nullable: true },
           ok: { type: 'boolean' },
           blockedReasons: { type: 'array', items: { type: 'string' } },
           durationMs: { type: 'integer' },
@@ -1590,6 +1600,15 @@ export const openApiSpec: Record<string, any> = {
         operationId: 'getSystemUpdateStatus',
         summary: 'Liefert den konsolidierten Status für geführte System-Updates.',
         security: securedAdmin,
+        parameters: [
+          {
+            in: 'query',
+            name: 'record',
+            schema: { type: 'boolean', default: false },
+            description:
+              'Optional: schreibt einen auditierbaren Status-Check in die Update-Historie (kind=status_check).',
+          },
+        ],
         responses: {
           '200': {
             description: 'Update-Status geladen.',

@@ -19,6 +19,12 @@ export interface UpdateMigrationSnapshot {
 export interface SystemUpdateStatus {
   currentVersion: string;
   latestTagVersion: string | null;
+  build: {
+    appVersion: string;
+    envBuildId: string | null;
+    envBuildTime: string | null;
+    envCommitRef: string | null;
+  };
   git: {
     available: boolean;
     branch: string | null;
@@ -38,6 +44,7 @@ export interface UpdatePreflightCheckResult {
 }
 
 export interface UpdatePreflightReport {
+  kind?: 'status_check' | 'preflight';
   ok: boolean;
   blockedReasons: string[];
   checks: Record<string, UpdatePreflightCheckResult>;

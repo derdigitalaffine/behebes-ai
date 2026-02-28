@@ -1234,6 +1234,13 @@ interface GitMetadataSnapshot {
   error?: string;
 }
 
+interface BuildMetadataSnapshot {
+  appVersion: string;
+  envBuildId: string | null;
+  envBuildTime: string | null;
+  envCommitRef: string | null;
+}
+
 interface DatabaseStructureColumnInfo {
   cid: number;
   name: string;
@@ -1409,6 +1416,15 @@ function loadLatestGitTag(): string | null {
   return tag || null;
 }
 
+function loadBuildMetadata(): BuildMetadataSnapshot {
+  return {
+    appVersion: PACKAGE_METADATA.workspace.version || 'unbekannt',
+    envBuildId: process.env.APP_BUILD_ID || process.env.BUILD_ID || process.env.ADMIN_BUILD_ID || null,
+    envBuildTime: process.env.APP_BUILD_TIME || process.env.BUILD_TIME || process.env.ADMIN_BUILD_TIME || null,
+    envCommitRef: process.env.VITE_COMMIT_SHA || process.env.GIT_COMMIT || process.env.COMMIT_SHA || null,
+  };
+}
+
 function collectBackupArtifacts(maxDepth = 4): Array<{ path: string; mtimeMs: number }> {
   const backupRoot = path.resolve(WORKSPACE_ROOT, 'backups');
   if (!existsSync(backupRoot)) return [];
@@ -1554,7 +1570,7 @@ async function listSystemUpdateHistory(db: AppDatabase, limit = 30): Promise<any
   const rows = await db.all(
     `SELECT id, admin_user_id, username, report_json, created_at
      FROM system_update_preflight_history
-     ORDER BY datetime(created_at) DESC
+     ORDER BY created_at DESC
      LIMIT ?`,
     [safeLimit]
   );
@@ -1622,9 +1638,11 @@ async function loadSystemUpdateStatus(db: AppDatabase): Promise<SystemUpdateStat
   const runtimeType = detectRuntimeType();
   const backup = loadBackupSnapshot(24);
   const migrations = await loadMigrationSnapshot(db);
+  const build = loadBuildMetadata();
   return {
-    currentVersion: PACKAGE_METADATA.workspace.version || 'unbekannt',
+    currentVersion: build.appVersion,
     latestTagVersion,
+    build,
     git: {
       available: gitMetadata.available,
       branch: gitMetadata.branch,
@@ -4503,6 +4521,7 @@ router.get('/system-info', adminOnly, async (_req: Request, res: Response) => {
     });
 
     const gitMetadata = loadGitMetadata(40);
+    const buildMetadata = loadBuildMetadata();
     const featureHistory = (featureHistoryRows || []).map((row: any) => ({
       id: String(row?.id || ''),
       createdAt: row?.created_at || null,
@@ -4589,21 +4608,10 @@ router.get('/system-info', adminOnly, async (_req: Request, res: Response) => {
         ops: PACKAGE_METADATA.ops,
       },
       build: {
-        envBuildId:
-          process.env.APP_BUILD_ID ||
-          process.env.BUILD_ID ||
-          process.env.ADMIN_BUILD_ID ||
-          null,
-        envBuildTime:
-          process.env.APP_BUILD_TIME ||
-          process.env.BUILD_TIME ||
-          process.env.ADMIN_BUILD_TIME ||
-          null,
-        envCommitRef:
-          process.env.VITE_COMMIT_SHA ||
-          process.env.GIT_COMMIT ||
-          process.env.COMMIT_SHA ||
-          null,
+        appVersion: buildMetadata.appVersion,
+        envBuildId: buildMetadata.envBuildId,
+        envBuildTime: buildMetadata.envBuildTime,
+        envCommitRef: buildMetadata.envCommitRef,
         git: {
           available: gitMetadata.available,
           branch: gitMetadata.branch,
@@ -4648,10 +4656,59 @@ router.get('/system-info', adminOnly, async (_req: Request, res: Response) => {
  * GET /api/admin/system/update/status
  * Liefert konsolidierten Update-Status fuer gefuehrte manuelle Updates.
  */
-router.get('/system/update/status', adminOnly, async (_req: Request, res: Response) => {
+router.get('/system/update/status', adminOnly, async (req: Request, res: Response) => {
   try {
     const db = getDatabase();
     const status = await loadSystemUpdateStatus(db);
+    const shouldRecordStatusCheck = isTruthyFlag(req.query?.record);
+    if (shouldRecordStatusCheck) {
+      const blockedReasons: string[] = [];
+      if (!status.git.available) blockedReasons.push('Git-Metadaten nicht verfügbar.');
+      if (!status.migrations.consistent) blockedReasons.push('Migrationsstatus ist inkonsistent.');
+      if (!status.backup.available) {
+        blockedReasons.push('Kein Backup-Artefakt gefunden.');
+      } else if (!status.backup.isFresh) {
+        blockedReasons.push(`Letztes Backup ist älter als ${status.backup.requiredMaxAgeHours}h.`);
+      }
+      const report: UpdatePreflightReport = {
+        kind: 'status_check',
+        ok: blockedReasons.length === 0,
+        blockedReasons,
+        checks: {
+          gitAvailable: {
+            ok: status.git.available,
+            detail: status.git.available ? 'Git-Metadaten verfügbar.' : 'Git-Metadaten nicht verfügbar.',
+          },
+          backupFresh: {
+            ok: status.backup.available && status.backup.isFresh,
+            detail: status.backup.available
+              ? status.backup.isFresh
+                ? 'Backup vorhanden und aktuell.'
+                : `Backup vorhanden, aber älter als ${status.backup.requiredMaxAgeHours}h.`
+              : 'Kein Backup-Artefakt gefunden.',
+          },
+          migrationsConsistent: {
+            ok: status.migrations.consistent,
+            detail: status.migrations.consistent
+              ? 'Migrationsstatus konsistent.'
+              : 'schema_migrations und Migrationsdateien sind nicht konsistent.',
+          },
+        },
+        status,
+        durationMs: 0,
+        checkedAt: new Date().toISOString(),
+      };
+      try {
+        await appendSystemUpdateHistory({
+          db,
+          adminUserId: normalizeText(req.userId) || null,
+          username: normalizeText(req.username) || null,
+          report,
+        });
+      } catch {
+        // status should still return even if history write fails
+      }
+    }
     return res.json(status);
   } catch (error: any) {
     return res.status(500).json({
@@ -4698,6 +4755,7 @@ router.post('/system/update/preflight', adminOnly, async (req: Request, res: Res
   if (!backupFresh) blockedReasons.push(backupBlockingReason || 'Backup-Prüfung fehlgeschlagen.');
 
   const report: UpdatePreflightReport = {
+    kind: 'preflight',
     ok: blockedReasons.length === 0,
     blockedReasons,
     checks: {

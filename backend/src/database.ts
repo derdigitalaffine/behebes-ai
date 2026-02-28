@@ -21,7 +21,7 @@ export async function initDatabase(): Promise<AppDatabase> {
   db = await createDatabaseAdapter(config);
 
   // Create tables
-  await createTables(db);
+  await createTables(db, config);
   await ensureAdminSchema(db);
   await migrateSqliteDataToMysqlIfNeeded(db, config);
   await runDatabaseMigrations(db);
@@ -36,7 +36,8 @@ export function getDatabase(): AppDatabase {
   return db;
 }
 
-async function createTables(db: AppDatabase) {
+async function createTables(db: AppDatabase, config: Config) {
+  const legacySchemaBootstrapEnabled = config.legacySchemaBootstrap !== false;
   // Citizens table - Bürgerdaten (PII - personenidentifizierbar)
   await db.exec(`
     CREATE TABLE IF NOT EXISTS citizens (
@@ -1261,6 +1262,9 @@ async function createTables(db: AppDatabase) {
     await db.exec(`ALTER TABLE admin_chat_messages MODIFY COLUMN \`group_kind\` VARCHAR(32)`);
   }
   
+  if (!legacySchemaBootstrapEnabled) {
+    console.info('[db] Legacy schema bootstrap disabled (DB_LEGACY_SCHEMA_BOOTSTRAP=false).');
+  } else {
   await ensureColumn(db, 'tickets', 'description', 'TEXT');
   await ensureColumn(db, 'tickets', 'validation_token', 'TEXT');
   await ensureColumn(db, 'tickets', 'citizen_email_normalized', 'VARCHAR(191)');
@@ -1997,6 +2001,7 @@ async function createTables(db: AppDatabase) {
     CREATE INDEX IF NOT EXISTS idx_email_template_library_origin
       ON email_template_library(origin_item_id, tenant_id);
   `);
+  }
 
   await seedPlatformBlogPostsIfEmpty(db);
   await syncPlatformHistorySeedPosts(db);
@@ -2559,6 +2564,8 @@ async function ensureAdminSchema(db: AppDatabase) {
 }
 
 async function ensureColumn(db: AppDatabase, table: string, column: string, type: string) {
+  // Legacy schema evolution path: keep for compatibility until all historical
+  // column mutations are fully represented as versioned migrations.
   try {
     const columns = await db.all(`PRAGMA table_info(${table})`);
     const hasColumn = columns.some((c: any) => c.name === column);

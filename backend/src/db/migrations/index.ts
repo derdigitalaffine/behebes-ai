@@ -1,9 +1,13 @@
 import crypto from 'crypto';
 import type { AppDatabase } from '../../db-adapter.js';
 import { migration202602280100CreateSystemUpdatePreflightHistory } from './definitions/202602280100_create_system_update_preflight_history.js';
+import { migration202602280110AddSystemUpdateHistoryIndexes } from './definitions/202602280110_add_system_update_history_indexes.js';
 import type { MigrationDefinition, MigrationExecutionResult } from './types.js';
 
-const REGISTERED_MIGRATIONS: MigrationDefinition[] = [migration202602280100CreateSystemUpdatePreflightHistory];
+const REGISTERED_MIGRATIONS: MigrationDefinition[] = [
+  migration202602280100CreateSystemUpdatePreflightHistory,
+  migration202602280110AddSystemUpdateHistoryIndexes,
+];
 
 function normalizeMigrationVersion(version: string): string {
   return String(version || '').trim();
@@ -162,4 +166,3 @@ export async function runDatabaseMigrations(db: AppDatabase): Promise<MigrationE
 
   return results;
 }
-
