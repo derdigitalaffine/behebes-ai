@@ -1,0 +1,217 @@
+.guide-page {
+  width: min(1080px, calc(100% - 2rem));
+  margin: 1.3rem auto 2.5rem;
+  display: grid;
+  gap: 1.1rem;
+}
+
+.guide-top-actions,
+.guide-bottom-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+
+.guide-back-btn {
+  border: 1px solid var(--brand-stone);
+  background: #ffffff;
+  color: var(--brand-forest);
+  border-radius: 10px;
+  padding: 0.58rem 0.95rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.guide-back-btn:hover {
+  background: #f3f8fd;
+  border-color: #afc4d8;
+}
+
+.guide-hero {
+  background:
+    radial-gradient(circle at 20% 0%, rgba(20, 110, 180, 0.13), transparent 42%),
+    radial-gradient(circle at 95% 95%, rgba(49, 147, 46, 0.11), transparent 42%),
+    #ffffff;
+  border: 1px solid var(--brand-stone);
+  border-radius: 16px;
+  padding: 1.35rem 1.45rem;
+  box-shadow: 0 10px 22px rgba(0, 28, 49, 0.06);
+}
+
+.guide-kicker {
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-size: 0.74rem;
+  color: var(--brand-muted);
+  font-weight: 700;
+}
+
+.guide-hero h2 {
+  margin: 0.35rem 0 0.55rem;
+  font-size: 1.56rem;
+  color: var(--brand-forest);
+}
+
+.guide-hero p {
+  margin: 0;
+  color: var(--brand-muted);
+  line-height: 1.58;
+}
+
+.guide-hero-chips {
+  margin-top: 1rem;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.48rem;
+}
+
+.guide-hero-chips span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid var(--brand-stone);
+  border-radius: 999px;
+  background: #f6fbff;
+  color: var(--brand-forest);
+  padding: 0.31rem 0.65rem;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.guide-section {
+  background: #ffffff;
+  border: 1px solid var(--brand-stone);
+  border-radius: 14px;
+  padding: 1.05rem 1.15rem;
+  box-shadow: 0 10px 20px rgba(0, 28, 49, 0.04);
+}
+
+.guide-section h3 {
+  margin: 0;
+  color: var(--brand-forest);
+  font-size: 1.02rem;
+}
+
+.guide-section h4 {
+  margin: 0;
+  color: var(--brand-forest);
+  font-size: 0.95rem;
+}
+
+.guide-section p {
+  margin: 0.5rem 0 0;
+  color: var(--brand-muted);
+  line-height: 1.58;
+}
+
+.guide-section ol,
+.guide-section ul {
+  margin: 0.65rem 0 0;
+  padding-left: 1.15rem;
+  color: #2f4d68;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.guide-card-grid {
+  margin-top: 0.85rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.75rem;
+}
+
+.guide-info-card {
+  border: 1px solid #d6e3ef;
+  border-radius: 12px;
+  background: #f8fcff;
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.guide-info-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  background: #deebf7;
+  color: var(--brand-forest);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.guide-info-card p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+.guide-timeline {
+  margin-top: 0.75rem !important;
+  list-style: none;
+  padding-left: 0 !important;
+}
+
+.guide-timeline li {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 0.55rem;
+  align-items: start;
+}
+
+.guide-timeline-index {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: #deebf7;
+  color: var(--brand-forest);
+  font-size: 0.82rem;
+  font-weight: 800;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.guide-faq-grid {
+  margin-top: 0.75rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 0.65rem;
+}
+
+.guide-faq-item {
+  border: 1px solid #d8e5f2;
+  border-radius: 12px;
+  background: #f8fcff;
+  padding: 0.85rem;
+}
+
+.guide-faq-item p {
+  margin-top: 0.45rem;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 720px) {
+  .guide-page {
+    width: calc(100% - 1.1rem);
+    margin-top: 0.95rem;
+  }
+
+  .guide-top-actions,
+  .guide-bottom-actions {
+    justify-content: stretch;
+  }
+
+  .guide-back-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .guide-hero h2 {
+    font-size: 1.3rem;
+  }
+}

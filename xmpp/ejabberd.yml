@@ -1,0 +1,93 @@
+##
+## behebes.AI XMPP profile (ejabberd)
+##
+
+loglevel: 4
+
+hosts:
+  - "localhost"
+
+auth_method: internal
+auth_password_format: scram
+default_db: mnesia
+
+acl:
+  admin:
+    user:
+      - "xmppadmin@localhost"
+
+api_permissions:
+  "xmpp admin api":
+    from:
+      - mod_http_api
+    who: all
+    what:
+      - "*"
+
+access_rules:
+  local:
+    allow: all
+  c2s:
+    allow: all
+  announce:
+    allow: admin
+  configure:
+    allow: admin
+  muc_create:
+    allow: all
+  pubsub_createnode:
+    allow: all
+
+listen:
+  -
+    port: 5222
+    module: ejabberd_c2s
+    max_stanza_size: 262144
+    starttls_required: false
+  -
+    port: 5280
+    module: ejabberd_http
+    request_handlers:
+      /api: mod_http_api
+      /ws: ejabberd_http_ws
+      /bosh: mod_bosh
+      /upload: mod_http_upload
+    web_admin: false
+
+modules:
+  mod_adhoc: {}
+  mod_admin_extra: {}
+  mod_bosh: {}
+  mod_carboncopy: {}
+  mod_client_state: {}
+  mod_disco: {}
+  mod_http_api: {}
+  mod_http_upload:
+    max_size: 20971520
+  mod_last: {}
+  mod_mam:
+    default: always
+  mod_muc:
+    host: "conference.localhost"
+    access:
+      - allow
+    default_room_options:
+      public: false
+      persistent: true
+      mam: true
+      members_only: false
+      moderated: false
+  mod_muc_admin: {}
+  mod_offline: {}
+  mod_ping: {}
+  mod_privacy: {}
+  mod_private: {}
+  mod_pubsub: {}
+  mod_register:
+    ip_access: all
+  mod_roster: {}
+  mod_stream_mgmt:
+    resend_on_timeout: if_offline
+  mod_time: {}
+  mod_vcard: {}
+  mod_version: {}

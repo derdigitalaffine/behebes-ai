@@ -1,0 +1,134 @@
+.address-search-container {
+  position: relative;
+  margin-bottom: 1.5rem;
+  z-index: 10;
+}
+
+.search-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.address-search-input {
+  width: 100%;
+  padding: 0.85rem 0.95rem;
+  padding-right: 2.5rem;
+  border: 1px solid var(--brand-stone);
+  border-radius: 10px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: var(--brand-white);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+.address-search-input:focus {
+  outline: none;
+  border-color: var(--brand-forest);
+  box-shadow: 0 0 0 3px rgba(11, 31, 58, 0.18);
+}
+
+.search-spinner {
+  position: absolute;
+  right: 0.75rem;
+  font-size: 1.2rem;
+  animation: spin 1s linear infinite;
+  color: var(--brand-forest);
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+.suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: var(--brand-white);
+  border: 1px solid var(--brand-stone);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  max-height: 300px;
+  overflow-y: auto;
+  box-shadow: 0 12px 20px rgba(11, 31, 58, 0.12);
+  z-index: 11;
+}
+
+.suggestion-item {
+  padding: 0.85rem;
+  border-bottom: 1px solid #dbe1ec;
+  cursor: pointer;
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  transition: background 0.2s;
+}
+
+.suggestion-item:last-child {
+  border-bottom: none;
+}
+
+.suggestion-item:hover {
+  background: #e7edf6;
+}
+
+.suggestion-item:active {
+  background: #dbe5f5;
+}
+
+.suggestion-icon {
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 0.2rem;
+}
+
+.suggestion-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.suggestion-address {
+  font-weight: 600;
+  color: var(--brand-ink);
+  font-size: 0.95rem;
+  word-break: break-word;
+}
+
+.suggestion-detail {
+  font-size: 0.85rem;
+  color: var(--brand-muted);
+  margin-top: 0.2rem;
+}
+
+.suggestion-empty {
+  padding: 1rem;
+  text-align: center;
+  color: var(--brand-muted);
+  font-size: 0.9rem;
+}
+
+.selected-address-info {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: #e7edf6;
+  border: 1px solid #c6d3e8;
+  border-radius: 10px;
+  color: var(--brand-forest);
+  font-size: 0.9rem;
+}
+
+@media (max-width: 768px) {
+  .address-search-input {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .suggestions-dropdown {
+    max-height: 250px;
+  }
+}

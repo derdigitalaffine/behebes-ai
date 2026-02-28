@@ -1,0 +1,309 @@
+.ticket-map-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.ticket-map-header-shell {
+  border-radius: 14px;
+  border-color: color-mix(in srgb, var(--admin-primary) 24%, var(--admin-border) 76%);
+  background:
+    radial-gradient(circle at 8% 14%, rgba(3, 98, 173, 0.08), transparent 45%),
+    linear-gradient(135deg, #f9fcff 0%, #f1f8ff 54%, #f9fcff 100%);
+  box-shadow: 0 10px 22px rgba(9, 25, 47, 0.08);
+}
+
+.ticket-map-kicker {
+  margin: 0;
+  color: #47627b;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 700;
+}
+
+.ticket-map-subtitle {
+  margin-top: 0.25rem;
+  color: var(--admin-text-muted);
+  max-width: 64ch;
+}
+
+.ticket-map-filters-panel {
+  border-radius: 14px;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+}
+
+.ticket-map-switch-row .MuiFormControlLabel-root {
+  margin: 0;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--admin-primary) 20%, var(--admin-border) 80%);
+  background: color-mix(in srgb, var(--admin-surface) 88%, #ffffff 12%);
+}
+
+.ticket-map-switch-row .MuiFormControlLabel-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.ticket-map-stats .MuiChip-root {
+  font-weight: 700;
+  border-radius: 999px;
+}
+
+.ticket-map-layout {
+  display: grid;
+  gap: 0.95rem;
+  grid-template-columns: minmax(0, 1fr) 360px;
+}
+
+.ticket-map-main-col {
+  display: grid;
+  gap: 0.72rem;
+}
+
+.ticket-map-tools {
+  border-radius: 12px;
+  border-color: color-mix(in srgb, var(--admin-primary) 20%, var(--admin-border) 80%);
+  padding: 0.58rem 0.65rem;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--admin-surface) 90%, #ffffff 10%) 0%,
+    color-mix(in srgb, var(--admin-surface-muted) 94%, #ffffff 6%) 100%
+  );
+}
+
+.ticket-map-tools .MuiButton-root {
+  border-radius: 999px;
+  text-transform: none;
+  font-weight: 700;
+}
+
+.ticket-map-selection-chip {
+  max-width: min(100%, 520px);
+}
+
+.ticket-map-selection-chip .MuiChip-label {
+  white-space: normal;
+}
+
+.ticket-map-card {
+  border-radius: 12px;
+  overflow: hidden;
+  border-color: color-mix(in srgb, var(--admin-primary) 18%, var(--admin-border) 82%);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+}
+
+.ticket-map-card-top {
+  border-bottom: 1px solid var(--admin-border);
+  padding: 0.52rem 0.7rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.7rem;
+  flex-wrap: wrap;
+  background: #f7fbff;
+}
+
+.ticket-map-legend {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.62rem;
+  flex-wrap: wrap;
+  font-size: 0.76rem;
+  color: #3d5871;
+}
+
+.ticket-map-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.24rem;
+}
+
+.ticket-map-status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.ticket-map-status-dot.is-pending_validation {
+  background: #2563eb;
+}
+
+.ticket-map-status-dot.is-open {
+  background: #dc2626;
+}
+
+.ticket-map-status-dot.is-in-progress {
+  background: #d97706;
+}
+
+.ticket-map-status-dot.is-completed {
+  background: #16a34a;
+}
+
+.ticket-map-status-dot.is-closed {
+  background: #475569;
+}
+
+.ticket-map-status-dot.is-hotspot {
+  background: #f97316;
+}
+
+.ticket-map-card-note {
+  font-size: 0.74rem;
+  color: #4a6780;
+}
+
+.ticket-map-canvas {
+  width: 100%;
+  height: min(68vh, 640px);
+  min-height: 420px;
+}
+
+.ticket-map-side-col {
+  display: grid;
+  gap: 0.85rem;
+  align-content: start;
+}
+
+.ticket-map-side-card {
+  border-radius: 12px;
+  border-color: color-mix(in srgb, var(--admin-primary) 20%, var(--admin-border) 80%);
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.58rem;
+  box-shadow: 0 6px 14px rgba(15, 23, 42, 0.05);
+}
+
+.ticket-map-side-card .MuiFormControlLabel-root {
+  margin: 0;
+}
+
+.ticket-map-side-card .MuiButton-root {
+  text-transform: none;
+  font-weight: 700;
+}
+
+.ticket-map-cluster-icon span {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  border: 2px solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 7px 14px rgba(15, 23, 42, 0.24);
+}
+
+.ticket-map-cluster-list {
+  margin: 0.45rem 0;
+  padding-left: 1rem;
+  font-size: 0.8rem;
+}
+
+.ticket-map-tooltip {
+  line-height: 1.3;
+  font-size: 0.82rem;
+}
+
+.ticket-map-popup h4 {
+  margin: 0 0 0.45rem;
+  font-size: 0.95rem;
+  color: var(--brand-ink);
+}
+
+.ticket-map-popup-line {
+  font-size: 0.82rem;
+  margin-bottom: 0.25rem;
+  color: var(--admin-text);
+}
+
+.ticket-map-popup-link {
+  display: inline-flex;
+  margin-top: 0.45rem;
+  text-decoration: none;
+  font-weight: 700;
+  color: #00457c;
+}
+
+.ticket-map-popup-link:hover {
+  text-decoration: underline;
+}
+
+.ticket-map-detail-link {
+  color: #00457c;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.ticket-map-detail-link:hover {
+  text-decoration: underline;
+}
+
+.ticket-map-unmapped-list {
+  display: grid;
+  gap: 0.48rem;
+  max-height: 380px;
+  overflow: auto;
+  padding-right: 0.1rem;
+}
+
+.ticket-map-unmapped-item {
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  background: #f7fbff;
+  padding: 0.5rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.ticket-map-unmapped-id {
+  font-family: monospace;
+  font-size: 0.75rem;
+  color: var(--admin-text-muted);
+}
+
+.ticket-map-unmapped-title {
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: var(--admin-text);
+}
+
+.ticket-map-unmapped-meta {
+  font-size: 0.75rem;
+  color: var(--admin-text-muted);
+}
+
+.ticket-map-unmapped-actions {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.35rem;
+}
+
+@media (max-width: 980px) {
+  .ticket-map-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .ticket-map-canvas {
+    height: 56vh;
+    min-height: 320px;
+  }
+}
+
+@media (max-width: 720px) {
+  .ticket-map-canvas {
+    min-height: 280px;
+  }
+
+  .ticket-map-switch-row .MuiFormControlLabel-root {
+    width: 100%;
+  }
+}

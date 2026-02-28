@@ -1,0 +1,176 @@
+.mail-queue-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.mail-queue-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.mail-queue-actions select {
+  border: 1px solid var(--brand-stone);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+.mail-queue-refresh {
+  background: var(--brand-forest);
+  color: var(--brand-white);
+  border: none;
+  border-radius: 8px;
+  padding: 0.55rem 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mail-queue-refresh:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.mail-queue-summary {
+  gap: 0.75rem;
+}
+
+.summary-card {
+  background: var(--brand-white);
+  border: 1px solid var(--brand-stone);
+  border-radius: 10px;
+  padding: 0.75rem 0.9rem;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.summary-label {
+  color: var(--brand-muted);
+  font-size: 0.8rem;
+}
+
+.summary-value {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--brand-ink);
+}
+
+.mail-queue-table-wrapper {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  overflow: auto;
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+}
+
+.mail-queue-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 980px;
+}
+
+.mail-queue-table thead {
+  background: var(--admin-surface-muted);
+}
+
+.mail-queue-table th,
+.mail-queue-table td {
+  padding: 0.8rem 0.9rem;
+  text-align: left;
+  border-bottom: 1px solid var(--admin-border);
+  font-size: 0.88rem;
+  vertical-align: top;
+}
+
+.mail-queue-table th {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--admin-text-muted);
+}
+
+.mail-queue-table td:nth-child(3),
+.mail-queue-table td:nth-child(8) {
+  max-width: 240px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mono {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+}
+
+.queue-row-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.btn-small {
+  border: none;
+  border-radius: 6px;
+  background: var(--admin-primary);
+  color: #fff;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-small:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-small.btn-secondary {
+  background: var(--admin-info);
+}
+
+.btn-small.btn-danger {
+  background: var(--admin-danger);
+}
+
+.status-pill.status-pending {
+  background: var(--admin-warning-bg);
+  color: var(--admin-warning-text);
+}
+
+.status-pill.status-retry {
+  background: var(--admin-info-bg);
+  color: var(--admin-info-text);
+}
+
+.status-pill.status-processing {
+  background: var(--admin-info-bg);
+  color: var(--admin-info-text);
+}
+
+.status-pill.status-sent {
+  background: var(--admin-success-bg);
+  color: var(--admin-success-text);
+}
+
+.status-pill.status-failed {
+  background: var(--admin-danger-bg);
+  color: var(--admin-danger-text);
+}
+
+.status-pill.status-cancelled {
+  background: var(--admin-border);
+  color: var(--admin-text-muted);
+}
+
+.queue-empty {
+  text-align: center;
+  color: var(--admin-text-muted);
+}
+
+.mail-queue-total {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--admin-text-muted);
+}

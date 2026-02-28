@@ -1,0 +1,316 @@
+.workflow-executor {
+  width: 100%;
+}
+
+.executor-title {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #001c31;
+  margin-bottom: 1.5rem;
+  text-align: center;
+}
+
+/* Progress */
+.executor-progress {
+  margin-bottom: 2rem;
+}
+
+/* Current Step */
+.executor-current {
+  margin-bottom: 2rem;
+}
+
+.current-step-card {
+  background: white;
+  border: 2px solid #3b82f6;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 4px 6px rgba(59, 130, 246, 0.1);
+}
+
+.current-step-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.5rem;
+  color: #001c31;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.current-step-desc {
+  margin: 0 0 1rem 0;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.running-indicator {
+  padding: 1.5rem;
+  background: #f0f9ff;
+  border-radius: 8px;
+  margin: 1rem 0;
+  display: flex;
+  justify-content: center;
+}
+
+.error-display {
+  padding: 1rem;
+  background: #fee2e2;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.error-text {
+  margin: 0;
+  color: #b91c1c;
+  font-weight: 500;
+}
+
+.success-display {
+  padding: 1rem;
+  background: #dcfce7;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  margin: 1rem 0;
+}
+
+.success-text {
+  margin: 0;
+  color: #166534;
+  font-weight: 500;
+}
+
+/* Action Buttons */
+.executor-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  justify-content: center;
+}
+
+/* Steps List */
+.executor-steps-list {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.steps-list-title {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #001c31;
+  font-weight: 600;
+}
+
+.steps-overview {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.step-overview-item {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 2px solid #e2e8f0;
+  transition: all 0.2s;
+}
+
+.step-overview-item.step-PENDING {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+}
+
+.step-overview-item.step-RUNNING {
+  background: #fef3c7;
+  border-color: #fcd34d;
+  animation: pulse 1s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.8;
+  }
+}
+
+.step-overview-item.step-COMPLETED {
+  background: #dcfce7;
+  border-color: #86efac;
+}
+
+.step-overview-item.step-FAILED {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.step-overview-item.step-SKIPPED {
+  background: #f3f4f6;
+  border-color: #d1d5db;
+  opacity: 0.7;
+}
+
+.step-index {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 32px;
+  height: 32px;
+  background: #001c31;
+  color: white;
+  border-radius: 50%;
+  font-weight: 600;
+  font-size: 0.85rem;
+  flex-shrink: 0;
+}
+
+.step-overview-content {
+  flex: 1;
+}
+
+.step-overview-title {
+  margin: 0;
+  font-weight: 600;
+  color: #001c31;
+  font-size: 0.95rem;
+}
+
+.step-overview-status {
+  margin: 0.25rem 0 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+/* Completion Screen */
+.executor-complete {
+  background: linear-gradient(135deg, #dcfce7 0%, #d1fae5 100%);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+}
+
+.complete-card {
+  background: white;
+  border-radius: 12px;
+  padding: 2rem;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+.complete-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  animation: bounceIn 0.6s ease-out;
+}
+
+@keyframes bounceIn {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.complete-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.75rem;
+  color: #166534;
+  font-weight: 700;
+}
+
+.complete-message {
+  margin: 0 0 1.5rem 0;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+/* Summary Stats */
+.complete-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1.5rem 0;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.summary-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.stat-label {
+  font-size: 0.85rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.stat-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #166534;
+}
+
+.stat-value.error {
+  color: #b91c1c;
+}
+
+/* Final Actions */
+.executor-final-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .current-step-card {
+    padding: 1.5rem;
+  }
+
+  .executor-actions {
+    flex-direction: column-reverse;
+  }
+
+  .executor-actions button {
+    width: 100%;
+  }
+
+  .steps-overview {
+    grid-template-columns: 1fr;
+  }
+
+  .executor-complete {
+    padding: 1rem;
+  }
+
+  .complete-card {
+    padding: 1.5rem;
+  }
+
+  .complete-icon {
+    font-size: 3rem;
+  }
+
+  .executor-final-actions {
+    flex-direction: column-reverse;
+  }
+
+  .executor-final-actions button {
+    width: 100%;
+  }
+}

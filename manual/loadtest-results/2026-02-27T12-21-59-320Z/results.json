@@ -1,0 +1,320 @@
+{
+  "startedAt": "2026-02-27T12:21:59.320Z",
+  "finishedAt": "2026-02-27T12:23:44.608Z",
+  "baseUrl": "https://www.behebes.de",
+  "citizenCount": 10,
+  "total": 20,
+  "ok": 19,
+  "failed": 1,
+  "citizens": [
+    {
+      "name": "Anna Schmitt",
+      "email": "anna.schmitt@troester.nl"
+    },
+    {
+      "name": "Ben Weber",
+      "email": "ben.weber@troester.nl"
+    },
+    {
+      "name": "Clara Hoffmann",
+      "email": "clara.hoffmann@troester.nl"
+    },
+    {
+      "name": "David Krueger",
+      "email": "david.krueger@troester.nl"
+    },
+    {
+      "name": "Emma Becker",
+      "email": "emma.becker@troester.nl"
+    },
+    {
+      "name": "Felix Neumann",
+      "email": "felix.neumann@troester.nl"
+    },
+    {
+      "name": "Greta Wagner",
+      "email": "greta.wagner@troester.nl"
+    },
+    {
+      "name": "Hannes Keller",
+      "email": "hannes.keller@troester.nl"
+    },
+    {
+      "name": "Iris Voigt",
+      "email": "iris.voigt@troester.nl"
+    },
+    {
+      "name": "Jonas Barth",
+      "email": "jonas.barth@troester.nl"
+    }
+  ],
+  "results": [
+    {
+      "ok": true,
+      "citizenName": "Anna Schmitt",
+      "citizenEmail": "anna.schmitt@troester.nl",
+      "severity": "ernst",
+      "address": "Hauptstrasse 8a, Otterberg",
+      "title": "Tiefes Schlagloch in Fahrbahn",
+      "imagesAttached": [
+        "free-01.jpg"
+      ],
+      "ticketText": "Ticket-ID: afb22ef3-858d-49fe-a061-a950e5a9931d",
+      "ticketId": "afb22ef3-858d-49fe-a061-a950e5a9931d",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": true,
+      "citizenName": "Ben Weber",
+      "citizenEmail": "ben.weber@troester.nl",
+      "severity": "ernst",
+      "address": "Hauptstrasse 14, Otterbach",
+      "title": "Strassenbeleuchtung komplett ausgefallen",
+      "imagesAttached": [
+        "free-02.jpg"
+      ],
+      "ticketText": "Ticket-ID: 9aa71465-1c94-44f2-9b9a-5f41aaedb2fd",
+      "ticketId": "9aa71465-1c94-44f2-9b9a-5f41aaedb2fd",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": true,
+      "citizenName": "Clara Hoffmann",
+      "citizenEmail": "clara.hoffmann@troester.nl",
+      "severity": "ernst",
+      "address": "Lauterstrasse 12, Katzweiler",
+      "title": "Kanaldeckel locker",
+      "imagesAttached": [],
+      "ticketText": "Ticket-ID: 2777c945-651d-4dc8-8beb-6d2fe8ccdaea",
+      "ticketId": "2777c945-651d-4dc8-8beb-6d2fe8ccdaea",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": true,
+      "citizenName": "David Krueger",
+      "citizenEmail": "david.krueger@troester.nl",
+      "severity": "ernst",
+      "address": "Hauptstrasse 5, Mehlbach",
+      "title": "Verkehrsschild umgestuerzt",
+      "imagesAttached": [
+        "free-04.jpg"
+      ],
+      "ticketText": "Ticket-ID: d61f5d2c-c4df-4ea8-a72b-80302917198c",
+      "ticketId": "d61f5d2c-c4df-4ea8-a72b-80302917198c",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": false,
+      "citizenName": "Emma Becker",
+      "citizenEmail": "emma.becker@troester.nl",
+      "severity": "ernst",
+      "address": "Hauptstrasse 18, Schneckenhausen",
+      "title": "Ast blockiert Gehweg",
+      "imagesAttached": [
+        "free-05.jpg"
+      ],
+      "ticketText": "",
+      "ticketId": "",
+      "validationCopy": "",
+      "error": "locator.check: Timeout 30000ms exceeded.\nCall log:\n\u001b[2m  - waiting for locator('input[type=\"checkbox\"]').first()\u001b[22m\n\u001b[2m    - locator resolved to <input type=\"checkbox\"/>\u001b[22m\n\u001b[2m  - attempting click action\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"suggestion-item\">…</div> from <div>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m    - waiting 20ms\u001b[22m\n\u001b[2m    2 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m      - element is visible, enabled and stable\u001b[22m\n\u001b[2m      - scrolling into view if needed\u001b[22m\n\u001b[2m      - done scrolling\u001b[22m\n\u001b[2m      - <div class=\"suggestion-item\">…</div> from <div>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m    - retrying click action\u001b[22m\n\u001b[2m      - waiting 100ms\u001b[22m\n\u001b[2m    58 × waiting for element to be visible, enabled and stable\u001b[22m\n\u001b[2m       - element is visible, enabled and stable\u001b[22m\n\u001b[2m       - scrolling into view if needed\u001b[22m\n\u001b[2m       - done scrolling\u001b[22m\n\u001b[2m       - <div class=\"suggestion-item\">…</div> from <div>…</div> subtree intercepts pointer events\u001b[22m\n\u001b[2m     - retrying click action\u001b[22m\n\u001b[2m       - waiting 500ms\u001b[22m\n"
+    },
+    {
+      "ok": true,
+      "citizenName": "Felix Neumann",
+      "citizenEmail": "felix.neumann@troester.nl",
+      "severity": "ernst",
+      "address": "Hauptstrasse 3, Olsbruecken",
+      "title": "Boeschung rutscht auf Weg",
+      "imagesAttached": [
+        "free-06.jpg",
+        "free-07.jpg"
+      ],
+      "ticketText": "Ticket-ID: fbd1a81d-ed48-489d-9577-f6a9c555acfe",
+      "ticketId": "fbd1a81d-ed48-489d-9577-f6a9c555acfe",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": true,
+      "citizenName": "Greta Wagner",
+      "citizenEmail": "greta.wagner@troester.nl",
+      "severity": "ernst",
+      "address": "Ringstrasse 9, Niederkirchen",
+      "title": "Illegale Muellablagerung",
+      "imagesAttached": [
+        "free-07.jpg"
+      ],
+      "ticketText": "Ticket-ID: 43be2a39-1a0f-45ea-9f4e-8559754d0138",
+      "ticketId": "43be2a39-1a0f-45ea-9f4e-8559754d0138",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": true,
+      "citizenName": "Hannes Keller",
+      "citizenEmail": "hannes.keller@troester.nl",
+      "severity": "ernst",
+      "address": "Schulstrasse 4, Heiligenmoschel",
+      "title": "Scherben auf Spielplatz",
+      "imagesAttached": [],
+      "ticketText": "Ticket-ID: e7793bbd-c33f-4d31-842c-6ac0a90311cd",
+      "ticketId": "e7793bbd-c33f-4d31-842c-6ac0a90311cd",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": true,
+      "citizenName": "Iris Voigt",
+      "citizenEmail": "iris.voigt@troester.nl",
+      "severity": "ernst",
+      "address": "Talstrasse 7, Schallodenbach",
+      "title": "Hydrant undicht",
+      "imagesAttached": [
+        "free-01.jpg"
+      ],
+      "ticketText": "Ticket-ID: 3dc0481d-8254-45af-a9f1-c24ebce7d330",
+      "ticketId": "3dc0481d-8254-45af-a9f1-c24ebce7d330",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": true,
+      "citizenName": "Jonas Barth",
+      "citizenEmail": "jonas.barth@troester.nl",
+      "severity": "ernst",
+      "address": "Hauptstrasse 11, Sulzbachtal",
+      "title": "Defekte Fusswegbeleuchtung",
+      "imagesAttached": [],
+      "ticketText": "Ticket-ID: d9fda989-ae79-45da-a3ff-4177c8d89d17",
+      "ticketId": "d9fda989-ae79-45da-a3ff-4177c8d89d17",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": true,
+      "citizenName": "Anna Schmitt",
+      "citizenEmail": "anna.schmitt@troester.nl",
+      "severity": "banal",
+      "address": "Hauptstrasse 21, Otterberg",
+      "title": "Muelleimer ueberfuellt",
+      "imagesAttached": [],
+      "ticketText": "Ticket-ID: 6d9798a0-4152-4cc7-83e2-986ce1bfa20e",
+      "ticketId": "6d9798a0-4152-4cc7-83e2-986ce1bfa20e",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": true,
+      "citizenName": "Ben Weber",
+      "citizenEmail": "ben.weber@troester.nl",
+      "severity": "banal",
+      "address": "Lauterstrasse 4, Otterbach",
+      "title": "Graffiti an Bushaltestelle",
+      "imagesAttached": [
+        "free-04.jpg"
+      ],
+      "ticketText": "Ticket-ID: 2a61d10f-943e-45b2-8156-2094865d9e68",
+      "ticketId": "2a61d10f-943e-45b2-8156-2094865d9e68",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": true,
+      "citizenName": "Clara Hoffmann",
+      "citizenEmail": "clara.hoffmann@troester.nl",
+      "severity": "banal",
+      "address": "Hauptstrasse 9, Katzweiler",
+      "title": "Parkbanklatte locker",
+      "imagesAttached": [],
+      "ticketText": "Ticket-ID: 6cec3999-c759-429c-9c97-35598c4af0a6",
+      "ticketId": "6cec3999-c759-429c-9c97-35598c4af0a6",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": true,
+      "citizenName": "David Krueger",
+      "citizenEmail": "david.krueger@troester.nl",
+      "severity": "ernst",
+      "address": "Kirchstrasse 6, Mehlbach",
+      "title": "Gullideckel abgesackt",
+      "imagesAttached": [
+        "free-06.jpg"
+      ],
+      "ticketText": "Ticket-ID: 52a5232a-5f41-42d8-b9f7-0488b4ef093f",
+      "ticketId": "52a5232a-5f41-42d8-b9f7-0488b4ef093f",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": true,
+      "citizenName": "Emma Becker",
+      "citizenEmail": "emma.becker@troester.nl",
+      "severity": "banal",
+      "address": "Hauptstrasse 2, Schneckenhausen",
+      "title": "Randstreifen stark verwildert",
+      "imagesAttached": [],
+      "ticketText": "Ticket-ID: a4cc39dc-6a5c-447b-b906-a1213b443091",
+      "ticketId": "a4cc39dc-6a5c-447b-b906-a1213b443091",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": true,
+      "citizenName": "Felix Neumann",
+      "citizenEmail": "felix.neumann@troester.nl",
+      "severity": "ernst",
+      "address": "Talstrasse 2, Olsbruecken",
+      "title": "Starker Wasserabfluss aus Schacht",
+      "imagesAttached": [
+        "free-08.jpg",
+        "free-01.jpg"
+      ],
+      "ticketText": "Ticket-ID: b194779a-200b-4dde-8707-681aa75b431c",
+      "ticketId": "b194779a-200b-4dde-8707-681aa75b431c",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": true,
+      "citizenName": "Greta Wagner",
+      "citizenEmail": "greta.wagner@troester.nl",
+      "severity": "banal",
+      "address": "Dorfstrasse 7, Niederkirchen",
+      "title": "Hundekotbeutelspender leer",
+      "imagesAttached": [],
+      "ticketText": "Ticket-ID: 6f2391de-9f02-4866-8a22-0370b3f6c330",
+      "ticketId": "6f2391de-9f02-4866-8a22-0370b3f6c330",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": true,
+      "citizenName": "Clara Hoffmann",
+      "citizenEmail": "clara.hoffmann@troester.nl",
+      "severity": "ernst",
+      "address": "Hauptstrasse 12, Heiligenmoschel",
+      "title": "Riss an Stuetzmauer",
+      "imagesAttached": [
+        "free-02.jpg"
+      ],
+      "ticketText": "Ticket-ID: d48c0246-829f-432c-817a-1d3beedd8cab",
+      "ticketId": "d48c0246-829f-432c-817a-1d3beedd8cab",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": true,
+      "citizenName": "Hannes Keller",
+      "citizenEmail": "hannes.keller@troester.nl",
+      "severity": "banal",
+      "address": "Muehlweg 3, Schallodenbach",
+      "title": "Strassenschild verschmutzt",
+      "imagesAttached": [],
+      "ticketText": "Ticket-ID: 3abcba3d-794f-49a0-87e2-1b82862a906e",
+      "ticketId": "3abcba3d-794f-49a0-87e2-1b82862a906e",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    },
+    {
+      "ok": true,
+      "citizenName": "Jonas Barth",
+      "citizenEmail": "jonas.barth@troester.nl",
+      "severity": "ernst",
+      "address": "Brunnenstrasse 5, Sulzbachtal",
+      "title": "Tiefe Kante zwischen Gehweg und Fahrbahn",
+      "imagesAttached": [
+        "free-04.jpg"
+      ],
+      "ticketText": "Ticket-ID: 8f8592bc-b5a6-4ffd-918c-5caf2ab9238b",
+      "ticketId": "8f8592bc-b5a6-4ffd-918c-5caf2ab9238b",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    }
+  ]
+}

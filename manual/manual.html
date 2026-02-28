@@ -1,0 +1,244 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Buergerfrontend Anleitung - Ticketmeldung</title>
+    <style>
+      :root {
+        --bg: #f3f6fb;
+        --card: #ffffff;
+        --text: #10263b;
+        --muted: #4f657a;
+        --brand: #0b4f8a;
+        --ok: #0a7a33;
+        --line: #d7e2ee;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Candara, "Segoe UI", Arial, sans-serif;
+        color: var(--text);
+        background: linear-gradient(180deg, #e9f1fb 0%, var(--bg) 220px);
+      }
+      .container {
+        width: min(1100px, 94vw);
+        margin: 28px auto 48px;
+      }
+      .hero {
+        background: linear-gradient(120deg, #003762, #08508d);
+        color: #fff;
+        border-radius: 16px;
+        padding: 22px 24px;
+        box-shadow: 0 12px 30px rgba(2, 28, 53, 0.25);
+      }
+      .hero h1 {
+        margin: 0 0 10px;
+        font-size: 1.8rem;
+      }
+      .hero p {
+        margin: 0;
+        line-height: 1.45;
+      }
+      .meta {
+        margin-top: 12px;
+        font-size: 0.95rem;
+        color: #d9e8f8;
+      }
+      .notice {
+        margin-top: 16px;
+        background: #eef6ff;
+        border: 1px solid #bfdbff;
+        color: #103c6b;
+        border-radius: 12px;
+        padding: 14px 16px;
+      }
+      .steps {
+        margin-top: 18px;
+        display: grid;
+        gap: 18px;
+      }
+      .step {
+        background: var(--card);
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        overflow: hidden;
+        box-shadow: 0 8px 20px rgba(16, 38, 59, 0.08);
+      }
+      .step-head {
+        padding: 12px 16px;
+        background: #f8fbff;
+        border-bottom: 1px solid var(--line);
+      }
+      .step-head h2 {
+        margin: 0;
+        font-size: 1.1rem;
+      }
+      .step-body {
+        padding: 14px 16px 16px;
+      }
+      .step-body p {
+        margin: 0 0 10px;
+        color: var(--muted);
+        line-height: 1.45;
+      }
+      .step-body ul {
+        margin: 0 0 12px 18px;
+        color: var(--muted);
+      }
+      .shot {
+        margin: 0;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        overflow: hidden;
+        background: #fff;
+      }
+      .shot img {
+        width: 100%;
+        display: block;
+      }
+      .shot figcaption {
+        font-size: 0.92rem;
+        color: #294968;
+        padding: 8px 10px;
+        background: #f8fbff;
+        border-top: 1px solid var(--line);
+      }
+      .validation {
+        background: #f3fff6;
+        border: 1px solid #bfe6cb;
+        border-radius: 12px;
+        padding: 14px 16px;
+        margin-top: 10px;
+      }
+      .validation h3 {
+        margin: 0 0 8px;
+        color: var(--ok);
+      }
+      .validation p {
+        margin: 0;
+        color: #2d6240;
+      }
+      .footer-note {
+        margin-top: 18px;
+        font-size: 0.93rem;
+        color: #4b6277;
+      }
+      code {
+        background: #edf3fa;
+        border: 1px solid #d9e5f1;
+        border-radius: 6px;
+        padding: 1px 6px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <section class="hero">
+        <h1>Bebilderte Anleitung: Ticket im Buergerfrontend erstellen</h1>
+        <p>
+          Diese Anleitung zeigt den echten Durchlauf im Produktivsystem
+          <code>https://www.behebes.de</code> mit einem Testfall
+          "lautes Hundegebell".
+        </p>
+        <p class="meta">
+          Erstelltes Ticket: <strong>0956589b-2594-440b-a631-5c00c1661969</strong>
+          | Ziel-E-Mail: <strong>test@troester.nl</strong>
+        </p>
+      </section>
+
+      <div class="notice">
+        Nach dem Absenden wurde das Ticket erfolgreich angelegt. Die E-Mail-Validierung
+        (Double Opt-In) erfolgt anschliessend ueber den Link in der E-Mail.
+      </div>
+      <div class="notice" style="margin-top: 10px; background: #f3fff6; border-color: #bfe6cb; color: #1e5e37;">
+        <strong>Validierung bestaetigt:</strong>
+        Der Klick auf den Link wurde verarbeitet. Aktueller Ticketstatus ist <code>open</code>.
+      </div>
+
+      <section class="steps">
+        <article class="step">
+          <div class="step-head">
+            <h2>1. Startseite oeffnen</h2>
+          </div>
+          <div class="step-body">
+            <p>
+              Das Buergerformular ist direkt auf der Startseite sichtbar.
+              Dort werden Name, E-Mail, Beschreibung und Standort erfasst.
+            </p>
+            <figure class="shot">
+              <img src="images/01-startseite.png" alt="Startseite mit leerem Buergerformular" />
+              <figcaption>Startansicht des Buergerfrontends.</figcaption>
+            </figure>
+          </div>
+        </article>
+
+        <article class="step">
+          <div class="step-head">
+            <h2>2. Formular ausfuellen</h2>
+          </div>
+          <div class="step-body">
+            <ul>
+              <li>Name: <code>Dominik Troester</code></li>
+              <li>E-Mail: <code>test@troester.nl</code></li>
+              <li>Beschreibung: lautes Hundegebell</li>
+              <li>Adresse: <code>Hauptstrasse 8a Otterberg</code></li>
+              <li>Datenschutz-Checkbox aktivieren</li>
+            </ul>
+            <p>Danach auf <strong>"Zusammenfassung anzeigen"</strong> klicken.</p>
+            <figure class="shot">
+              <img src="images/02-formular-ausgefuellt.png" alt="Ausgefuelltes Formular mit Testdaten" />
+              <figcaption>Formular mit den Testdaten vor dem Wechsel in die Zusammenfassung.</figcaption>
+            </figure>
+          </div>
+        </article>
+
+        <article class="step">
+          <div class="step-head">
+            <h2>3. Zusammenfassung pruefen und absenden</h2>
+          </div>
+          <div class="step-body">
+            <p>
+              In der Zusammenfassung die Angaben noch einmal kontrollieren,
+              dann auf <strong>"Absenden und verifizieren"</strong> klicken.
+            </p>
+            <figure class="shot">
+              <img src="images/03-zusammenfassung.png" alt="Zusammenfassungsansicht vor dem Absenden" />
+              <figcaption>Zusammenfassung mit allen eingegebenen Werten.</figcaption>
+            </figure>
+          </div>
+        </article>
+
+        <article class="step">
+          <div class="step-head">
+            <h2>4. Erfolgsmeldung nach dem Absenden</h2>
+          </div>
+          <div class="step-body">
+            <p>
+              Nach erfolgreichem Versand erscheint die Ticket-ID in der Erfolgsmaske.
+            </p>
+            <figure class="shot">
+              <img src="images/04-erfolg-validierung.png" alt="Erfolgsmeldung mit Ticket-ID" />
+              <figcaption>Ticket erfolgreich angelegt, Ticket-ID sichtbar.</figcaption>
+            </figure>
+
+            <div class="validation">
+              <h3>5. E-Mail validieren (manueller Schritt)</h3>
+              <p>
+                Erledigt: Der Validierungslink wurde angeklickt. Das Ticket ist jetzt final
+                bestaetigt und im System aktiv.
+              </p>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <p class="footer-note">
+        Technische Erzeugung: Ticket und Screenshots wurden automatisiert mit Playwright erstellt.
+        Script: <code>manual/generate_manual_assets.mjs</code>
+      </p>
+    </div>
+  </body>
+</html>

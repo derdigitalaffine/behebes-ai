@@ -1,0 +1,254 @@
+[
+  {
+    "town": "Otterberg",
+    "street": "Hauptstraße 12",
+    "display": "12, Hauptstraße, Sambach, Otterbach, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67731, Deutschland",
+    "lat": "49.4853327",
+    "lon": "7.7393686"
+  },
+  {
+    "town": "Otterberg",
+    "street": "Kirchstraße 8",
+    "display": "8, Kirchstraße, Otterberg, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67697, Deutschland",
+    "lat": "49.5027738",
+    "lon": "7.7731196"
+  },
+  {
+    "town": "Otterberg",
+    "street": "Lauterstraße 3",
+    "display": "KiK, 3, Lauterstraße, Sambach, Otterbach, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67731, Deutschland",
+    "lat": "49.4833339",
+    "lon": "7.7303619"
+  },
+  {
+    "town": "Otterberg",
+    "street": "Konrad-Adenauer-Straße 5",
+    "display": "5, Konrad-Adenauer-Straße, Otterbach, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67731, Deutschland",
+    "lat": "49.4868418",
+    "lon": "7.7384449"
+  },
+  {
+    "town": "Otterberg",
+    "street": "Schulstraße 4",
+    "display": "4, Schulstraße, Otterberg, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67697, Deutschland",
+    "lat": "49.5005941",
+    "lon": "7.7615578"
+  },
+  {
+    "town": "Otterberg",
+    "street": "Ringstraße 6",
+    "display": "6, Ringstraße, Ziegelhütte, Otterbach, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67731, Deutschland",
+    "lat": "49.4874428",
+    "lon": "7.7366140"
+  },
+  {
+    "town": "Otterberg",
+    "street": "Mühlstraße 9",
+    "display": "9, Mühlstraße, Otterberg, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67697, Deutschland",
+    "lat": "49.5020767",
+    "lon": "7.7734048"
+  },
+  {
+    "town": "Otterberg",
+    "street": "Brunnenstraße 7",
+    "display": "Brunnenstraße, Heimkirchen, Niederkirchen, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67700, Deutschland",
+    "lat": "49.5727096",
+    "lon": "7.7154606"
+  },
+  {
+    "town": "Otterberg",
+    "street": "Bergstraße 11",
+    "display": "11, Bergstraße, Otterberg, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67697, Deutschland",
+    "lat": "49.5042247",
+    "lon": "7.7701957"
+  },
+  {
+    "town": "Otterbach",
+    "street": "Hauptstraße 14",
+    "display": "14, Hauptstraße, Sambach, Otterbach, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67731, Deutschland",
+    "lat": "49.4852858",
+    "lon": "7.7389954"
+  },
+  {
+    "town": "Otterbach",
+    "street": "Lauterstraße 2",
+    "display": "2, Obere Lauterstraße, Sambach, Otterbach, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67731, Deutschland",
+    "lat": "49.4817465",
+    "lon": "7.7325516"
+  },
+  {
+    "town": "Otterbach",
+    "street": "Bahnhofstraße 6",
+    "display": "6, Bahnhofstraße, Olsbrücken, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67737, Deutschland",
+    "lat": "49.5386246",
+    "lon": "7.6544886"
+  },
+  {
+    "town": "Otterbach",
+    "street": "Ringstraße 4",
+    "display": "4, Ringstraße, Ziegelhütte, Otterbach, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67731, Deutschland",
+    "lat": "49.4874533",
+    "lon": "7.7364209"
+  },
+  {
+    "town": "Otterbach",
+    "street": "Kirchstraße 9",
+    "display": "9, Kirchstraße, Otterberg, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67697, Deutschland",
+    "lat": "49.5033057",
+    "lon": "7.7726475"
+  },
+  {
+    "town": "Otterbach",
+    "street": "Schulstraße 1",
+    "display": "1, Schulstraße, Sambach, Otterbach, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67731, Deutschland",
+    "lat": "49.4934364",
+    "lon": "7.7148143"
+  },
+  {
+    "town": "Otterbach",
+    "street": "Mühlstraße 5",
+    "display": "5, Mühlstraße, Otterberg, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67697, Deutschland",
+    "lat": "49.5020679",
+    "lon": "7.7732746"
+  },
+  {
+    "town": "Otterbach",
+    "street": "Brunnenstraße 3",
+    "display": "3, Brunnenstraße, Heimkirchen, Niederkirchen, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67700, Deutschland",
+    "lat": "49.5752778",
+    "lon": "7.7105129"
+  },
+  {
+    "town": "Otterbach",
+    "street": "Bergstraße 8",
+    "display": "8, Bergstraße, Sambach, Otterbach, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67731, Deutschland",
+    "lat": "49.4840878",
+    "lon": "7.7315552"
+  },
+  {
+    "town": "Otterbach",
+    "street": "Talstraße 10",
+    "display": "10, Talstraße, Otterberg, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67697, Deutschland",
+    "lat": "49.5022614",
+    "lon": "7.7664695"
+  },
+  {
+    "town": "Katzweiler",
+    "street": "Hauptstraße 1",
+    "display": "1 A, Hauptstraße, Karlshof, Katzweiler, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67734, Deutschland",
+    "lat": "49.4992291",
+    "lon": "7.7028586"
+  },
+  {
+    "town": "Katzweiler",
+    "street": "Lauterstraße 12",
+    "display": "Lauterstraße, Katzweiler, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67734, Deutschland",
+    "lat": "49.4979734",
+    "lon": "7.7000586"
+  },
+  {
+    "town": "Katzweiler",
+    "street": "Talstraße 2",
+    "display": "Talstraße, Ziegelhütte, Katzweiler, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67734, Deutschland",
+    "lat": "49.5041248",
+    "lon": "7.6936321"
+  },
+  {
+    "town": "Katzweiler",
+    "street": "Schulstraße 3",
+    "display": "Schulstraße, Ziegelhütte, Katzweiler, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67734, Deutschland",
+    "lat": "49.5045895",
+    "lon": "7.6969358"
+  },
+  {
+    "town": "Mehlbach",
+    "street": "Hauptstraße 5",
+    "display": "5, Hauptstraße, Mehlbach, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67735, Deutschland",
+    "lat": "49.5176485",
+    "lon": "7.7135875"
+  },
+  {
+    "town": "Mehlbach",
+    "street": "Talstraße 4",
+    "display": "4, Talstraße, Mehlbach, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67735, Deutschland",
+    "lat": "49.5183200",
+    "lon": "7.7136205"
+  },
+  {
+    "town": "Mehlbach",
+    "street": "Gartenstraße 8",
+    "display": "8, Gartenstraße, Mehlbach, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67735, Deutschland",
+    "lat": "49.5228607",
+    "lon": "7.7139903"
+  },
+  {
+    "town": "Schneckenhausen",
+    "street": "Hauptstraße 2",
+    "display": "Hauptstraße, Schneckenhausen, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67699, Deutschland",
+    "lat": "49.5386310",
+    "lon": "7.7444545"
+  },
+  {
+    "town": "Schneckenhausen",
+    "street": "Kirchstraße 4",
+    "display": "Kirchstraße, Schneckenhausen, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67699, Deutschland",
+    "lat": "49.5384489",
+    "lon": "7.7470875"
+  },
+  {
+    "town": "Schneckenhausen",
+    "street": "Bergstraße 6",
+    "display": "Bergstraße, Schneckenhausen, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67699, Deutschland",
+    "lat": "49.5355123",
+    "lon": "7.7458177"
+  },
+  {
+    "town": "Schneckenhausen",
+    "street": "Gartenstraße 9",
+    "display": "Gartenstraße, Schneckenhausen, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67699, Deutschland",
+    "lat": "49.5379509",
+    "lon": "7.7447952"
+  },
+  {
+    "town": "Olsbrücken",
+    "street": "Hauptstraße 3",
+    "display": "3, Hauptstraße, Olsbrücken, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67737, Deutschland",
+    "lat": "49.5346198",
+    "lon": "7.6608939"
+  },
+  {
+    "town": "Olsbrücken",
+    "street": "Bahnhofstraße 4",
+    "display": "4, Bahnhofstraße, Olsbrücken, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67737, Deutschland",
+    "lat": "49.5388699",
+    "lon": "7.6546384"
+  },
+  {
+    "town": "Niederkirchen",
+    "street": "Schulstraße 2",
+    "display": "2, Schulstraße, Niederkirchen, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67700, Deutschland",
+    "lat": "49.5805711",
+    "lon": "7.6975684"
+  },
+  {
+    "town": "Niederkirchen",
+    "street": "Kirchstraße 6",
+    "display": "Kirchstraße, Niederkirchen, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67700, Deutschland",
+    "lat": "49.5810500",
+    "lon": "7.6951473"
+  },
+  {
+    "town": "Niederkirchen",
+    "street": "Talstraße 4",
+    "display": "Wasgau, 4, Talstraße, Niederkirchen, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67700, Deutschland",
+    "lat": "49.5744335",
+    "lon": "7.6949196"
+  },
+  {
+    "town": "Niederkirchen",
+    "street": "Bergstraße 3",
+    "display": "3, Bergstraße, Heimkirchen, Niederkirchen, Otterbach-Otterberg, Landkreis Kaiserslautern, Rheinland-Pfalz, 67700, Deutschland",
+    "lat": "49.5745876",
+    "lon": "7.7142522"
+  }
+]

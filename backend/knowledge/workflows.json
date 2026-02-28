@@ -1,0 +1,499 @@
+{
+  "enabled": true,
+  "templates": [
+    {
+      "id": "standard-redmine-ticket",
+      "name": "🎫 Standard: Redmine Ticket",
+      "description": "Erstellt automatisch ein Redmine-Ticket mit Kategorie-Vorgaben",
+      "steps": [
+        {
+          "title": "Redmine Ticket erstellen",
+          "type": "REDMINE_TICKET",
+          "config": {
+            "projectMode": "ai",
+            "trackerMode": "ai",
+            "assigneeMode": "ai",
+            "waitForTargetStatus": false,
+            "targetStatusIds": [],
+            "targetStatusCheckIntervalSeconds": 60,
+            "aiPromptTemplate": "",
+            "aiPromptExtension": "",
+            "projectId": "auto",
+            "tracker": "auto",
+            "assigneeId": "",
+            "noAssignee": false,
+            "titleTemplate": "{category}: {address}",
+            "descriptionTemplate": "Kategorie: {category}\nAdresse: {address}\nMeldende Person: {citizenName}\nMeldung: {submissionId}",
+            "waitMaxSeconds": 0
+          },
+          "auto": false
+        }
+      ],
+      "executionMode": "MANUAL",
+      "autoTriggerOnEmailVerified": false,
+      "enabled": true,
+      "createdAt": "2026-02-16T12:03:10.440Z",
+      "updatedAt": "2026-02-16T12:03:10.440Z",
+      "runtime": {
+        "maxTransitionsPerExecution": 500,
+        "maxVisitsPerTask": 20,
+        "defaultStepTimeoutSeconds": 60,
+        "retryPolicy": {
+          "maxRetries": 0,
+          "backoffSeconds": 0
+        },
+        "sla": {
+          "targetMinutes": 1440,
+          "riskThresholdPercent": 80
+        }
+      }
+    },
+    {
+      "id": "template-1771323515934",
+      "name": "Strassenunterhaltung",
+      "description": "",
+      "steps": [
+        {
+          "title": "Knoten 1",
+          "type": "WAIT_STATUS_CHANGE",
+          "auto": true,
+          "config": {
+            "waitHours": 0,
+            "waitMinutes": 0,
+            "waitSeconds": 1,
+            "statusMode": "set",
+            "statusAfter": "in-progress",
+            "priorityMode": "keep",
+            "priorityAfter": "medium",
+            "assigneeMode": "keep",
+            "assigneeAfter": "",
+            "categoryMode": "keep",
+            "categoryAfter": "",
+            "descriptionMode": "keep",
+            "descriptionAfter": "",
+            "addressMode": "keep",
+            "addressAfter": "",
+            "postalCodeMode": "keep",
+            "postalCodeAfter": "",
+            "cityMode": "keep",
+            "cityAfter": "",
+            "latitudeMode": "keep",
+            "latitudeAfter": "",
+            "longitudeMode": "keep",
+            "longitudeAfter": "",
+            "nextTaskIds": []
+          }
+        },
+        {
+          "title": "Knoten 2",
+          "type": "REDMINE_TICKET",
+          "auto": true,
+          "config": {
+            "projectMode": "ai",
+            "trackerMode": "ai",
+            "assigneeMode": "ai",
+            "textMode": "ai",
+            "waitForTargetStatus": true,
+            "targetStatusIds": [
+              3,
+              9
+            ],
+            "targetStatusCheckIntervalSeconds": 60,
+            "aiPromptTemplate": "asignee ist bei orten Otterberg Sven Karsch und bei anderen Charlotte Frenger",
+            "aiPromptExtension": "",
+            "projectId": "auto",
+            "tracker": "auto",
+            "assigneeId": "",
+            "noAssignee": false,
+            "titleTemplate": "{category}: {address}",
+            "descriptionTemplate": "Ticket-ID: {ticketId}\nKategorie: {category}\nAdresse: {address}\nKoordinaten: {coordinates}\nMeldende Person: {citizenName} ({citizenEmail})\n\nBeschreibung:\n{description}",
+            "nextTaskIds": [],
+            "waitMaxSeconds": 0
+          }
+        },
+        {
+          "title": "Knoten 3",
+          "type": "WAIT_STATUS_CHANGE",
+          "auto": true,
+          "config": {
+            "waitHours": 0,
+            "waitMinutes": 0,
+            "waitSeconds": 0,
+            "statusMode": "set",
+            "statusAfter": "completed",
+            "priorityMode": "keep",
+            "priorityAfter": "medium",
+            "assigneeMode": "keep",
+            "assigneeAfter": "",
+            "categoryMode": "keep",
+            "categoryAfter": "",
+            "descriptionMode": "keep",
+            "descriptionAfter": "",
+            "addressMode": "keep",
+            "addressAfter": "",
+            "postalCodeMode": "keep",
+            "postalCodeAfter": "",
+            "cityMode": "keep",
+            "cityAfter": "",
+            "latitudeMode": "keep",
+            "latitudeAfter": "",
+            "longitudeMode": "keep",
+            "longitudeAfter": "",
+            "nextTaskIds": []
+          }
+        },
+        {
+          "title": "Knoten 4",
+          "type": "END",
+          "auto": true,
+          "config": {
+            "scope": "workflow",
+            "endScope": "workflow",
+            "nextTaskIds": []
+          }
+        }
+      ],
+      "executionMode": "AUTO",
+      "autoTriggerOnEmailVerified": true,
+      "enabled": true,
+      "runtime": {
+        "maxTransitionsPerExecution": 500,
+        "maxVisitsPerTask": 20,
+        "defaultStepTimeoutSeconds": 60,
+        "retryPolicy": {
+          "maxRetries": 0,
+          "backoffSeconds": 0
+        },
+        "sla": {
+          "targetMinutes": 1440,
+          "riskThresholdPercent": 80
+        }
+      },
+      "createdAt": "2026-02-17T10:18:35.934Z",
+      "updatedAt": "2026-02-17T10:20:49.706Z"
+    },
+    {
+      "id": "template-1771426799577",
+      "name": "Erweiterter Testworkflow",
+      "description": "Tests",
+      "steps": [
+        {
+          "title": "Status auf in Bearbeitung setzen",
+          "type": "WAIT_STATUS_CHANGE",
+          "auto": true,
+          "config": {
+            "waitHours": 0,
+            "waitMinutes": 0,
+            "waitSeconds": 1,
+            "statusMode": "set",
+            "statusAfter": "in-progress",
+            "priorityMode": "keep",
+            "priorityAfter": "medium",
+            "assigneeMode": "keep",
+            "assigneeAfter": "",
+            "categoryMode": "keep",
+            "categoryAfter": "",
+            "descriptionMode": "keep",
+            "descriptionAfter": "",
+            "addressMode": "keep",
+            "addressAfter": "",
+            "postalCodeMode": "keep",
+            "postalCodeAfter": "",
+            "cityMode": "keep",
+            "cityAfter": "",
+            "latitudeMode": "keep",
+            "latitudeAfter": "",
+            "longitudeMode": "keep",
+            "longitudeAfter": "",
+            "nextTaskIds": []
+          }
+        },
+        {
+          "title": "Erweiterte Datennachforderung",
+          "type": "ENHANCED_CATEGORIZATION",
+          "auto": true,
+          "config": {
+            "recipientType": "citizen",
+            "recipientEmail": "",
+            "recipientName": "",
+            "templateId": "workflow-data-request",
+            "subject": "Rückfragen für bessere Einordnung Ihrer Meldung",
+            "introText": "Bitte beantworten Sie ein paar kurze Rückfragen.",
+            "fields": [],
+            "questionPrompt": "",
+            "enableNeedCheck": true,
+            "needCheckPrompt": "",
+            "enableRecategorization": true,
+            "maxQuestionsPerCycle": 2,
+            "allowFollowUpCycles": true,
+            "maxFollowUpCycles": 2,
+            "parallelMode": true,
+            "timeoutHours": 72,
+            "variablePrefix": "",
+            "aliasPrefix": "var",
+            "createAlias": true,
+            "responseCommentVisibility": "internal",
+            "aiCommentVisibility": "internal",
+            "rejectNextTaskIds": [],
+            "timeoutMinutes": 0,
+            "nextTaskIds": [],
+            "rejectNextTaskId": ""
+          }
+        },
+        {
+          "title": "KI-gesteuerter Workflow-Wechsel",
+          "type": "REDMINE_TICKET",
+          "auto": true,
+          "config": {
+            "projectMode": "ai",
+            "trackerMode": "ai",
+            "assigneeMode": "ai",
+            "textMode": "ai",
+            "waitForTargetStatus": true,
+            "targetStatusIds": [
+              3,
+              9
+            ],
+            "targetStatusCheckIntervalSeconds": 60,
+            "aiPromptTemplate": "",
+            "aiPromptExtension": "",
+            "projectId": "auto",
+            "tracker": "auto",
+            "assigneeId": "",
+            "noAssignee": false,
+            "titleTemplate": "{category}: {address}",
+            "descriptionTemplate": "Ticket-ID: {ticketId}\nKategorie: {category}\nAdresse: {address}\nKoordinaten: {coordinates}\nMeldende Person: {citizenName} ({citizenEmail})\n\nBeschreibung:\n{description}",
+            "nextTaskIds": [],
+            "waitMaxSeconds": 0
+          }
+        },
+        {
+          "title": "Knoten 4",
+          "type": "EMAIL_CONFIRMATION",
+          "auto": true,
+          "config": {
+            "recipientType": "custom",
+            "recipientEmail": "d@tromu.de",
+            "recipientName": "Test",
+            "templateId": "workflow-confirmation",
+            "instructionText": "",
+            "instructionAiPrompt": "",
+            "timeoutHours": 48,
+            "rejectNextTaskIds": [],
+            "timeoutMinutes": 0,
+            "nextTaskIds": [],
+            "rejectNextTaskId": ""
+          }
+        },
+        {
+          "title": "Knoten 5",
+          "type": "WAIT_STATUS_CHANGE",
+          "auto": true,
+          "config": {
+            "waitHours": 0,
+            "waitMinutes": 0,
+            "waitSeconds": 1,
+            "statusMode": "set",
+            "statusAfter": "completed",
+            "priorityMode": "keep",
+            "priorityAfter": "medium",
+            "assigneeMode": "keep",
+            "assigneeAfter": "",
+            "categoryMode": "keep",
+            "categoryAfter": "",
+            "descriptionMode": "keep",
+            "descriptionAfter": "",
+            "addressMode": "keep",
+            "addressAfter": "",
+            "postalCodeMode": "keep",
+            "postalCodeAfter": "",
+            "cityMode": "keep",
+            "cityAfter": "",
+            "latitudeMode": "keep",
+            "latitudeAfter": "",
+            "longitudeMode": "keep",
+            "longitudeAfter": "",
+            "nextTaskIds": []
+          }
+        },
+        {
+          "title": "Knoten 6",
+          "type": "END",
+          "auto": true,
+          "config": {
+            "scope": "workflow",
+            "endScope": "workflow",
+            "nextTaskIds": []
+          }
+        }
+      ],
+      "executionMode": "AUTO",
+      "autoTriggerOnEmailVerified": true,
+      "enabled": true,
+      "runtime": {
+        "maxTransitionsPerExecution": 500,
+        "maxVisitsPerTask": 20,
+        "defaultStepTimeoutSeconds": 7200,
+        "retryPolicy": {
+          "maxRetries": 0,
+          "backoffSeconds": 0
+        },
+        "sla": {
+          "targetMinutes": 1440,
+          "riskThresholdPercent": 80
+        }
+      },
+      "createdAt": "2026-02-18T14:59:59.577Z",
+      "updatedAt": "2026-02-19T11:06:33.509Z"
+    },
+    {
+      "id": "standard-intake-workflow",
+      "name": "📥 Standard: Intake + DOI",
+      "description": "Engine-first Intake mit E-Mail Double Opt-In und Kategorisierungsschritt",
+      "steps": [
+        {
+          "title": "E-Mail Double Opt-In",
+          "type": "EMAIL_DOUBLE_OPT_IN",
+          "auto": true,
+          "config": {
+            "recipientType": "citizen",
+            "recipientEmail": "",
+            "recipientName": "",
+            "templateId": "validation-email",
+            "sendLegacySubmissionConfirmation": false,
+            "instructionText": "",
+            "instructionAiPrompt": "",
+            "timeoutHours": 48,
+            "rejectNextTaskIds": [
+              "task-2"
+            ],
+            "nextTaskId": "task-1",
+            "nextTaskIds": [
+              "task-1"
+            ],
+            "rejectNextTaskId": "task-2",
+            "timeoutMinutes": 0
+          }
+        },
+        {
+          "title": "Kategorisieren und Kategorie-Workflow starten",
+          "type": "CATEGORIZATION",
+          "auto": true,
+          "config": {
+            "startCategoryWorkflow": true,
+            "endCurrentWorkflow": true,
+            "fallbackTemplateId": "standard-redmine-ticket",
+            "allowSameTemplateSwitch": false,
+            "addAiComment": true,
+            "aiCommentVisibility": "internal",
+            "nextTaskIds": []
+          }
+        },
+        {
+          "title": "Intake abgelehnt oder Timeout",
+          "type": "END",
+          "auto": true,
+          "config": {
+            "scope": "workflow",
+            "nextTaskIds": [],
+            "endScope": "workflow"
+          }
+        }
+      ],
+      "executionMode": "AUTO",
+      "autoTriggerOnEmailVerified": false,
+      "enabled": true,
+      "runtime": {
+        "maxTransitionsPerExecution": 500,
+        "maxVisitsPerTask": 20,
+        "defaultStepTimeoutSeconds": 60,
+        "retryPolicy": {
+          "maxRetries": 0,
+          "backoffSeconds": 0
+        },
+        "sla": {
+          "targetMinutes": 1440,
+          "riskThresholdPercent": 80
+        }
+      },
+      "createdAt": "2026-02-18T20:35:10.886Z",
+      "updatedAt": "2026-02-19T12:16:22.759Z"
+    },
+    {
+      "id": "template-1771850316077",
+      "name": "Neuer Workflow",
+      "description": "",
+      "steps": [
+        {
+          "title": "Knoten 1",
+          "type": "FREE_AI_DATA_REQUEST",
+          "auto": true,
+          "config": {
+            "recipientType": "citizen",
+            "recipientEmail": "",
+            "recipientName": "",
+            "templateId": "workflow-data-request",
+            "subject": "Rückfragen zu Ihrer Meldung",
+            "introText": "Bitte beantworten Sie die folgenden Rückfragen für die weitere Bearbeitung.",
+            "fields": [],
+            "collectionObjective": "Erfrage gezielt alle Informationen, die für die fachliche Bearbeitung in diesem Workflow benötigt werden.",
+            "questionPrompt": "versuche den täter zu ermitteln",
+            "enableNeedCheck": true,
+            "needCheckPrompt": "",
+            "answerEvaluationPrompt": "",
+            "maxQuestionsPerCycle": 6,
+            "allowFollowUpCycles": false,
+            "maxFollowUpCycles": 2,
+            "parallelMode": true,
+            "timeoutHours": 72,
+            "variablePrefix": "",
+            "aliasPrefix": "var",
+            "createAlias": true,
+            "responseCommentVisibility": "internal",
+            "aiCommentVisibility": "internal",
+            "rejectNextTaskIds": [],
+            "enableRecategorization": false,
+            "timeoutMinutes": 0,
+            "nextTaskIds": [],
+            "rejectNextTaskId": ""
+          }
+        }
+      ],
+      "executionMode": "MANUAL",
+      "autoTriggerOnEmailVerified": false,
+      "enabled": true,
+      "runtime": {
+        "maxTransitionsPerExecution": 500,
+        "maxVisitsPerTask": 20,
+        "defaultStepTimeoutSeconds": 60,
+        "retryPolicy": {
+          "maxRetries": 0,
+          "backoffSeconds": 0
+        },
+        "sla": {
+          "targetMinutes": 1440,
+          "riskThresholdPercent": 80
+        }
+      },
+      "createdAt": "2026-02-23T12:38:36.077Z",
+      "updatedAt": "2026-02-23T12:38:36.077Z"
+    }
+  ],
+  "defaultExecutionMode": "MANUAL",
+  "autoTriggerOnEmailVerified": false,
+  "maxStepsPerWorkflow": 10,
+  "standardRedmineWorkflow": true,
+  "runtimeDefaults": {
+    "maxTransitionsPerExecution": 500,
+    "maxVisitsPerTask": 20,
+    "defaultStepTimeoutSeconds": 60,
+    "retryPolicy": {
+      "maxRetries": 0,
+      "backoffSeconds": 0
+    },
+    "sla": {
+      "targetMinutes": 1440,
+      "riskThresholdPercent": 80
+    }
+  }
+}

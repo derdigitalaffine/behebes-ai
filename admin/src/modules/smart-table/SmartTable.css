@@ -1,0 +1,401 @@
+.smart-table-root {
+  width: 100%;
+  background: var(--admin-surface);
+  border-color: var(--admin-border);
+  overflow: hidden;
+  border-radius: 14px;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  --smart-font-scale: 1;
+  --smart-grid-font-size: calc(0.82rem * var(--smart-font-scale));
+  --smart-grid-header-font-size: calc(0.72rem * var(--smart-font-scale));
+  --smart-tag-font-size: calc(0.62rem * var(--smart-font-scale));
+  --smart-tag-font-weight: 600;
+  --smart-tag-padding-y: 0.08rem;
+  --smart-tag-padding-x: 0.38rem;
+  --smart-tag-gap: 0.16rem;
+  --smart-ticket-id-font-size: calc(0.68rem * var(--smart-font-scale));
+  --smart-ticket-id-padding-y: 0.1rem;
+  --smart-ticket-id-padding-x: 0.36rem;
+}
+
+.smart-table-root.smart-table-mode-expanded {
+  --smart-tag-font-size: calc(0.66rem * var(--smart-font-scale));
+  --smart-tag-font-weight: 650;
+  --smart-tag-padding-y: 0.14rem;
+  --smart-tag-padding-x: 0.46rem;
+  --smart-tag-gap: 0.24rem;
+  --smart-ticket-id-font-size: calc(0.72rem * var(--smart-font-scale));
+  --smart-ticket-id-padding-y: 0.14rem;
+  --smart-ticket-id-padding-x: 0.42rem;
+}
+
+.smart-table-root.smart-table-text-sm {
+  --smart-font-scale: 0.9;
+}
+
+.smart-table-root.smart-table-text-md {
+  --smart-font-scale: 1;
+}
+
+.smart-table-root.smart-table-text-lg {
+  --smart-font-scale: 1.16;
+}
+
+.smart-table-grid-wrap {
+  width: 100%;
+  min-height: 420px;
+  overflow-x: auto;
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--admin-surface) 94%, #ffffff 6%) 0%, var(--admin-surface) 100%);
+}
+
+.smart-table-grid-wrap .MuiDataGrid-root {
+  min-height: 420px;
+}
+
+.smart-table-grid-wrap .MuiDataGrid-main::-webkit-scrollbar,
+.smart-table-grid-wrap .MuiDataGrid-virtualScroller::-webkit-scrollbar {
+  height: 10px;
+  width: 10px;
+}
+
+.smart-table-grid-wrap .MuiDataGrid-main::-webkit-scrollbar-thumb,
+.smart-table-grid-wrap .MuiDataGrid-virtualScroller::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--admin-border) 75%, var(--admin-text-muted) 25%);
+  border-radius: 999px;
+}
+
+.smart-table-root .status-pill,
+.smart-table-root .priority-pill,
+.smart-table-root .attachment-indicator,
+.smart-table-root .workflow-badge,
+.smart-table-root .workflow-ref-chip {
+  font-size: var(--smart-tag-font-size) !important;
+  font-weight: var(--smart-tag-font-weight) !important;
+  padding: var(--smart-tag-padding-y) var(--smart-tag-padding-x) !important;
+  gap: var(--smart-tag-gap) !important;
+  line-height: 1.2;
+}
+
+.smart-table-root .ticket-id {
+  font-size: var(--smart-ticket-id-font-size) !important;
+  padding: var(--smart-ticket-id-padding-y) var(--smart-ticket-id-padding-x) !important;
+  border-radius: 999px;
+}
+
+.smart-table-root.smart-table-mode-compact .workflow-title-chip {
+  max-width: 200px;
+}
+
+.smart-table-root .smart-table-multiline-text {
+  display: block;
+  max-width: 100%;
+}
+
+.smart-table-root .smart-table-toolbar-btn {
+  text-transform: none;
+  font-weight: 700;
+  border-radius: 10px;
+  min-height: 32px;
+  padding-inline: 0.78rem;
+  border: 1px solid color-mix(in srgb, var(--admin-primary) 34%, var(--admin-border) 66%);
+  color: var(--admin-primary);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--admin-surface) 86%, #ffffff 14%) 0%,
+    color-mix(in srgb, var(--admin-surface-muted) 92%, #ffffff 8%) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    0 5px 14px rgba(0, 45, 84, 0.08);
+  transition: transform 0.14s ease, box-shadow 0.16s ease, background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.smart-table-root .smart-table-toolbar-btn .MuiButton-startIcon {
+  color: inherit;
+}
+
+.smart-table-root .smart-table-toolbar-btn:hover {
+  border-color: color-mix(in srgb, var(--admin-primary) 78%, #ffffff 22%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--admin-surface-muted) 76%, #ffffff 24%) 0%,
+    color-mix(in srgb, var(--admin-surface-muted) 86%, #ffffff 14%) 100%
+  );
+  color: color-mix(in srgb, var(--admin-primary-dark) 90%, #000000 10%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.88),
+    0 8px 18px rgba(0, 45, 84, 0.14);
+}
+
+.smart-table-root .smart-table-toolbar-btn:active {
+  transform: translateY(1px);
+}
+
+.smart-table-root .smart-table-toolbar-btn.Mui-focusVisible {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--admin-surface) 82%, transparent 18%),
+    0 0 0 4px color-mix(in srgb, var(--admin-primary) 45%, transparent 55%);
+}
+
+.smart-table-root .smart-table-toolbar-btn.Mui-disabled {
+  opacity: 0.62;
+  color: color-mix(in srgb, var(--admin-text-muted) 80%, #ffffff 20%);
+  border-color: color-mix(in srgb, var(--admin-border) 70%, #ffffff 30%);
+  background: color-mix(in srgb, var(--admin-surface-muted) 90%, #ffffff 10%);
+  box-shadow: none;
+}
+
+.smart-table-root .smart-table-toolbar-btn.smart-table-toolbar-btn-primary {
+  border-color: color-mix(in srgb, var(--admin-primary-dark) 84%, #000000 16%);
+  color: #ffffff;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--admin-accent) 88%, #ffffff 12%) 0%,
+    var(--admin-primary) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    0 8px 18px rgba(0, 42, 77, 0.24);
+}
+
+.smart-table-root .smart-table-toolbar-btn.smart-table-toolbar-btn-primary:hover {
+  border-color: color-mix(in srgb, var(--admin-primary-dark) 95%, #000000 5%);
+  color: #ffffff;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--admin-accent) 75%, #ffffff 25%) 0%,
+    var(--admin-primary-dark) 100%
+  );
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    0 12px 24px rgba(0, 32, 63, 0.32);
+}
+
+.smart-table-root .smart-table-toolbar-toggle-group {
+  border: 1px solid color-mix(in srgb, var(--admin-primary) 32%, var(--admin-border) 68%);
+  border-radius: 10px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--admin-surface-muted) 90%, #ffffff 10%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.74);
+}
+
+.smart-table-root .smart-table-toolbar-toggle-group .smart-table-toolbar-toggle {
+  border: 0;
+  color: color-mix(in srgb, var(--admin-primary) 88%, #000000 12%);
+  font-weight: 700;
+}
+
+.smart-table-root .smart-table-toolbar-toggle-group .smart-table-toolbar-toggle:not(:first-of-type) {
+  border-left: 1px solid color-mix(in srgb, var(--admin-border) 80%, transparent 20%);
+}
+
+.smart-table-root .smart-table-toolbar-toggle-group .smart-table-toolbar-toggle:hover {
+  background: color-mix(in srgb, var(--admin-surface) 75%, var(--admin-surface-muted) 25%);
+}
+
+.smart-table-root .smart-table-toolbar-toggle-group .smart-table-toolbar-toggle.Mui-selected {
+  color: #ffffff;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--admin-accent) 80%, #ffffff 20%) 0%, var(--admin-primary) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16);
+}
+
+.smart-table-root .smart-table-toolbar-toggle-group .smart-table-toolbar-toggle.Mui-selected:hover {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--admin-accent) 72%, #ffffff 28%) 0%,
+    color-mix(in srgb, var(--admin-primary-dark) 92%, #000000 8%) 100%
+  );
+}
+
+.smart-table-root .smart-table-toolbar-chip {
+  font-weight: 700;
+  border-radius: 999px;
+  min-height: 24px;
+}
+
+.smart-table-root .smart-table-toolbar-chip.smart-table-toolbar-chip-muted {
+  color: color-mix(in srgb, var(--admin-primary-dark) 90%, #000000 10%);
+  border-color: color-mix(in srgb, var(--admin-primary) 28%, var(--admin-border) 72%);
+  background: color-mix(in srgb, var(--admin-surface) 80%, var(--admin-surface-muted) 20%);
+}
+
+.smart-table-root .smart-table-toolbar-chip.smart-table-toolbar-chip-live.MuiChip-colorSuccess {
+  color: #114d12;
+  background: #d9f6d9;
+  border: 1px solid #7cd17c;
+}
+
+.smart-table-root .smart-table-toolbar-chip.smart-table-toolbar-chip-live.MuiChip-colorWarning {
+  color: #714b00;
+  background: #ffefcc;
+  border: 1px solid #efc267;
+}
+
+.smart-table-root .smart-table-toolbar-chip.smart-table-toolbar-chip-live.MuiChip-colorDefault {
+  color: color-mix(in srgb, var(--admin-primary-dark) 78%, #000000 22%);
+  background: color-mix(in srgb, var(--admin-surface-muted) 88%, #ffffff 12%);
+  border: 1px solid color-mix(in srgb, var(--admin-border) 74%, var(--admin-primary) 26%);
+}
+
+.smart-table-root.smart-table-mode-compact .smart-table-multiline-text {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.smart-table-root.smart-table-mode-expanded .smart-table-multiline-text {
+  white-space: normal;
+  line-height: 1.4;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.smart-table-root.smart-table-mode-expanded .MuiDataGrid-cellContent {
+  overflow-wrap: anywhere;
+}
+
+.smart-table-root.smart-table-mode-expanded .workflow-state {
+  gap: 0.42rem;
+}
+
+.smart-table-root.smart-table-mode-expanded .workflow-meta-line {
+  margin-top: 0.05rem;
+  row-gap: 0.26rem;
+}
+
+.smart-table-root.smart-table-mode-expanded .workflow-ref-chip.workflow-title-chip {
+  max-width: 100%;
+  white-space: normal;
+  line-height: 1.32;
+}
+
+.smart-table-root .smart-table-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.28rem;
+  flex-wrap: nowrap;
+}
+
+.smart-table-root .smart-table-row-action-btn-wrap {
+  display: inline-flex;
+}
+
+.smart-table-root .smart-table-row-action-btn {
+  width: 1.95rem;
+  height: 1.95rem;
+  border-radius: 0.58rem;
+  border: 1px solid color-mix(in srgb, var(--admin-border) 72%, var(--admin-primary) 28%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--admin-surface) 84%, #ffffff 16%) 0%,
+    color-mix(in srgb, var(--admin-surface-muted) 90%, #ffffff 10%) 100%
+  );
+  color: color-mix(in srgb, var(--admin-primary-dark) 82%, #000000 18%);
+  transition: transform 0.14s ease, box-shadow 0.16s ease, border-color 0.2s ease, color 0.2s ease, background 0.2s ease;
+}
+
+.smart-table-root .smart-table-row-action-btn:hover {
+  transform: translateY(-1px);
+  border-color: color-mix(in srgb, var(--admin-primary) 70%, #ffffff 30%);
+  box-shadow: 0 6px 14px rgba(7, 20, 41, 0.14);
+}
+
+.smart-table-root .smart-table-row-action-btn:active {
+  transform: translateY(0);
+}
+
+.smart-table-root .smart-table-row-action-btn.Mui-focusVisible {
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--admin-surface) 82%, transparent 18%),
+    0 0 0 4px color-mix(in srgb, var(--admin-primary) 45%, transparent 55%);
+}
+
+.smart-table-root .smart-table-row-action-btn.Mui-disabled {
+  opacity: 0.52;
+  border-color: color-mix(in srgb, var(--admin-border) 84%, #ffffff 16%);
+  color: color-mix(in srgb, var(--admin-text-muted) 75%, #ffffff 25%);
+}
+
+.smart-table-root .smart-table-row-action-btn.smart-table-row-action-btn-primary {
+  border-color: color-mix(in srgb, var(--admin-primary-dark) 75%, #000000 25%);
+  color: #ffffff;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--admin-accent) 82%, #ffffff 18%) 0%,
+    var(--admin-primary) 100%
+  );
+}
+
+.smart-table-root .smart-table-row-action-btn.smart-table-row-action-btn-primary:hover {
+  border-color: color-mix(in srgb, var(--admin-primary-dark) 88%, #000000 12%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--admin-accent) 74%, #ffffff 26%) 0%,
+    var(--admin-primary-dark) 100%
+  );
+}
+
+.smart-table-root .smart-table-row-action-btn.smart-table-row-action-btn-danger {
+  border-color: color-mix(in srgb, var(--admin-danger) 78%, #000000 22%);
+  color: color-mix(in srgb, var(--admin-danger) 92%, #000000 8%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--admin-danger-bg) 76%, #ffffff 24%) 0%,
+    color-mix(in srgb, var(--admin-danger-bg) 96%, #ffffff 4%) 100%
+  );
+}
+
+.smart-table-root .smart-table-row-action-btn.smart-table-row-action-btn-danger:hover {
+  color: #ffffff;
+  border-color: color-mix(in srgb, var(--admin-danger) 88%, #000000 12%);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--admin-danger) 82%, #ffffff 18%) 0%,
+    color-mix(in srgb, var(--admin-danger) 94%, #000000 6%) 100%
+  );
+}
+
+.smart-table-root .smart-table-row-action-btn.smart-table-row-action-btn-warning {
+  border-color: color-mix(in srgb, #d27a00 72%, #000000 28%);
+  color: #8f5400;
+  background: linear-gradient(180deg, #fff5de 0%, #ffe8b8 100%);
+}
+
+.smart-table-root .smart-table-row-action-btn.smart-table-row-action-btn-warning:hover {
+  color: #6f3f00;
+  border-color: #b36600;
+  background: linear-gradient(180deg, #ffefcc 0%, #ffdba1 100%);
+}
+
+.smart-table-root .smart-table-row-action-btn.smart-table-row-action-btn-success {
+  border-color: color-mix(in srgb, #2e7d32 74%, #000000 26%);
+  color: #1f6b24;
+  background: linear-gradient(180deg, #e4f8e5 0%, #cdf0cf 100%);
+}
+
+.smart-table-root .smart-table-row-action-btn.smart-table-row-action-btn-success:hover {
+  color: #145d18;
+  border-color: #236a27;
+  background: linear-gradient(180deg, #d8f5da 0%, #b7eabc 100%);
+}
+
+.smart-table-root.smart-table-text-sm .smart-table-row-action-btn {
+  width: 1.8rem;
+  height: 1.8rem;
+}
+
+.smart-table-root.smart-table-text-lg .smart-table-row-action-btn {
+  width: 2.1rem;
+  height: 2.1rem;
+}
+
+@media (max-width: 768px) {
+  .smart-table-grid-wrap {
+    min-height: 360px;
+  }
+
+  .smart-table-grid-wrap .MuiDataGrid-root {
+    min-height: 360px;
+  }
+}

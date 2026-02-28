@@ -1,0 +1,162 @@
+@font-face {
+  font-family: 'Candara';
+  src: url('/fonts/candara.ttf') format('truetype');
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html,
+body,
+#root {
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+:root {
+  --brand-forest: #003762;
+  --brand-forest-dark: #001c31;
+  --brand-ocean: #00457c;
+  --brand-gold: #8ea8c2;
+  --brand-cream: #f1f6fb;
+  --brand-stone: #c8d7e5;
+  --brand-ink: #001c31;
+  --brand-muted: #49627a;
+  --brand-white: #ffffff;
+
+  --admin-primary: var(--brand-forest);
+  --admin-primary-dark: var(--brand-forest-dark);
+  --admin-accent: var(--brand-ocean);
+  --admin-surface: var(--brand-white);
+  --admin-surface-muted: #ecf3f9;
+  --admin-border: var(--brand-stone);
+  --admin-text: var(--brand-ink);
+  --admin-text-muted: var(--brand-muted);
+
+  --admin-info-bg: #dceaf6;
+  --admin-info-text: #003762;
+  --admin-success-bg: #e6f5e5;
+  --admin-success-text: #246f22;
+  --admin-warning-bg: #fff2d9;
+  --admin-warning-text: #8d6200;
+  --admin-danger-bg: #fde8e4;
+  --admin-danger-text: #9f3523;
+
+  --admin-info: #146eb4;
+  --admin-info-dark: var(--admin-primary);
+  --admin-success: #31932e;
+  --admin-success-dark: #257324;
+  --admin-warning: #ffae00;
+  --admin-warning-dark: #c98900;
+  --admin-danger: #ec5840;
+  --admin-danger-dark: #c64631;
+
+  --admin-radius-sm: 10px;
+  --admin-radius-md: 14px;
+  --admin-radius-lg: 18px;
+  --admin-shadow-sm: 0 8px 20px rgba(13, 44, 74, 0.06);
+  --admin-shadow-md: 0 14px 30px rgba(13, 44, 74, 0.08);
+
+  --font-body: 'Candara', 'Segoe UI', Tahoma, sans-serif;
+  --font-display: 'Candara', 'Segoe UI', Tahoma, sans-serif;
+}
+
+body {
+  font-family: var(--font-body);
+  background: var(--brand-cream);
+  color: var(--brand-ink);
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--font-display);
+}
+
+@layer components {
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 rounded-lg font-medium transition-all duration-200;
+    gap: 0.45rem;
+    border-radius: var(--admin-radius-sm);
+    min-height: 2.35rem;
+  }
+
+  .btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--admin-accent) 26%, transparent 74%);
+  }
+
+  .btn-primary {
+    @apply btn text-white hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed;
+    border: 1px solid color-mix(in srgb, var(--brand-forest-dark) 45%, var(--brand-forest) 55%);
+    background: linear-gradient(
+      140deg,
+      color-mix(in srgb, var(--brand-forest) 90%, #ffffff 10%) 0%,
+      color-mix(in srgb, var(--admin-accent) 66%, var(--brand-forest) 34%) 100%
+    );
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 10px 22px rgba(0, 55, 98, 0.24);
+  }
+
+  .btn-secondary {
+    @apply btn bg-white border disabled:opacity-50 disabled:cursor-not-allowed;
+    border-color: var(--brand-stone);
+    color: var(--brand-forest);
+    box-shadow: 0 5px 14px rgba(13, 44, 74, 0.06);
+  }
+
+  .btn-secondary:hover {
+    background: var(--admin-surface-muted);
+    transform: translateY(-1px);
+  }
+
+  .btn-danger {
+    @apply btn bg-rose-600 text-white hover:bg-rose-700 disabled:opacity-50 disabled:cursor-not-allowed;
+    border: 1px solid #be3a29;
+  }
+
+  .card {
+    @apply bg-white rounded-lg shadow-sm border;
+    border-radius: var(--admin-radius-md);
+    border-color: var(--brand-stone);
+    box-shadow: var(--admin-shadow-sm);
+  }
+
+  .input {
+    @apply w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:border-transparent transition-all;
+    border-radius: var(--admin-radius-sm);
+    background: #ffffff;
+    min-height: 2.35rem;
+  }
+
+  .input:focus {
+    border-color: var(--brand-forest);
+    box-shadow: 0 0 0 3px rgba(21, 54, 95, 0.2);
+  }
+
+  .badge {
+    @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+  }
+
+  .message-banner {
+    @apply rounded-lg border;
+    border-radius: var(--admin-radius-sm);
+    padding: 0.75rem 0.85rem;
+    border-color: color-mix(in srgb, var(--admin-border) 88%, white 12%);
+    box-shadow: 0 6px 14px rgba(13, 44, 74, 0.05);
+  }
+}

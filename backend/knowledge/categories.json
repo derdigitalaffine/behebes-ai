@@ -1,0 +1,1504 @@
+{
+  "version": "1.0.0",
+  "classifyPrompt": "# AI-Kategorisierungs-System\n\nDu bist ein KI-Kategorisierungs-System für eine Verwaltung.\nAnalysiere die folgende Bürgermeldung und kategorisiere sie strukturiert mit JSON-Antwort.\nNutze die Geodaten, insbesondere den Ort\n\n## Kategorisierungs-Regeln\n\n- Antworte NUR mit gültigem JSON\n- Benutze Kategorienamen exakt wie vorgegeben\n- Wähle Dringlichkeit basierend auf: Sicherheitsrisiken, Umfang, Anzahl betroffener Personen, Sichtbarkeit\n- Keine Spekulationen über Personen\n- Keine persönlichen Daten verarbeitet\n\n## Dringlichkeits-Kategorien\n\n- **low**: Routinemäßig, keine Eile\n- **medium**: Standard-Anfrage, normale Bearbeitung\n- **high**: Dringend, schnelle Bearbeitung erforderlich\n- **critical**: Notfall oder Sicherheitsrisiko, sofortige Maßnahme erforderlich\n\n## JSON-Response-Format\n\n```json\n{\n  \"kategorie\": \"Exakter Kategoriename\",\n  \"dringlichkeit\": \"low|medium|high|critical\",\n  \"reasoning\": \"Sachliche Begründung\"\n}\n```\n\n## Zusätzliche Fachregeln für Straßenbezug\n\n- Nutze OSM-/Nominatim-Hinweise aktiv (z. B. ref=B..., L..., K...).\n- Berücksichtige innerorts/außerorts aus Adress- und Siedlungshinweisen.\n- Kategorien zu Bundes-/Landes-/Kreisstraßen nur wählen, wenn Hinweise dafür plausibel vorliegen.",
+  "urgencies": [
+    {
+      "level": "low",
+      "label": "Niedrig",
+      "description": "Routinemäßige Anfragen, keine Eile",
+      "color": "#28a745",
+      "responseTime": "10 Tage"
+    },
+    {
+      "level": "medium",
+      "label": "Mittel",
+      "description": "Standard-Anfragen, normal bearbeiten",
+      "color": "#ffc107",
+      "responseTime": "5 Tage"
+    },
+    {
+      "level": "high",
+      "label": "Hoch",
+      "description": "Dringende Probleme, schnelle Bearbeitung erforderlich",
+      "color": "#fd7e14",
+      "responseTime": "2 Tage"
+    },
+    {
+      "level": "critical",
+      "label": "Kritisch",
+      "description": "Notfall oder Sicherheitsrisiko, sofortige Maßnahme erforderlich",
+      "color": "#dc3545",
+      "responseTime": "24 Stunden"
+    }
+  ],
+  "categories": [
+    {
+      "id": "schlagloecher",
+      "name": "Schlaglöcher & Straßenschäden",
+      "description": "Beschädigte Straßenoberflächen, Risse, Schlaglöcher",
+      "keywords": [
+        "schlagloch",
+        "riss",
+        "straße",
+        "asfalt",
+        "kopfsteinpflaster"
+      ],
+      "workflowTemplateId": "template-1771323515934"
+    },
+    {
+      "id": "abfall",
+      "name": "Abfall & Verschmutzung",
+      "description": "Illegale Müllablagerung, Verschmutzung öffentlicher Flächen",
+      "keywords": [
+        "abfall",
+        "müll",
+        "verschmutzung",
+        "müllablagerung",
+        "littering"
+      ]
+    },
+    {
+      "id": "wasser",
+      "name": "Wasserschäden & Kanalisation",
+      "description": "Überschwemmungen, Kanalprobleme, Wasserrohrbruch",
+      "keywords": [
+        "wasser",
+        "kanal",
+        "überschwemmung",
+        "rohrbruch",
+        "hochwasser"
+      ]
+    },
+    {
+      "id": "gruen",
+      "name": "Grünflächenunterhalt",
+      "description": "Baumprobleme, Grünflächenpflege, Heckenwerk",
+      "keywords": [
+        "baum",
+        "hecke",
+        "grün",
+        "rasen",
+        "ast"
+      ]
+    },
+    {
+      "id": "verkehr",
+      "name": "Verkehr & Verkehrssicherheit",
+      "description": "Verkehrszeichen, Ampeln, gefährliche Kreuzungen",
+      "keywords": [
+        "verkehr",
+        "ampel",
+        "schild",
+        "kreuzung",
+        "sicherheit"
+      ]
+    },
+    {
+      "id": "sonstiges",
+      "name": "Sonstiges",
+      "description": "Alle anderen Anliegen und Meldungen",
+      "keywords": []
+    },
+    {
+      "id": "1770822312114",
+      "name": "Wahlen",
+      "description": "alles mit wahlen\nvor allem abhanden gekomme benachrichtigungen oder stimmzettel",
+      "keywords": [
+        "absitmmung",
+        "piltikeraussuchen",
+        "stimmzettel",
+        ""
+      ]
+    },
+    {
+      "id": "1770880853179",
+      "name": "Kindergarten",
+      "description": "Alles was tagespflegeeinrichtungen für kinder betrifft",
+      "keywords": []
+    },
+    {
+      "id": "tier_fund",
+      "name": "Tierkadaverbeseitigung",
+      "description": "Fund von toten Tieren im öffentlichen Raum",
+      "externalRecipientEmail": "tierkadaver@beispiel.de",
+      "keywords": [
+        "tier",
+        "kadaver",
+        "tot",
+        "vogel",
+        "reh"
+      ]
+    },
+    {
+      "id": "umwelt_ext",
+      "name": "Umweltbehörde Weiterleitung",
+      "description": "Umweltprobleme zur Weiterleitung an Umweltbehörde",
+      "externalRecipientEmail": "umwelt@beispiel.de",
+      "keywords": [
+        "umwelt",
+        "emission",
+        "luft",
+        "boden",
+        "naturschutz"
+      ]
+    },
+    {
+      "id": "fire_safety",
+      "name": "Brandschutz",
+      "description": "Brandschutzprobleme zur Feuerwehr",
+      "externalRecipientEmail": "feuerwehr@beispiel.de",
+      "keywords": [
+        "brand",
+        "feuer",
+        "brandschutz",
+        "rauchen"
+      ]
+    },
+    {
+      "id": "1770820608666",
+      "name": "Strafverfolgung Polizei / Ordnungsamt",
+      "description": "Alles was akute gefahr für leib und leben ist. ausser dinge für feuerwehr",
+      "keywords": [],
+      "externalRecipientEmail": ""
+    },
+    {
+      "id": "1770821080605",
+      "name": "Erziehungsproblem mit Kind",
+      "description": "Alles was das Verhalten von Kindern betrifft.",
+      "keywords": [
+        "kind",
+        "unterhalt",
+        "eltern",
+        "problem",
+        "kindesmissbrauch",
+        "kindesmisshandlung",
+        ""
+      ],
+      "externalRecipientEmail": "Jugendamt@troester.nl"
+    },
+    {
+      "id": "1770821609777",
+      "name": "Strassenlaterne defekt (abita)",
+      "description": "Alles was die Strassenbeleuchtung betrifft, aber nur im Ort Otterberg",
+      "keywords": [],
+      "externalRecipientEmail": "sl@troester.nl"
+    },
+    {
+      "id": "1770821647254",
+      "name": "Strassenlaterne defekt (Pfalzwerke)",
+      "description": "Alles was die Strassenbeleuchtung betrifft, aber nur NICHT im Ort Otterberg, also in den anderen Orten",
+      "keywords": [],
+      "externalRecipientEmail": "swk@troester.nl"
+    },
+    {
+      "id": "1770822886855",
+      "name": "Feuerwehr",
+      "description": "alles was brandbekämpfung und technische hilfeleistung im sinne der feuerwehr betrifft und auch katastrophenschutzsachen. nur notfälle. nicht dringliches hier nicht.\nkleine mengen brennender unrat hier auch nicht erfassen. das ist eher müll.",
+      "keywords": [],
+      "externalRecipientEmail": ""
+    },
+    {
+      "id": "1770905273643",
+      "name": "Homepage",
+      "description": "Alles was unsere Homepage oder Webanwendungen betrifft. (Inhaltlich)",
+      "keywords": [],
+      "externalRecipientEmail": "vz@troester.nl",
+      "externalRecipientName": "Vorzimmer",
+      "workflowTemplateId": ""
+    },
+    {
+      "id": "1770905340516",
+      "name": "EDV",
+      "description": "Alles was unsere Homepage oder Webanwendungen betrifft. (technisch)",
+      "keywords": [],
+      "externalRecipientEmail": "edv@otterbach-otterberg.de",
+      "externalRecipientName": "EDV Obachberg",
+      "workflowTemplateId": "template-1770908509977"
+    },
+    {
+      "id": "testkategorie",
+      "name": "Testkategorie",
+      "description": "Hier soll alles rein, was irgendwie nach einem Systemtest aussieht.",
+      "keywords": [],
+      "externalRecipientEmail": "",
+      "externalRecipientName": "",
+      "workflowTemplateId": "template-testworkflow-parallel-eskalation"
+    },
+    {
+      "id": "angelegenheiten-besonderer-bedeutung-buergermeister",
+      "name": "Angelegenheiten besonderer Bedeutung (Bürgermeister)",
+      "description": "Vorgänge von außergewöhnlicher politischer Relevanz oder dringliche Krisenfälle zur direkten Vorlage beim Bürgermeister. Nur für Sachverhalte, die über die Zuständigkeit der Fachämter hinausgehen.",
+      "keywords": [
+        "Bürgermeister",
+        "Chef-Sache",
+        "Eskalation",
+        "Krisenmanagement",
+        "Politik"
+      ],
+      "externalRecipientEmail": "",
+      "externalRecipientName": "",
+      "workflowTemplateId": ""
+    },
+    {
+      "id": "bundesstrassen",
+      "name": "Bundesstraßen",
+      "description": "Meldungen zu Bundesstraßen (B-Nummern), innerorts und außerorts. Einschließlich Fahrbahn, Markierung, Beschilderung, Entwässerung, Seitenraum und Verkehrssicherheit. OSM-Hinweise wie ref=B... und Straßenklasse berücksichtigen.",
+      "keywords": [
+        "bundesstraße",
+        "bundesstrasse",
+        "bundesfernstraße",
+        "b-strasse",
+        "bstrasse",
+        "ref=b",
+        "fahrbahn",
+        "leitplanke",
+        "markierung",
+        "innerorts",
+        "außerorts",
+        "ausserorts"
+      ]
+    },
+    {
+      "id": "landesstrassen",
+      "name": "Landesstraßen",
+      "description": "Meldungen zu Landesstraßen (L-Nummern), innerorts und außerorts. Einschließlich Fahrbahnzustand, Verkehrszeichen, Bankett, Sichtbehinderungen und Entwässerung. OSM-Hinweise wie ref=L... aktiv nutzen.",
+      "keywords": [
+        "landesstraße",
+        "landesstrasse",
+        "l-strasse",
+        "lstrasse",
+        "ref=l",
+        "fahrbahnschaden",
+        "bankett",
+        "beschilderung",
+        "innerorts",
+        "außerorts",
+        "ausserorts"
+      ]
+    },
+    {
+      "id": "kreisstrassen_ausserorts",
+      "name": "Kreisstraßen (außerorts)",
+      "description": "Meldungen zu Kreisstraßen (K-Nummern) außerhalb geschlossener Ortslagen. Einschließlich Fahrbahn, Bankett, Graben, Beschilderung und Verkehrssicherheit. OSM-Hinweise wie ref=K... und Siedlungshinweis verwenden.",
+      "keywords": [
+        "kreisstraße",
+        "kreisstrasse",
+        "k-strasse",
+        "kstrasse",
+        "ref=k",
+        "außerorts",
+        "ausserorts",
+        "bankett",
+        "graben",
+        "verkehrssicherheit"
+      ]
+    },
+    {
+      "id": "andere_strassen_wege",
+      "name": "Andere Straßen und Wege",
+      "description": "Sonstige Straßen, Gemeindestraßen, Wirtschaftswege, Gehwege, Radwege und Fußwege, die nicht klar als Bundes-/Landes-/Kreisstraße klassifiziert sind.",
+      "keywords": [
+        "gemeindestraße",
+        "gemeindestrasse",
+        "wirtschaftsweg",
+        "gehweg",
+        "radweg",
+        "fußweg",
+        "fussweg",
+        "wegeschaden"
+      ]
+    },
+    {
+      "id": "nachbarschaftsstreitigkeiten",
+      "name": "Nachbarschaftsstreitigkeiten",
+      "description": "Konflikte zwischen Nachbarn im kommunalen Kontext (z. B. Grenzabstände, Überwuchs, wiederkehrende Störungen), soweit verwaltungsseitig bearbeitbar oder vermittelbar.",
+      "keywords": [
+        "nachbarschaft",
+        "streit",
+        "grenze",
+        "hecke",
+        "überwuchs",
+        "konflikt",
+        "nachbar"
+      ]
+    },
+    {
+      "id": "muellablagerung_oeffentlich",
+      "name": "Müllablagerung (öffentlicher Raum)",
+      "description": "Illegale oder wilde Müllablagerung auf Straßen, Wegen, Plätzen, Grünanlagen und sonstigen öffentlichen Flächen.",
+      "keywords": [
+        "müll",
+        "muell",
+        "wilde müllkippe",
+        "ablagerung",
+        "öffentlicher raum",
+        "illegal entsorgt"
+      ]
+    },
+    {
+      "id": "muellablagerung_privat",
+      "name": "Müllablagerung (privater Raum)",
+      "description": "Hinweise auf Müllablagerung auf Privatgrundstücken oder in privaten Bereichen mit möglichem ordnungs- oder abfallrechtlichem Bezug.",
+      "keywords": [
+        "müll privat",
+        "muell privat",
+        "privatgrundstück",
+        "grundstück",
+        "abfall auf privatfläche"
+      ]
+    },
+    {
+      "id": "wildtiere",
+      "name": "Wildtiere",
+      "description": "Meldungen zu Wildtieren im Siedlungs- oder Verkehrsraum (z. B. verletzte Wildtiere, Wildunfälle, auffälliges Verhalten).",
+      "keywords": [
+        "wildtier",
+        "reh",
+        "wildschwein",
+        "fuchs",
+        "dachs",
+        "verletztes tier",
+        "wildunfall"
+      ]
+    },
+    {
+      "id": "nutz_haustiere",
+      "name": "Nutz- und Haustiere",
+      "description": "Meldungen zu Nutztieren und Haustieren im öffentlichen Kontext (z. B. entlaufen, nicht ordnungsgemäß gehalten, Gefährdungslagen).",
+      "keywords": [
+        "haustier",
+        "nutztiere",
+        "hund",
+        "katze",
+        "pferd",
+        "rind",
+        "entlaufen",
+        "tierhaltung"
+      ]
+    },
+    {
+      "id": "graffiti_vandalismus",
+      "name": "Graffiti / Vandalismus",
+      "description": "Sachbeschädigungen im öffentlichen Raum durch Graffiti, mutwillige Zerstörung oder Beschädigung kommunaler Einrichtungen.",
+      "keywords": [
+        "graffiti",
+        "vandalismus",
+        "sachbeschädigung",
+        "beschmiert",
+        "zerstört",
+        "beschädigt"
+      ]
+    },
+    {
+      "id": "verschmutzung_oeffentlicher_raum",
+      "name": "Verschmutzung öffentlicher Raum",
+      "description": "Allgemeine Verunreinigungen im öffentlichen Raum ohne klaren Schwerpunkt auf Abfallablagerung (z. B. Ölspuren, starke Verunreinigungen, Scherbenlagen).",
+      "keywords": [
+        "verschmutzung",
+        "verunreinigung",
+        "ölspur",
+        "scherben",
+        "öffentlicher platz",
+        "schmutz"
+      ]
+    },
+    {
+      "id": "schaeden_wassernetz",
+      "name": "Schäden am Wassernetz",
+      "description": "Technische Schäden am Trinkwasser- oder Versorgungsnetz (z. B. Rohrbruch, Druckprobleme, Leckagen, Versorgungsausfälle).",
+      "keywords": [
+        "wasserleitung",
+        "rohrbruch",
+        "leck",
+        "trinkwasser",
+        "wassernetz",
+        "druckabfall"
+      ]
+    },
+    {
+      "id": "schaeden_kanalnetz",
+      "name": "Schäden am Kanalnetz",
+      "description": "Schäden und Störungen im Kanal- und Abwassernetz (z. B. Rückstau, Einbruch, defekte Schächte, Verstopfungen).",
+      "keywords": [
+        "kanal",
+        "abwasser",
+        "rückstau",
+        "rueckstau",
+        "kanaldeckel",
+        "schacht",
+        "verstopfung"
+      ]
+    },
+    {
+      "id": "forstangelegenheiten",
+      "name": "Forstangelegenheiten",
+      "description": "Belange in Wald und Forst (z. B. Verkehrssicherung im Wald, Wegezustand, abgestorbene Bäume, Holzlagerung mit Gefahrenbezug).",
+      "keywords": [
+        "forst",
+        "wald",
+        "waldweg",
+        "baum",
+        "verkehrssicherung",
+        "holz"
+      ]
+    },
+    {
+      "id": "wild_jagd",
+      "name": "Wild / Jagd",
+      "description": "Meldungen mit direktem Bezug zum Jagdwesen und Wildmanagement (z. B. jagdliche Einrichtungen, Konfliktlagen mit Jagdausübung, Wildschäden).",
+      "keywords": [
+        "jagd",
+        "jagdpacht",
+        "hochstand",
+        "wildschaden",
+        "revier",
+        "jagdausübung"
+      ]
+    },
+    {
+      "id": "ruhestoerung",
+      "name": "Ruhestörung",
+      "description": "Meldungen zu unzulässigen Lärmbeeinträchtigungen, insbesondere in Ruhezeiten und bei wiederkehrenden Störungen.",
+      "keywords": [
+        "ruhestörung",
+        "ruhestoerung",
+        "lärm",
+        "laerm",
+        "nachtlärm",
+        "ruhezeit"
+      ]
+    },
+    {
+      "id": "parkverstoesse",
+      "name": "Parkverstöße u.Ä.",
+      "description": "Verstöße im ruhenden Verkehr (z. B. Gehwegparken, Falschparken, Rettungswege blockiert, Sichtbehinderungen).",
+      "keywords": [
+        "falschparker",
+        "parkverstoß",
+        "parkverstoss",
+        "ruhender verkehr",
+        "gehwegparken",
+        "rettungsweg"
+      ]
+    },
+    {
+      "id": "bienen_imkerei",
+      "name": "Bienen / Imkerei",
+      "description": "Meldungen zu Bienenvölkern, Schwärmen und imkerbezogenen Sachverhalten mit kommunalem Handlungsbedarf.",
+      "keywords": [
+        "bienen",
+        "imkerei",
+        "bienenschwarm",
+        "bienenvolk",
+        "imker"
+      ]
+    },
+    {
+      "id": "eichenprozessionsspinner",
+      "name": "Eichenprozessionsspinner",
+      "description": "Sichtungen oder Befall durch Eichenprozessionsspinner mit Gesundheits- oder Verkehrssicherheitsrelevanz.",
+      "keywords": [
+        "eichenprozessionsspinner",
+        "eps",
+        "raupe",
+        "eiche",
+        "nest"
+      ]
+    },
+    {
+      "id": "raserei",
+      "name": "Raserei",
+      "description": "Hinweise auf überhöhte Geschwindigkeit, riskantes Fahrverhalten und wiederkehrende Geschwindigkeitsprobleme im Straßenraum.",
+      "keywords": [
+        "raserei",
+        "zu schnell",
+        "geschwindigkeit",
+        "rennen",
+        "tempo"
+      ]
+    },
+    {
+      "id": "allgemein_verbandsgemeinde",
+      "name": "allgemein (Zuständigkeit Verbandsgemeinde)",
+      "description": "Allgemeine Anliegen, die typischerweise in die Verwaltungszuständigkeit der Verbandsgemeinde fallen oder dort initial geprüft werden müssen.",
+      "keywords": [
+        "allgemein",
+        "verbandsgemeinde",
+        "verwaltung",
+        "zuständigkeit",
+        "zustaendigkeit"
+      ]
+    },
+    {
+      "id": "allgemein_ortsgemeinde",
+      "name": "allgemein (Zuständigkeit Ortsgemeinde)",
+      "description": "Allgemeine lokale Anliegen mit primär ortsbezogenem Bezug im Aufgabenbereich der Ortsgemeinde.",
+      "keywords": [
+        "allgemein",
+        "ortsgemeinde",
+        "örtlich",
+        "oertlich",
+        "gemeindeangelegenheit"
+      ]
+    },
+    {
+      "id": "allgemein_kreisverwaltung",
+      "name": "allgemein (Zuständigkeit Kreisverwaltung)",
+      "description": "Allgemeine Anliegen mit erkennbarer Zuständigkeit auf Ebene der Kreisverwaltung bzw. des Landkreises.",
+      "keywords": [
+        "allgemein",
+        "kreisverwaltung",
+        "landkreis",
+        "kreiszuständigkeit",
+        "kreisbehoerde"
+      ]
+    },
+    {
+      "id": "oeffentliche_beleuchtung_allgemein",
+      "name": "Öffentliche Beleuchtung (allgemein)",
+      "description": "Defekte oder unzureichende öffentliche Beleuchtung außerhalb spezieller Betreiber-Sonderkategorien.",
+      "keywords": [
+        "beleuchtung",
+        "laterne",
+        "straßenlaterne",
+        "dunkel",
+        "ausfall"
+      ]
+    },
+    {
+      "id": "spielplaetze_freizeitanlagen",
+      "name": "Spielplätze und Freizeitanlagen",
+      "description": "Sicherheitsmängel, Beschädigungen oder Pflegeprobleme auf Spielplätzen und kommunalen Freizeitanlagen.",
+      "keywords": [
+        "spielplatz",
+        "klettergerüst",
+        "rutsche",
+        "freizeitanlage",
+        "sicherheitsmangel"
+      ]
+    },
+    {
+      "id": "oepnv_haltestellen_barrierefreiheit",
+      "name": "ÖPNV-Haltestellen / Barrierefreiheit",
+      "description": "Meldungen zu Haltestellenzustand, Zugänglichkeit, taktilen Elementen und barrierefreier Erreichbarkeit.",
+      "keywords": [
+        "haltestelle",
+        "öpnv",
+        "oepnv",
+        "barrierefrei",
+        "bordstein",
+        "fahrgast"
+      ]
+    },
+    {
+      "id": "hochwasser_starkregen_vorsorge",
+      "name": "Hochwasser- und Starkregenvorsorge",
+      "description": "Hinweise auf Gefahrenlagen und Defizite in Vorsorge, Ableitung und Schutz gegen Starkregen/Hochwasser.",
+      "keywords": [
+        "hochwasser",
+        "starkregen",
+        "überflutung",
+        "ueberflutung",
+        "rückhalte",
+        "rueckhalte"
+      ]
+    },
+    {
+      "id": "gewaesserunterhaltung",
+      "name": "Gewässerunterhaltung",
+      "description": "Unterhaltung von Bachläufen, Gräben und sonstigen Gewässern mit kommunalem Zuständigkeitsbezug.",
+      "keywords": [
+        "gewässer",
+        "gewaesser",
+        "bach",
+        "graben",
+        "ufer",
+        "unterhaltung"
+      ]
+    },
+    {
+      "id": "friedhofsangelegenheiten",
+      "name": "Friedhofsangelegenheiten",
+      "description": "Meldungen zu Zustand, Sicherheit, Sauberkeit und Infrastruktur auf kommunalen Friedhöfen.",
+      "keywords": [
+        "friedhof",
+        "grab",
+        "trauerhalle",
+        "wege",
+        "friedhofsmauer"
+      ]
+    }
+  ],
+  "assignments": [
+    {
+      "id": "assign_schlagloecher",
+      "condition": "category:schlagloecher",
+      "assignedTo": "Abteilung Straßenunterhalt",
+      "department": "Straßenunterhalt"
+    },
+    {
+      "id": "assign_wasser",
+      "condition": "contains:wasser OR category:wasser",
+      "assignedTo": "Abteilung Wasserwirtschaft",
+      "department": "Wasserwirtschaft"
+    },
+    {
+      "id": "assign_abfall",
+      "condition": "category:abfall",
+      "assignedTo": "Abteilung Reinigung",
+      "department": "Reinigung"
+    }
+  ],
+  "redmine": {
+    "enabled": true,
+    "baseUrl": "https://redmine.vgo-o.de",
+    "apiKey": "139346b9850c8ce7fd9f947e9a3a0a91ea406777",
+    "projects": [
+      {
+        "id": 11,
+        "name": "Bauhof",
+        "identifier": "bauhof",
+        "enabled": false
+      },
+      {
+        "id": 23,
+        "name": "Arbeiten für das Sozialamt",
+        "identifier": "arbeiten-fuer-das-sozialamt",
+        "enabled": false
+      },
+      {
+        "id": 26,
+        "name": "Arbeiten für die Bauabteilung",
+        "identifier": "arbeiten-fuer-die-bauabteilung",
+        "enabled": false
+      },
+      {
+        "id": 24,
+        "name": "Arbeiten für die Liegenschaftsabteilung",
+        "identifier": "arbeiten-fuer-die-liegenschaftsabteilung",
+        "enabled": false
+      },
+      {
+        "id": 27,
+        "name": "Arbeiten für die Zentralabteilung",
+        "identifier": "arbeiten-fuer-die-zentralabteilung",
+        "enabled": false
+      },
+      {
+        "id": 43,
+        "name": "Arbeiten für Ortsgemeinden",
+        "identifier": "arbeiten-fuer-ortsgemeinden",
+        "enabled": false
+      },
+      {
+        "id": 88,
+        "name": "Ortsgemeinde Otterbach",
+        "identifier": "ortsgemeinde-otterbach",
+        "enabled": false
+      },
+      {
+        "id": 42,
+        "name": "Stadt Otterberg",
+        "identifier": "auftraege-der-stadt-otterberg",
+        "enabled": false
+      },
+      {
+        "id": 39,
+        "name": "Arbeiten für Werksabteilung",
+        "identifier": "arbeiten-fuer-werksabteilung",
+        "enabled": false
+      },
+      {
+        "id": 25,
+        "name": "Aufträge vom Ordnungsamt",
+        "identifier": "auftraege-vom-ordnungsamt",
+        "enabled": false
+      },
+      {
+        "id": 22,
+        "name": "Bestattungen",
+        "identifier": "bestattungen",
+        "enabled": false
+      },
+      {
+        "id": 69,
+        "name": "Friedhofwesen - Sonstiges",
+        "identifier": "friedhofwesen-sonstiges",
+        "enabled": false
+      },
+      {
+        "id": 13,
+        "name": "Grundschule Katzweiler ",
+        "identifier": "grundschule-katzweiler",
+        "enabled": false
+      },
+      {
+        "id": 14,
+        "name": "Grundschule Mehlbach",
+        "identifier": "grundschule-mehlbach",
+        "enabled": false
+      },
+      {
+        "id": 16,
+        "name": "Grundschule Niederkirchen ",
+        "identifier": "grundschule-niederkirchen",
+        "enabled": false
+      },
+      {
+        "id": 15,
+        "name": "Grundschule Olsbrücken ",
+        "identifier": "grundschule-olsbruecken",
+        "enabled": false
+      },
+      {
+        "id": 12,
+        "name": "Grundschule Otterbach",
+        "identifier": "grundschule-otterbach",
+        "enabled": false
+      },
+      {
+        "id": 18,
+        "name": "Grundschule Otterberg ",
+        "identifier": "grundschule-otterberg",
+        "enabled": false
+      },
+      {
+        "id": 17,
+        "name": "Grundschule Schallodenbach ",
+        "identifier": "grundschule-schallodenbach",
+        "enabled": false
+      },
+      {
+        "id": 77,
+        "name": "Kindertagesstätten",
+        "identifier": "kindertagesstaetten-it",
+        "enabled": false
+      },
+      {
+        "id": 82,
+        "name": "KiTa Hirschhorn",
+        "identifier": "kita-hirschhorn-pfalz",
+        "enabled": false
+      },
+      {
+        "id": 78,
+        "name": "KiTa Katzweiler",
+        "identifier": "kita-katzweiler-it",
+        "enabled": false
+      },
+      {
+        "id": 83,
+        "name": "KiTa Mehlbach",
+        "identifier": "kita-mehlbach",
+        "enabled": false
+      },
+      {
+        "id": 84,
+        "name": "KiTa Niederkirchen",
+        "identifier": "kita-niederkirchen",
+        "enabled": false
+      },
+      {
+        "id": 81,
+        "name": "KiTa Olsbrücken",
+        "identifier": "kita-zweckverband-olsbruecken",
+        "enabled": false
+      },
+      {
+        "id": 80,
+        "name": "KiTa Otterbach",
+        "identifier": "kita-otterbach",
+        "enabled": false
+      },
+      {
+        "id": 89,
+        "name": "KiTa Otterberg",
+        "identifier": "kita-otterberg",
+        "enabled": false
+      },
+      {
+        "id": 90,
+        "name": "Schulen",
+        "identifier": "vg_schulen",
+        "enabled": false
+      },
+      {
+        "id": 20,
+        "name": "Verwaltungsgebäude Otterbach",
+        "identifier": "verwaltungsgebaeude-otterbach",
+        "enabled": false
+      },
+      {
+        "id": 21,
+        "name": "Verwaltungsgebäude Otterberg",
+        "identifier": "verwaltungsgebaeude-otterberg",
+        "enabled": false
+      },
+      {
+        "id": 47,
+        "name": "Bauvorhaben",
+        "identifier": "bauvorhaben",
+        "enabled": false
+      },
+      {
+        "id": 48,
+        "name": "Abt. II",
+        "identifier": "bv_abt-ii",
+        "enabled": false
+      },
+      {
+        "id": 45,
+        "name": "Dienstreisen",
+        "identifier": "dienstreisen",
+        "enabled": false
+      },
+      {
+        "id": 46,
+        "name": "mit Übernachtung",
+        "identifier": "dienstreise-mit-uebernachtung",
+        "enabled": false
+      },
+      {
+        "id": 71,
+        "name": "Feuerwehr",
+        "identifier": "feuerwehr",
+        "enabled": false
+      },
+      {
+        "id": 72,
+        "name": "VG Funk- und Elektrowerkstatt",
+        "identifier": "vg-funk-und-elektrowertkstatt",
+        "enabled": false
+      },
+      {
+        "id": 41,
+        "name": "Integrierte Gesamtschule Otterberg",
+        "identifier": "integrierte-gesamtschule-otterberg",
+        "enabled": false
+      },
+      {
+        "id": 10,
+        "name": "IT",
+        "identifier": "let-s-do-it",
+        "enabled": false
+      },
+      {
+        "id": 87,
+        "name": "IGS-IT",
+        "identifier": "igs-it",
+        "enabled": false
+      },
+      {
+        "id": 92,
+        "name": "intern",
+        "identifier": "intern",
+        "enabled": false
+      },
+      {
+        "id": 79,
+        "name": "KiTA Otterbach kommunal",
+        "identifier": "kita",
+        "enabled": false
+      },
+      {
+        "id": 33,
+        "name": "Schulen",
+        "identifier": "schulen_it",
+        "enabled": false
+      },
+      {
+        "id": 34,
+        "name": "Grundschule Katzweiler",
+        "identifier": "grundschule-katzweiler_it",
+        "enabled": false
+      },
+      {
+        "id": 35,
+        "name": "Grundschule Mehlbach",
+        "identifier": "grundschule-mehlbach_it",
+        "enabled": false
+      },
+      {
+        "id": 36,
+        "name": "Grundschule Niederkirchen",
+        "identifier": "grundschule-niederkirchen_it",
+        "enabled": false
+      },
+      {
+        "id": 37,
+        "name": "Grundschule Olsbrücken",
+        "identifier": "grundschule-olsbruecken_it",
+        "enabled": false
+      },
+      {
+        "id": 38,
+        "name": "Grundschule Otterbach",
+        "identifier": "grundschule-otterbach_it",
+        "enabled": false
+      },
+      {
+        "id": 52,
+        "name": "NEUE STRUKTUR",
+        "identifier": "neue-struktur",
+        "enabled": false
+      },
+      {
+        "id": 93,
+        "name": "behebes",
+        "identifier": "behebes",
+        "enabled": true
+      },
+      {
+        "id": 102,
+        "name": "behebes - Frankelbach",
+        "identifier": "behebes-frankelbach",
+        "enabled": false
+      },
+      {
+        "id": 97,
+        "name": "behebes - Heiligenmoschel",
+        "identifier": "behebes-heiligenmoschel",
+        "enabled": false
+      },
+      {
+        "id": 104,
+        "name": "behebes - Hirschhorn",
+        "identifier": "behebes-hirschhorn",
+        "enabled": false
+      },
+      {
+        "id": 105,
+        "name": "behebes - Katzweiler",
+        "identifier": "behebes-katzweiler",
+        "enabled": false
+      },
+      {
+        "id": 100,
+        "name": "behebes - Mehlbach",
+        "identifier": "behebes-mehlbach",
+        "enabled": false
+      },
+      {
+        "id": 99,
+        "name": "behebes - Niederkirchen",
+        "identifier": "behebes-niederkirchen",
+        "enabled": false
+      },
+      {
+        "id": 101,
+        "name": "behebes - Olsbrücken",
+        "identifier": "behebes-olsbruecken",
+        "enabled": false
+      },
+      {
+        "id": 95,
+        "name": "behebes - Otterbach",
+        "identifier": "behebes-otterbach",
+        "enabled": false
+      },
+      {
+        "id": 94,
+        "name": "behebes - Otterberg",
+        "identifier": "behebes-otterberg",
+        "enabled": false
+      },
+      {
+        "id": 98,
+        "name": "behebes - Schallodenbach",
+        "identifier": "behebes-schallodenbach",
+        "enabled": false
+      },
+      {
+        "id": 96,
+        "name": "behebes - Schneckenhausen",
+        "identifier": "behebes-schneckenhausen",
+        "enabled": false
+      },
+      {
+        "id": 103,
+        "name": "behebes - Sulzbachtal",
+        "identifier": "behebes-sulzbachtal",
+        "enabled": false
+      },
+      {
+        "id": 54,
+        "name": "Ortsgemeinden",
+        "identifier": "ortsgemeinden",
+        "enabled": false
+      },
+      {
+        "id": 55,
+        "name": "Frankelbach",
+        "identifier": "frankelbach",
+        "enabled": false
+      },
+      {
+        "id": 56,
+        "name": "Heiligenmoschel",
+        "identifier": "heiligenmoschel",
+        "enabled": false
+      },
+      {
+        "id": 57,
+        "name": "Hirschhorn",
+        "identifier": "hirschhorn",
+        "enabled": false
+      },
+      {
+        "id": 58,
+        "name": "Katzweiler",
+        "identifier": "ogkatzweiler",
+        "enabled": false
+      },
+      {
+        "id": 67,
+        "name": "Ortsgemeindeintern",
+        "identifier": "ortsgemeindeintern-katzweiler",
+        "enabled": false
+      },
+      {
+        "id": 59,
+        "name": "Mehlbach",
+        "identifier": "mehlbach",
+        "enabled": false
+      },
+      {
+        "id": 60,
+        "name": "Niederkirchen",
+        "identifier": "niederkirchen",
+        "enabled": false
+      },
+      {
+        "id": 61,
+        "name": "Olsbrücken",
+        "identifier": "olsbruecken",
+        "enabled": false
+      },
+      {
+        "id": 62,
+        "name": "Otterbach",
+        "identifier": "otterbach",
+        "enabled": false
+      },
+      {
+        "id": 86,
+        "name": "Bürgerportal",
+        "identifier": "buergerportal",
+        "enabled": false
+      },
+      {
+        "id": 63,
+        "name": "Otterberg",
+        "identifier": "otterberg",
+        "enabled": false
+      },
+      {
+        "id": 64,
+        "name": "Schallodenbach",
+        "identifier": "schallodenbach",
+        "enabled": false
+      },
+      {
+        "id": 65,
+        "name": "Sulzbachtal",
+        "identifier": "sulzbachtal",
+        "enabled": false
+      },
+      {
+        "id": 53,
+        "name": "Verbandsgemeinde",
+        "identifier": "verbandsgemeinde",
+        "enabled": false
+      },
+      {
+        "id": 31,
+        "name": "Ordnungsamt",
+        "identifier": "ordnungsamt",
+        "enabled": false
+      },
+      {
+        "id": 32,
+        "name": "allg. Vollzugsdienst",
+        "identifier": "test_vollzugsdienst",
+        "enabled": false
+      },
+      {
+        "id": 50,
+        "name": "Sachgebiet Soziales",
+        "identifier": "sachgebiet-soziales",
+        "enabled": false
+      },
+      {
+        "id": 44,
+        "name": "ruhender Verkehr",
+        "identifier": "ruhender-verkehr",
+        "enabled": false
+      },
+      {
+        "id": 66,
+        "name": "Schädlingsbekämpfung",
+        "identifier": "schaedlingsbekaempfung",
+        "enabled": false
+      },
+      {
+        "id": 74,
+        "name": "Schulen",
+        "identifier": "alleschulen",
+        "enabled": false
+      },
+      {
+        "id": 91,
+        "name": "Grundschule Katzweiler",
+        "identifier": "grundschule-katzweiler2",
+        "enabled": false
+      },
+      {
+        "id": 19,
+        "name": "test",
+        "identifier": "test",
+        "enabled": false
+      },
+      {
+        "id": 85,
+        "name": "TWO AöR (Schwimmbad und Energiegewinnung) ",
+        "identifier": "two-aoer-schwimmbad-und-energiegewinnung",
+        "enabled": false
+      }
+    ],
+    "assignableUsers": [],
+    "trackers": [
+      {
+        "id": 7,
+        "name": "Hausmeistertätigkeiten"
+      },
+      {
+        "id": 8,
+        "name": "EDV/IT"
+      },
+      {
+        "id": 9,
+        "name": "Hardwaredefekt"
+      },
+      {
+        "id": 10,
+        "name": "Update"
+      },
+      {
+        "id": 11,
+        "name": "Auftrag an Bauhof"
+      },
+      {
+        "id": 12,
+        "name": "Vollzugsdienst"
+      },
+      {
+        "id": 13,
+        "name": "Softwareinstallation"
+      },
+      {
+        "id": 14,
+        "name": "Dienstreise"
+      },
+      {
+        "id": 15,
+        "name": "Bauausführung"
+      },
+      {
+        "id": 16,
+        "name": "allg. Auftrag"
+      },
+      {
+        "id": 17,
+        "name": "Beschaffungsprozeß"
+      },
+      {
+        "id": 18,
+        "name": "Feuerwehr-Standardtracker"
+      },
+      {
+        "id": 19,
+        "name": "DME-Programmierauftrag"
+      },
+      {
+        "id": 20,
+        "name": "Bürgeranliegen Schadensmelder"
+      },
+      {
+        "id": 21,
+        "name": "Gebäudeunterhaltung"
+      },
+      {
+        "id": 22,
+        "name": "Unterhaltung Außenanlage"
+      },
+      {
+        "id": 23,
+        "name": "Betriebsausstattung"
+      }
+    ],
+    "roles": [
+      {
+        "id": 3,
+        "name": "Bauhofmanager"
+      },
+      {
+        "id": 4,
+        "name": "Schulleiter"
+      },
+      {
+        "id": 7,
+        "name": "Schulhausmeister"
+      },
+      {
+        "id": 8,
+        "name": "Bürgermeister"
+      },
+      {
+        "id": 9,
+        "name": "Verwaltung"
+      },
+      {
+        "id": 10,
+        "name": "Büroleiter"
+      },
+      {
+        "id": 11,
+        "name": "Administrator"
+      },
+      {
+        "id": 12,
+        "name": "IT"
+      },
+      {
+        "id": 13,
+        "name": "Vorarbeiter"
+      },
+      {
+        "id": 14,
+        "name": "Bauhof_readonly"
+      },
+      {
+        "id": 15,
+        "name": "Bauhof_MA"
+      },
+      {
+        "id": 16,
+        "name": "Sachbearbeiter Ordnungsamt"
+      },
+      {
+        "id": 17,
+        "name": "Abteilungsleiter"
+      },
+      {
+        "id": 18,
+        "name": "Schulsekräterin"
+      },
+      {
+        "id": 19,
+        "name": "Mitarbeiter"
+      },
+      {
+        "id": 20,
+        "name": "Auftragnehmer"
+      },
+      {
+        "id": 21,
+        "name": "Verwaltung_G"
+      },
+      {
+        "id": 22,
+        "name": "Feuerwehr-Elektrogerätedienst"
+      },
+      {
+        "id": 23,
+        "name": "Projektleiter"
+      },
+      {
+        "id": 24,
+        "name": "Feuerwehr-Gerätedienst"
+      },
+      {
+        "id": 25,
+        "name": "Ortsbürgermeister"
+      },
+      {
+        "id": 26,
+        "name": "KITA-Leitung"
+      },
+      {
+        "id": 28,
+        "name": "Stadtbürgermeister"
+      },
+      {
+        "id": 29,
+        "name": "Beigeordneter"
+      }
+    ],
+    "groups": [
+      {
+        "id": 54,
+        "name": "Bauabteilung"
+      },
+      {
+        "id": 50,
+        "name": "Bauhofmitarbeiter"
+      },
+      {
+        "id": 83,
+        "name": "Bürgermeister"
+      },
+      {
+        "id": 81,
+        "name": "Büroleitung"
+      },
+      {
+        "id": 183,
+        "name": "DigiTaF"
+      },
+      {
+        "id": 168,
+        "name": "DigiTaF - Abt II"
+      },
+      {
+        "id": 165,
+        "name": "DigiTaF - Abt V"
+      },
+      {
+        "id": 166,
+        "name": "DigiTaF - Büroleiter"
+      },
+      {
+        "id": 171,
+        "name": "DigiTaF - extern"
+      },
+      {
+        "id": 167,
+        "name": "DigiTaF - Ortsbürgermeister"
+      },
+      {
+        "id": 170,
+        "name": "DigiTaF - Schiedsamt"
+      },
+      {
+        "id": 146,
+        "name": "Digitalbeauftrage GS Katzweiler"
+      },
+      {
+        "id": 145,
+        "name": "Digitalbeauftragte IGS"
+      },
+      {
+        "id": 53,
+        "name": "Disponenten Bauhof"
+      },
+      {
+        "id": 8,
+        "name": "EDV"
+      },
+      {
+        "id": 119,
+        "name": "Feuerwehr-Elektrogerätewarte"
+      },
+      {
+        "id": 115,
+        "name": "Feuerwehr-Gerätewarte"
+      },
+      {
+        "id": 118,
+        "name": "Feuerwehr-Wehrleitung"
+      },
+      {
+        "id": 75,
+        "name": "Grundschul-EDV"
+      },
+      {
+        "id": 70,
+        "name": "IGS Schulhausmeister"
+      },
+      {
+        "id": 192,
+        "name": "Leitung Bauabteilung"
+      },
+      {
+        "id": 89,
+        "name": "Leitung Ordnungsamt"
+      },
+      {
+        "id": 55,
+        "name": "Liegenschaftsabteilung"
+      },
+      {
+        "id": 80,
+        "name": "Mitarbeiter Verwaltung"
+      },
+      {
+        "id": 52,
+        "name": "Ordnungsamt"
+      },
+      {
+        "id": 92,
+        "name": "Ortsbürgermeister"
+      },
+      {
+        "id": 139,
+        "name": "Ortsgemeinde Otterbach"
+      },
+      {
+        "id": 51,
+        "name": "Schulhausmeister"
+      },
+      {
+        "id": 88,
+        "name": "Schulverwaltung"
+      },
+      {
+        "id": 78,
+        "name": "Vollzugsdienst"
+      },
+      {
+        "id": 57,
+        "name": "Vorarbeiter"
+      }
+    ],
+    "lastSync": "2026-02-12T10:29:28.432Z"
+  },
+  "escalation": [
+    {
+      "id": "escalate_critical",
+      "priority": "critical",
+      "condition": null,
+      "escalateTo": "Geschäftsführung",
+      "notifyEmailTemplate": "critical_issue"
+    },
+    {
+      "id": "escalate_high_delay",
+      "priority": "high",
+      "condition": "delay_days:>7",
+      "escalateTo": "Abteilungsleiter",
+      "notifyEmailTemplate": "delayed_ticket"
+    }
+  ],
+  "prompts": [
+    {
+      "version": "1.0.0",
+      "systemPrompt": "Du bist ein KI-gestützter Ticket-Manager für die Verbandsgemeinde Otterbach Otterberg. Deine Aufgabe ist es, Bürgermeldungen zu analysieren und automatisch in das richtige Ticketing-System zu kategorisieren.\n\nVORLAUFIG: Die Bürgerdaten (Email, Bild, Name) sind von dir GETRENNT und werden von deinen Tools nicht verarbeitet. Du erhältst nur den anonymisierten Beschreibungstext.\n\nDeine Aufgaben:\n1. Analysiere die Meldung und erkenne die Kategorie (Schlagloch, Abfall, Wasser, etc.)\n2. Bestimme die Priorität (low, medium, high, critical)\n3. Finde die zuständige Abteilung mithilfe der Assignments-Regeln\n4. Erstelle ein Ticket in RedMine mit allen relevanten Informationen\n5. Sende eine Bestätigungsemail an den Bürger (ohne persönliche Daten preiszugeben)\n6. Speichere deine Entscheidung im Log für späteres Feedback und Lernen\n\nNutze deine verfügbaren Tools: curl für RedMine, send_email für Benachrichtigungen, create_ticket für Datenbank.\n\nWICHTIG: Bei Unsicherheit → log_decision mit lower confidence, damit Admin das Feedback geben kann.",
+      "createdAt": "2026-02-10T00:00:00Z",
+      "createdBy": "system",
+      "active": true
+    }
+  ],
+  "rules": [
+    {
+      "id": "rule_multiple_attachments",
+      "name": "Mehrere Bilder vorhanden",
+      "condition": "attachment_count:>1",
+      "action": "increase_priority"
+    },
+    {
+      "id": "rule_urgent_keywords",
+      "name": "Dringende Keywords erkannt",
+      "condition": "contains:DRINGEND OR contains:NOTFALL OR contains:GEFAHR",
+      "action": "force_critical_priority"
+    }
+  ]
+}

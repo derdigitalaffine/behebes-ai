@@ -1,0 +1,31 @@
+{
+  "name": "behebes-ai",
+  "version": "1.0.0",
+  "description": "behebes.AI - Intelligentes Bürgermeldungs-System für Verbandsgemeinde Otterbach-Otterberg",
+  "author": "D. Tröster, Verbandgemeinde Otterbach-Otterberg",
+  "license": "Apache-2.0",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend",
+    "admin",
+    "ops"
+  ],
+  "scripts": {
+    "install-all": "npm install && npm --workspace=backend install && npm --workspace=frontend install && npm --workspace=admin install && npm --workspace=ops install",
+    "dev": "npm run dev --workspaces",
+    "dev:backend": "npm run dev --workspace=backend",
+    "dev:frontend": "npm run dev --workspace=frontend",
+    "dev:admin": "npm run dev --workspace=admin",
+    "dev:ops": "npm run dev --workspace=ops",
+    "build": "npm run build --workspaces",
+    "test": "npm test --workspaces",
+    "playthrough:loadtest": "node ./scripts/playthrough-loadtest.mjs",
+    "playthrough:extra30": "node ./scripts/playthrough-extra30.mjs",
+    "fix:backend-url": "bash ./scripts/update-backend-url.sh",
+    "lint": "npm run lint --workspaces"
+  },
+  "devDependencies": {
+    "playwright": "^1.58.2"
+  }
+}

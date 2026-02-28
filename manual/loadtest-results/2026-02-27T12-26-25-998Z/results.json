@@ -1,0 +1,67 @@
+{
+  "startedAt": "2026-02-27T12:26:25.998Z",
+  "finishedAt": "2026-02-27T12:26:28.574Z",
+  "baseUrl": "https://www.behebes.de",
+  "citizenCount": 10,
+  "total": 1,
+  "ok": 1,
+  "failed": 0,
+  "citizens": [
+    {
+      "name": "Anna Schmitt",
+      "email": "anna.schmitt@troester.nl"
+    },
+    {
+      "name": "Ben Weber",
+      "email": "ben.weber@troester.nl"
+    },
+    {
+      "name": "Clara Hoffmann",
+      "email": "clara.hoffmann@troester.nl"
+    },
+    {
+      "name": "David Krueger",
+      "email": "david.krueger@troester.nl"
+    },
+    {
+      "name": "Emma Becker",
+      "email": "emma.becker@troester.nl"
+    },
+    {
+      "name": "Felix Neumann",
+      "email": "felix.neumann@troester.nl"
+    },
+    {
+      "name": "Greta Wagner",
+      "email": "greta.wagner@troester.nl"
+    },
+    {
+      "name": "Hannes Keller",
+      "email": "hannes.keller@troester.nl"
+    },
+    {
+      "name": "Iris Voigt",
+      "email": "iris.voigt@troester.nl"
+    },
+    {
+      "name": "Jonas Barth",
+      "email": "jonas.barth@troester.nl"
+    }
+  ],
+  "results": [
+    {
+      "ok": true,
+      "citizenName": "Emma Becker",
+      "citizenEmail": "emma.becker@troester.nl",
+      "severity": "ernst",
+      "address": "Hauptstrasse 18, Schneckenhausen",
+      "title": "Ast blockiert Gehweg",
+      "imagesAttached": [
+        "free-05.jpg"
+      ],
+      "ticketText": "Ticket-ID: 6f65c6b4-eb2d-430e-ae6b-5f1f16ae13b3",
+      "ticketId": "6f65c6b4-eb2d-430e-ae6b-5f1f16ae13b3",
+      "validationCopy": "Bitte bestätigen Sie Ihre E-Mail, um die Meldung abzuschließen."
+    }
+  ]
+}

@@ -1,0 +1,49 @@
+:root {
+  color-scheme: light;
+  --ops-surface-border: #d8e2f0;
+  --ops-text-quiet: #64748b;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  margin: 0;
+  padding: 0;
+  min-height: 100%;
+  height: 100%;
+}
+
+body {
+  color: #0f172a;
+}
+
+body.ops-no-scroll,
+body.ops-no-scroll #root {
+  overflow: hidden;
+}
+
+body.ops-no-scroll {
+  overscroll-behavior: none;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.ops-page-shell {
+  display: grid;
+  gap: 16px;
+}
+
+.ops-page-muted {
+  color: var(--ops-text-quiet);
+}
+
+.ops-soft-divider {
+  border-top: 1px solid var(--ops-surface-border);
+}

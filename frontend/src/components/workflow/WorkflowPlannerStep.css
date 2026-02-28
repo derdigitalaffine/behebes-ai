@@ -1,0 +1,254 @@
+.planner-step {
+  margin-top: 1rem;
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1rem;
+}
+
+.planner-toggle {
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border: 2px dashed #7dd3fc;
+  border-radius: 8px;
+  font-weight: 600;
+  color: #0369a1;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: all 0.2s;
+}
+
+.planner-toggle:hover {
+  background: linear-gradient(135deg, #e0f2fe 0%, #cffafe 100%);
+  border-color: #06b6d4;
+}
+
+.planner-form {
+  margin-top: 1rem;
+  padding: 1.5rem;
+  background: #f8fafc;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  animation: slideDown 0.2s ease-out;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.form-group {
+  margin-bottom: 1.25rem;
+}
+
+.form-label {
+  display: block;
+  font-weight: 600;
+  color: #001c31;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.form-input,
+.form-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  font-family: inherit;
+  font-size: 0.95rem;
+  transition: border-color 0.2s;
+}
+
+.form-input:focus,
+.form-textarea:focus {
+  outline: none;
+  border-color: #001c31;
+  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.1);
+}
+
+/* Type Selector */
+.type-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.type-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.type-option:hover {
+  border-color: #cbd5e1;
+  background-color: #f8fafc;
+}
+
+.type-option input[type="radio"] {
+  cursor: pointer;
+}
+
+.type-option span {
+  font-weight: 500;
+  color: #001c31;
+}
+
+.type-option input[type="radio"]:checked + span {
+  color: #0369a1;
+  font-weight: 600;
+}
+
+/* Config Section */
+.config-section {
+  background: white;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.config-section h4 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #001c31;
+  font-size: 0.95rem;
+}
+
+/* Email Input Group */
+.email-input-group {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.email-add-btn {
+  padding: 0.75rem 1rem;
+  background: #001c31;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: background 0.2s;
+}
+
+.email-add-btn:hover {
+  background: #1e293b;
+}
+
+/* Email List */
+.email-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.email-tag {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: #dbeafe;
+  color: #0c4a6e;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+
+.email-remove {
+  background: none;
+  border: none;
+  color: #0c4a6e;
+  cursor: pointer;
+  font-size: 1.2rem;
+  padding: 0;
+  line-height: 1;
+}
+
+.email-remove:hover {
+  color: #7c2d12;
+}
+
+/* Checkbox */
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-weight: 500;
+  color: #001c31;
+}
+
+.checkbox-label input[type="checkbox"] {
+  cursor: pointer;
+  width: 18px;
+  height: 18px;
+}
+
+/* Planner Actions */
+.planner-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  justify-content: flex-end;
+}
+
+.planner-cancel-btn {
+  padding: 0.75rem 1.5rem;
+  background: white;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #001c31;
+  transition: all 0.2s;
+}
+
+.planner-cancel-btn:hover {
+  background: #f8fafc;
+  border-color: #64748b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .planner-form {
+    padding: 1rem;
+  }
+
+  .planner-actions {
+    flex-direction: column-reverse;
+    gap: 0.75rem;
+  }
+
+  .planner-cancel-btn,
+  .planner-actions button {
+    width: 100%;
+  }
+
+  .email-input-group {
+    flex-direction: column;
+  }
+
+  .email-add-btn {
+    width: 100%;
+  }
+
+  .type-selector {
+    gap: 0.5rem;
+  }
+
+  .type-option {
+    padding: 0.5rem;
+  }
+}

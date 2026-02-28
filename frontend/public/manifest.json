@@ -1,0 +1,67 @@
+{
+  "name": "behebes.AI - Meldungsformular",
+  "short_name": "behebes.AI",
+  "description": "PWA für Bürgermeldungen - behebes.AI der Verbandsgemeinde Otterbach-Otterberg",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "launch_handler": {
+    "client_mode": "focus-existing"
+  },
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],
+  "lang": "de",
+  "dir": "ltr",
+  "background_color": "#f2f4f7",
+  "theme_color": "#1b447a",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/pwa-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/pwa-192-maskable.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/pwa-512-maskable.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "categories": ["productivity"],
+  "screenshots": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 540 720'><rect fill='%23f2f4f7' width='540' height='720'/><rect fill='%2315365f' width='540' height='120'/><text y='80' x='20' font-size='40' fill='white' font-weight='bold'>Meldungsformular</text></svg>",
+      "sizes": "540x720",
+      "type": "image/svg+xml"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Neue Meldung",
+      "short_name": "Meldung",
+      "description": "Schnell eine neue Bürgermeldung erstellen",
+      "url": "/",
+      "icons": [
+        {
+          "src": "/pwa-96.png",
+          "sizes": "96x96",
+          "type": "image/png"
+        }
+      ]
+    }
+  ]
+}

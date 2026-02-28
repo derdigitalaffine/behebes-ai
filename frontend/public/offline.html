@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>behebes.AI · Offline</title>
+    <style>
+      @font-face {
+        font-family: 'Candara';
+        src: url('/fonts/candara.ttf') format('truetype');
+        font-style: normal;
+        font-weight: 400;
+        font-display: swap;
+      }
+      :root {
+        color-scheme: light;
+        --bg: #f8fafc;
+        --card: #ffffff;
+        --text: #0f172a;
+        --muted: #475569;
+        --accent: #1d4ed8;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at 20% 10%, rgba(29, 78, 216, 0.1), transparent 40%), var(--bg);
+        color: var(--text);
+        font-family: 'Candara', 'Segoe UI', Tahoma, sans-serif;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 1rem;
+      }
+      .card {
+        width: min(560px, 100%);
+        background: var(--card);
+        border: 1px solid #dbeafe;
+        border-left: 6px solid var(--accent);
+        border-radius: 14px;
+        padding: 1.25rem 1.2rem;
+        box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+      }
+      h1 {
+        margin: 0 0 0.5rem 0;
+        font-size: 1.35rem;
+      }
+      p {
+        margin: 0.35rem 0;
+        line-height: 1.45;
+        color: var(--muted);
+      }
+      button {
+        margin-top: 1rem;
+        border: none;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #fff;
+        font-weight: 700;
+        padding: 0.58rem 0.9rem;
+        cursor: pointer;
+      }
+    </style>
+  </head>
+  <body>
+    <main class="card">
+      <h1>Der Dienst ist aktuell offline</h1>
+      <p>Es besteht momentan keine stabile Verbindung zum Server.</p>
+      <p>Bitte prüfen Sie Ihre Internetverbindung und laden Sie die Seite anschließend neu.</p>
+      <button type="button" onclick="window.location.reload()">Erneut versuchen</button>
+    </main>
+  </body>
+</html>

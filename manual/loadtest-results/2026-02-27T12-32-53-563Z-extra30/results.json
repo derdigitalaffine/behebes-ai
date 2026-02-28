@@ -1,0 +1,389 @@
+{
+  "startedAt": "2026-02-27T12:32:53.563Z",
+  "finishedAt": "2026-02-27T12:34:05.279Z",
+  "baseUrl": "https://www.behebes.de",
+  "total": 30,
+  "ok": 30,
+  "failed": 0,
+  "sourceAddressFile": "/home/vm/behebes.ai/manual/loadtest-assets/validated-addresses-otterbach-otterberg.json",
+  "results": [
+    {
+      "ok": true,
+      "citizenName": "Anna Schmitt",
+      "citizenEmail": "anna.schmitt@troester.nl",
+      "severity": "ernst",
+      "title": "Tiefe Fahrbahnkante nach Aufbruch",
+      "address": "Hauptstraße 12, Otterberg",
+      "imagesAttached": [
+        "free-01.jpg",
+        "free-02.jpg"
+      ],
+      "ticketText": "Ticket-ID: b25998e7-898f-4ebf-b700-3d037477c720",
+      "ticketId": "b25998e7-898f-4ebf-b700-3d037477c720"
+    },
+    {
+      "ok": true,
+      "citizenName": "Ben Weber",
+      "citizenEmail": "ben.weber@troester.nl",
+      "severity": "ernst",
+      "title": "Laternenausfall im Strassenabschnitt",
+      "address": "Kirchstraße 8, Otterberg",
+      "imagesAttached": [
+        "free-02.jpg"
+      ],
+      "ticketText": "Ticket-ID: 7233b864-3015-4dcf-8883-2a30b26e603d",
+      "ticketId": "7233b864-3015-4dcf-8883-2a30b26e603d"
+    },
+    {
+      "ok": true,
+      "citizenName": "Clara Hoffmann",
+      "citizenEmail": "clara.hoffmann@troester.nl",
+      "severity": "ernst",
+      "title": "Gefaehrliche Absackung am Schacht",
+      "address": "Lauterstraße 3, Otterberg",
+      "imagesAttached": [
+        "free-03.jpg"
+      ],
+      "ticketText": "Ticket-ID: 7e92ef04-afe7-480b-acd7-d69b9621f2c4",
+      "ticketId": "7e92ef04-afe7-480b-acd7-d69b9621f2c4"
+    },
+    {
+      "ok": true,
+      "citizenName": "David Krueger",
+      "citizenEmail": "david.krueger@troester.nl",
+      "severity": "banal",
+      "title": "Verwilderter Randstreifen",
+      "address": "Konrad-Adenauer-Straße 5, Otterberg",
+      "imagesAttached": [
+        "free-04.jpg"
+      ],
+      "ticketText": "Ticket-ID: b24059ad-4113-4882-8641-2eac30da3ea1",
+      "ticketId": "b24059ad-4113-4882-8641-2eac30da3ea1"
+    },
+    {
+      "ok": true,
+      "citizenName": "Emma Becker",
+      "citizenEmail": "emma.becker@troester.nl",
+      "severity": "banal",
+      "title": "Verschmutztes Strassenschild",
+      "address": "Schulstraße 4, Otterberg",
+      "imagesAttached": [],
+      "ticketText": "Ticket-ID: ad9542fd-1ebc-41c8-9981-b4538a3aa0dc",
+      "ticketId": "ad9542fd-1ebc-41c8-9981-b4538a3aa0dc"
+    },
+    {
+      "ok": true,
+      "citizenName": "Felix Neumann",
+      "citizenEmail": "felix.neumann@troester.nl",
+      "severity": "ernst",
+      "title": "Sichtbehinderung durch defektes Schild",
+      "address": "Ringstraße 6, Otterberg",
+      "imagesAttached": [
+        "free-06.jpg"
+      ],
+      "ticketText": "Ticket-ID: 89ae57bf-e2b4-4857-a331-ebed0eddd496",
+      "ticketId": "89ae57bf-e2b4-4857-a331-ebed0eddd496"
+    },
+    {
+      "ok": true,
+      "citizenName": "Greta Wagner",
+      "citizenEmail": "greta.wagner@troester.nl",
+      "severity": "ernst",
+      "title": "Tiefe Fahrbahnkante nach Aufbruch",
+      "address": "Mühlstraße 9, Otterberg",
+      "imagesAttached": [
+        "free-07.jpg"
+      ],
+      "ticketText": "Ticket-ID: 11e28afa-a8f9-4c86-99b4-cce4bd630ddc",
+      "ticketId": "11e28afa-a8f9-4c86-99b4-cce4bd630ddc"
+    },
+    {
+      "ok": true,
+      "citizenName": "Hannes Keller",
+      "citizenEmail": "hannes.keller@troester.nl",
+      "severity": "ernst",
+      "title": "Laternenausfall im Strassenabschnitt",
+      "address": "Brunnenstraße 7, Otterberg",
+      "imagesAttached": [
+        "free-08.jpg"
+      ],
+      "ticketText": "Ticket-ID: 414ce1b4-3e2e-4dd7-86a3-4b3f6e5981a9",
+      "ticketId": "414ce1b4-3e2e-4dd7-86a3-4b3f6e5981a9"
+    },
+    {
+      "ok": true,
+      "citizenName": "Iris Voigt",
+      "citizenEmail": "iris.voigt@troester.nl",
+      "severity": "banal",
+      "title": "Banklatte locker",
+      "address": "Bergstraße 11, Otterberg",
+      "imagesAttached": [],
+      "ticketText": "Ticket-ID: 93d64448-b0c8-44c1-b17b-c1772ab02ca5",
+      "ticketId": "93d64448-b0c8-44c1-b17b-c1772ab02ca5"
+    },
+    {
+      "ok": true,
+      "citizenName": "Jonas Barth",
+      "citizenEmail": "jonas.barth@troester.nl",
+      "severity": "banal",
+      "title": "Verwilderter Randstreifen",
+      "address": "Hauptstraße 14, Otterbach",
+      "imagesAttached": [
+        "free-02.jpg"
+      ],
+      "ticketText": "Ticket-ID: 8c39a913-8e52-46f8-ae15-7ae3f72a56f7",
+      "ticketId": "8c39a913-8e52-46f8-ae15-7ae3f72a56f7"
+    },
+    {
+      "ok": true,
+      "citizenName": "Anna Schmitt",
+      "citizenEmail": "anna.schmitt@troester.nl",
+      "severity": "ernst",
+      "title": "Wasseraustritt aus Hydrant",
+      "address": "Lauterstraße 2, Otterbach",
+      "imagesAttached": [
+        "free-03.jpg"
+      ],
+      "ticketText": "Ticket-ID: 209f6c01-ecc0-47f0-b14a-611927817779",
+      "ticketId": "209f6c01-ecc0-47f0-b14a-611927817779"
+    },
+    {
+      "ok": true,
+      "citizenName": "Ben Weber",
+      "citizenEmail": "ben.weber@troester.nl",
+      "severity": "ernst",
+      "title": "Sichtbehinderung durch defektes Schild",
+      "address": "Bahnhofstraße 6, Otterbach",
+      "imagesAttached": [
+        "free-04.jpg"
+      ],
+      "ticketText": "Ticket-ID: cd0ecaa0-6aae-4162-9c08-142df336427d",
+      "ticketId": "cd0ecaa0-6aae-4162-9c08-142df336427d"
+    },
+    {
+      "ok": true,
+      "citizenName": "Clara Hoffmann",
+      "citizenEmail": "clara.hoffmann@troester.nl",
+      "severity": "ernst",
+      "title": "Tiefe Fahrbahnkante nach Aufbruch",
+      "address": "Ringstraße 4, Otterbach",
+      "imagesAttached": [
+        "free-05.jpg",
+        "free-06.jpg"
+      ],
+      "ticketText": "Ticket-ID: 74218ead-f9b8-4743-afb5-54ad14e0110c",
+      "ticketId": "74218ead-f9b8-4743-afb5-54ad14e0110c"
+    },
+    {
+      "ok": true,
+      "citizenName": "David Krueger",
+      "citizenEmail": "david.krueger@troester.nl",
+      "severity": "banal",
+      "title": "Graffiti an Haltestelle",
+      "address": "Kirchstraße 9, Otterbach",
+      "imagesAttached": [],
+      "ticketText": "Ticket-ID: ab7af463-246b-47c0-bd88-791e4b497e2e",
+      "ticketId": "ab7af463-246b-47c0-bd88-791e4b497e2e"
+    },
+    {
+      "ok": true,
+      "citizenName": "Emma Becker",
+      "citizenEmail": "emma.becker@troester.nl",
+      "severity": "banal",
+      "title": "Banklatte locker",
+      "address": "Schulstraße 1, Otterbach",
+      "imagesAttached": [],
+      "ticketText": "Ticket-ID: cbe50ae6-00c2-40ba-b89e-df6bcfaba4d6",
+      "ticketId": "cbe50ae6-00c2-40ba-b89e-df6bcfaba4d6"
+    },
+    {
+      "ok": true,
+      "citizenName": "Felix Neumann",
+      "citizenEmail": "felix.neumann@troester.nl",
+      "severity": "ernst",
+      "title": "Astbruch blockiert Gehweg",
+      "address": "Mühlstraße 5, Otterbach",
+      "imagesAttached": [
+        "free-08.jpg"
+      ],
+      "ticketText": "Ticket-ID: 073b80b2-c9f2-4341-95f6-6404855ada42",
+      "ticketId": "073b80b2-c9f2-4341-95f6-6404855ada42"
+    },
+    {
+      "ok": true,
+      "citizenName": "Greta Wagner",
+      "citizenEmail": "greta.wagner@troester.nl",
+      "severity": "ernst",
+      "title": "Wasseraustritt aus Hydrant",
+      "address": "Brunnenstraße 3, Otterbach",
+      "imagesAttached": [
+        "free-01.jpg",
+        "free-02.jpg"
+      ],
+      "ticketText": "Ticket-ID: 5fc0a0f1-7054-4b74-ac9b-d5a64da0ed6f",
+      "ticketId": "5fc0a0f1-7054-4b74-ac9b-d5a64da0ed6f"
+    },
+    {
+      "ok": true,
+      "citizenName": "Hannes Keller",
+      "citizenEmail": "hannes.keller@troester.nl",
+      "severity": "ernst",
+      "title": "Sichtbehinderung durch defektes Schild",
+      "address": "Bergstraße 8, Otterbach",
+      "imagesAttached": [
+        "free-02.jpg"
+      ],
+      "ticketText": "Ticket-ID: cf676201-076f-40b7-8a6e-5bf865d9bc16",
+      "ticketId": "cf676201-076f-40b7-8a6e-5bf865d9bc16"
+    },
+    {
+      "ok": true,
+      "citizenName": "Iris Voigt",
+      "citizenEmail": "iris.voigt@troester.nl",
+      "severity": "banal",
+      "title": "Muelleimer ueberfuellt",
+      "address": "Talstraße 10, Otterbach",
+      "imagesAttached": [
+        "free-03.jpg"
+      ],
+      "ticketText": "Ticket-ID: ea35f8c8-03c0-4257-a0f1-60560c1e6459",
+      "ticketId": "ea35f8c8-03c0-4257-a0f1-60560c1e6459"
+    },
+    {
+      "ok": true,
+      "citizenName": "Jonas Barth",
+      "citizenEmail": "jonas.barth@troester.nl",
+      "severity": "banal",
+      "title": "Graffiti an Haltestelle",
+      "address": "Hauptstraße 1, Katzweiler",
+      "imagesAttached": [],
+      "ticketText": "Ticket-ID: 9c7b0d8e-ce96-4c2c-b805-f821f58409e0",
+      "ticketId": "9c7b0d8e-ce96-4c2c-b805-f821f58409e0"
+    },
+    {
+      "ok": true,
+      "citizenName": "Anna Schmitt",
+      "citizenEmail": "anna.schmitt@troester.nl",
+      "severity": "ernst",
+      "title": "Gefaehrliche Absackung am Schacht",
+      "address": "Lauterstraße 12, Katzweiler",
+      "imagesAttached": [
+        "free-05.jpg",
+        "free-06.jpg"
+      ],
+      "ticketText": "Ticket-ID: 59f35cb7-17d8-4ee4-9972-299fe8bc041c",
+      "ticketId": "59f35cb7-17d8-4ee4-9972-299fe8bc041c"
+    },
+    {
+      "ok": true,
+      "citizenName": "Ben Weber",
+      "citizenEmail": "ben.weber@troester.nl",
+      "severity": "ernst",
+      "title": "Astbruch blockiert Gehweg",
+      "address": "Talstraße 2, Katzweiler",
+      "imagesAttached": [
+        "free-06.jpg"
+      ],
+      "ticketText": "Ticket-ID: daf41e90-55fc-4f1b-abb3-17c6440bbbc4",
+      "ticketId": "daf41e90-55fc-4f1b-abb3-17c6440bbbc4"
+    },
+    {
+      "ok": true,
+      "citizenName": "Clara Hoffmann",
+      "citizenEmail": "clara.hoffmann@troester.nl",
+      "severity": "ernst",
+      "title": "Wasseraustritt aus Hydrant",
+      "address": "Schulstraße 3, Katzweiler",
+      "imagesAttached": [
+        "free-07.jpg"
+      ],
+      "ticketText": "Ticket-ID: 5d871346-aab7-42d3-b447-0dab308ded31",
+      "ticketId": "5d871346-aab7-42d3-b447-0dab308ded31"
+    },
+    {
+      "ok": true,
+      "citizenName": "David Krueger",
+      "citizenEmail": "david.krueger@troester.nl",
+      "severity": "banal",
+      "title": "Leerer Beutelspender",
+      "address": "Hauptstraße 5, Mehlbach",
+      "imagesAttached": [],
+      "ticketText": "Ticket-ID: b83299b1-97b0-422a-b7e0-7fcce28418a6",
+      "ticketId": "b83299b1-97b0-422a-b7e0-7fcce28418a6"
+    },
+    {
+      "ok": true,
+      "citizenName": "Emma Becker",
+      "citizenEmail": "emma.becker@troester.nl",
+      "severity": "banal",
+      "title": "Muelleimer ueberfuellt",
+      "address": "Talstraße 4, Mehlbach",
+      "imagesAttached": [
+        "free-01.jpg"
+      ],
+      "ticketText": "Ticket-ID: bcab32d5-5126-47d6-abfc-47de44e953ac",
+      "ticketId": "bcab32d5-5126-47d6-abfc-47de44e953ac"
+    },
+    {
+      "ok": true,
+      "citizenName": "Felix Neumann",
+      "citizenEmail": "felix.neumann@troester.nl",
+      "severity": "ernst",
+      "title": "Laternenausfall im Strassenabschnitt",
+      "address": "Gartenstraße 8, Mehlbach",
+      "imagesAttached": [
+        "free-02.jpg"
+      ],
+      "ticketText": "Ticket-ID: 2552d598-1dcc-44f5-a5c1-dab94e97164a",
+      "ticketId": "2552d598-1dcc-44f5-a5c1-dab94e97164a"
+    },
+    {
+      "ok": true,
+      "citizenName": "Greta Wagner",
+      "citizenEmail": "greta.wagner@troester.nl",
+      "severity": "ernst",
+      "title": "Gefaehrliche Absackung am Schacht",
+      "address": "Hauptstraße 2, Schneckenhausen",
+      "imagesAttached": [
+        "free-03.jpg"
+      ],
+      "ticketText": "Ticket-ID: b902edf6-ce14-4274-8aab-7f56d4c98df3",
+      "ticketId": "b902edf6-ce14-4274-8aab-7f56d4c98df3"
+    },
+    {
+      "ok": true,
+      "citizenName": "Hannes Keller",
+      "citizenEmail": "hannes.keller@troester.nl",
+      "severity": "ernst",
+      "title": "Astbruch blockiert Gehweg",
+      "address": "Kirchstraße 4, Schneckenhausen",
+      "imagesAttached": [
+        "free-04.jpg"
+      ],
+      "ticketText": "Ticket-ID: d1014607-cd6c-47d7-bf52-f97a4df192fc",
+      "ticketId": "d1014607-cd6c-47d7-bf52-f97a4df192fc"
+    },
+    {
+      "ok": true,
+      "citizenName": "Iris Voigt",
+      "citizenEmail": "iris.voigt@troester.nl",
+      "severity": "banal",
+      "title": "Verschmutztes Strassenschild",
+      "address": "Bergstraße 6, Schneckenhausen",
+      "imagesAttached": [],
+      "ticketText": "Ticket-ID: 9bfd7735-59ae-41aa-8d6f-c69d2f4103ed",
+      "ticketId": "9bfd7735-59ae-41aa-8d6f-c69d2f4103ed"
+    },
+    {
+      "ok": true,
+      "citizenName": "Jonas Barth",
+      "citizenEmail": "jonas.barth@troester.nl",
+      "severity": "banal",
+      "title": "Leerer Beutelspender",
+      "address": "Gartenstraße 9, Schneckenhausen",
+      "imagesAttached": [],
+      "ticketText": "Ticket-ID: 5f2cec06-9645-4114-b4bf-4ba2ddf6ddc3",
+      "ticketId": "5f2cec06-9645-4114-b4bf-4ba2ddf6ddc3"
+    }
+  ]
+}

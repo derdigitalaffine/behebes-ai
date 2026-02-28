@@ -1,0 +1,499 @@
+{
+  "templates": [
+    {
+      "id": "submission-confirmation",
+      "name": "Meldung bestätigt & eingegangen",
+      "subject": "E-Mail-Adresse erfolgreich bestätigt",
+      "placeholders": [
+        "{citizenName}",
+        "{ticketId}",
+        "{category}",
+        "{statusLink}",
+        "{unsubscribeLink}"
+      ],
+      "editable": true,
+      "groupPath": [
+        "Bürger",
+        "Eingangsbestätigung"
+      ],
+      "tags": [
+        "submission",
+        "confirmation"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "validation-email",
+      "name": "Double Opt-In Validierung",
+      "subject": "Bestätigen Sie Ihre Meldung",
+      "placeholders": [
+        "{citizenName}",
+        "{validationLink}",
+        "{statusLink}"
+      ],
+      "editable": true,
+      "groupPath": [
+        "Bürger",
+        "Double Opt-In"
+      ],
+      "tags": [
+        "doi",
+        "validation"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "status-change",
+      "name": "Status-Update",
+      "subject": "Aktualisierung Ihrer Meldung zur Homepage - Ticket {ticketId}",
+      "placeholders": [
+        "{citizenName}",
+        "{ticketId}",
+        "{oldStatus}",
+        "{newStatus}",
+        "{statusMessage}",
+        "{statusLink}",
+        "{unsubscribeLink}"
+      ],
+      "editable": true,
+      "groupPath": [
+        "Bürger",
+        "Statuskommunikation"
+      ],
+      "tags": [
+        "status",
+        "notification"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "citizen_login_magic_link",
+      "name": "Bürger-App Anmeldung (Magic Link)",
+      "subject": "Anmeldelink für Ihre behebes.AI-App",
+      "placeholders": [
+        "{loginLink}",
+        "{expiresInMinutes}",
+        "{citizenName}",
+        "{ticketId}"
+      ],
+      "editable": true,
+      "groupPath": [
+        "Bürger",
+        "Anmeldung"
+      ],
+      "tags": [
+        "auth",
+        "magic-link"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "citizen-workflow-notification",
+      "name": "Workflow: Bürgerbenachrichtigung",
+      "subject": "Information zu Ihrer Meldung ({ticketId})",
+      "placeholders": [
+        "{citizenName}",
+        "{ticketId}",
+        "{category}",
+        "{description}",
+        "{location}",
+        "{validationLink}",
+        "{statusLink}",
+        "{customMessage}"
+      ],
+      "editable": true,
+      "groupPath": [
+        "Workflow",
+        "Bürgerfrontend"
+      ],
+      "tags": [
+        "workflow",
+        "citizen"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "external-notification",
+      "name": "Benachrichtigung externe Empfänger",
+      "subject": "Neue Meldung erhalten",
+      "placeholders": [
+        "{recipientName}",
+        "{category}",
+        "{description}",
+        "{location}",
+        "{citizenName}",
+        "{citizenEmail}",
+        "{ticketId}"
+      ],
+      "editable": true,
+      "groupPath": [
+        "Extern",
+        "Weiterleitung"
+      ],
+      "tags": [
+        "external",
+        "forwarding"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "workflow-confirmation",
+      "name": "Workflow-Bestaetigung",
+      "subject": "Bitte Workflow-Schritt bestaetigen",
+      "placeholders": [
+        "{recipientName}",
+        "{ticketId}",
+        "{category}",
+        "{location}",
+        "{validationLink}",
+        "{approveLink}",
+        "{rejectLink}",
+        "{decisionPageLink}",
+        "{approvalInstruction}",
+        "{statusLink}",
+        "{workflowTitle}",
+        "{workflowStepTitle}",
+        "{citizenName}",
+        "{citizenEmail}"
+      ],
+      "editable": true,
+      "groupPath": [
+        "Workflow",
+        "Freigabe"
+      ],
+      "tags": [
+        "workflow",
+        "approval",
+        "doi"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "workflow-mayor-involvement-notify",
+      "name": "Workflow: Ortsbuergermeister informieren",
+      "subject": "Information zu Anliegen {ticketId}",
+      "placeholders": [
+        "{recipientName}",
+        "{ticketId}",
+        "{category}",
+        "{location}",
+        "{description}",
+        "{statusLink}",
+        "{workflowTitle}",
+        "{workflowStepTitle}",
+        "{citizenName}",
+        "{citizenEmail}",
+        "{mayorLocationType}",
+        "{mayorLocationValue}"
+      ],
+      "editable": true,
+      "groupPath": [
+        "Workflow",
+        "Kommunale Beteiligung"
+      ],
+      "tags": [
+        "workflow",
+        "mayor",
+        "notification"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "workflow-mayor-involvement-approval",
+      "name": "Workflow: Ortsbuergermeister Zustimmung",
+      "subject": "Bitte um Entscheidung: Anliegen {ticketId}",
+      "placeholders": [
+        "{recipientName}",
+        "{ticketId}",
+        "{category}",
+        "{location}",
+        "{description}",
+        "{decisionPageLink}",
+        "{approveLink}",
+        "{rejectLink}",
+        "{statusLink}",
+        "{approvalInstruction}",
+        "{workflowTitle}",
+        "{workflowStepTitle}",
+        "{citizenName}",
+        "{citizenEmail}",
+        "{mayorLocationType}",
+        "{mayorLocationValue}"
+      ],
+      "editable": true,
+      "groupPath": [
+        "Workflow",
+        "Kommunale Beteiligung"
+      ],
+      "tags": [
+        "workflow",
+        "mayor",
+        "approval"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "workflow-data-request",
+      "name": "Workflow: Datennachforderung",
+      "subject": "Bitte ergänzen Sie Angaben zu Ihrer Meldung ({ticketId})",
+      "placeholders": [
+        "{citizenName}",
+        "{ticketId}",
+        "{category}",
+        "{location}",
+        "{formLink}",
+        "{statusLink}",
+        "{requestFieldsSummary}",
+        "{expiresAt}",
+        "{introText}"
+      ],
+      "editable": true,
+      "groupPath": [
+        "Workflow",
+        "Datennachforderung"
+      ],
+      "tags": [
+        "workflow",
+        "data-request"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "template-tier_fund",
+      "name": "Weiterleitung: Tierkadaverbeseitigung",
+      "subject": "Neue Bürgermeldung: Tierkadaverbeseitigung",
+      "placeholders": [
+        "{citizenName}",
+        "{citizenEmail}",
+        "{ticketId}",
+        "{category}",
+        "{description}",
+        "{location}",
+        "{recipientName}"
+      ],
+      "editable": true,
+      "categoryId": "tier_fund",
+      "groupPath": [
+        "Extern",
+        "Weiterleitung"
+      ],
+      "tags": [
+        "external",
+        "category"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "template-umwelt_ext",
+      "name": "Weiterleitung: Umweltbehörde Weiterleitung",
+      "subject": "Weiterleitung einer eingegangenen Bürger-Meldung betreffend Umweltanliegen",
+      "placeholders": [
+        "{citizenName}",
+        "{citizenEmail}",
+        "{ticketId}",
+        "{category}",
+        "{description}",
+        "{location}",
+        "{recipientName}"
+      ],
+      "editable": true,
+      "categoryId": "umwelt_ext",
+      "groupPath": [
+        "Extern",
+        "Weiterleitung"
+      ],
+      "tags": [
+        "external",
+        "category"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "template-fire_safety",
+      "name": "Weiterleitung: Brandschutz",
+      "subject": "Weiterleitung von Bürgermeldung betreffend Brandschutz",
+      "placeholders": [
+        "{citizenName}",
+        "{citizenEmail}",
+        "{ticketId}",
+        "{category}",
+        "{description}",
+        "{location}",
+        "{recipientName}"
+      ],
+      "editable": true,
+      "categoryId": "fire_safety",
+      "groupPath": [
+        "Extern",
+        "Weiterleitung"
+      ],
+      "tags": [
+        "external",
+        "category"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "template-1770820608666",
+      "name": "Weiterleitung: Strafverfolgung Polizei / Ordnungsamt",
+      "subject": "Neue Bürgermeldung: Strafverfolgung Polizei / Ordnungsamt",
+      "placeholders": [
+        "{citizenName}",
+        "{citizenEmail}",
+        "{ticketId}",
+        "{category}",
+        "{description}",
+        "{location}",
+        "{recipientName}"
+      ],
+      "editable": true
+    },
+    {
+      "id": "template-1770821080605",
+      "name": "Weiterleitung: Erziehungsproblem mit Kind",
+      "subject": "Neue Bürgermeldung: Erziehungsproblem mit Kind",
+      "placeholders": [
+        "{citizenName}",
+        "{citizenEmail}",
+        "{ticketId}",
+        "{category}",
+        "{description}",
+        "{location}",
+        "{recipientName}"
+      ],
+      "editable": true,
+      "categoryId": "1770821080605",
+      "groupPath": [
+        "Extern",
+        "Weiterleitung"
+      ],
+      "tags": [
+        "external",
+        "category"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "template-1770821609777",
+      "name": "Weiterleitung: Strassenlaterne defekt (abita)",
+      "subject": "Weiterleitung: Störung der Straßenbeleuchtung Otterberg - Ticket {ticketId}",
+      "placeholders": [
+        "{citizenName}",
+        "{citizenEmail}",
+        "{ticketId}",
+        "{category}",
+        "{description}",
+        "{location}",
+        "{recipientName}"
+      ],
+      "editable": true,
+      "categoryId": "1770821609777",
+      "groupPath": [
+        "Extern",
+        "Weiterleitung"
+      ],
+      "tags": [
+        "external",
+        "category"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "template-1770821647254",
+      "name": "Weiterleitung: Strassenlaterne defekt (Pfalzwerke)",
+      "subject": "Neue Bürgermeldung: Strassenlaterne defekt (Pfalzwerke)",
+      "placeholders": [
+        "{citizenName}",
+        "{citizenEmail}",
+        "{ticketId}",
+        "{category}",
+        "{description}",
+        "{location}",
+        "{recipientName}"
+      ],
+      "editable": true,
+      "categoryId": "1770821647254",
+      "groupPath": [
+        "Extern",
+        "Weiterleitung"
+      ],
+      "tags": [
+        "external",
+        "category"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "template-1770822886855",
+      "name": "Weiterleitung: Feuerwehr",
+      "subject": "Weiterleitung einer Bürgermeldung: {category} - Ticket {ticketId}",
+      "placeholders": [
+        "{citizenName}",
+        "{citizenEmail}",
+        "{ticketId}",
+        "{category}",
+        "{description}",
+        "{location}",
+        "{recipientName}"
+      ],
+      "editable": true
+    },
+    {
+      "id": "template-1770905273643",
+      "name": "Weiterleitung: Homepage",
+      "subject": "Neue Bürgermeldung: Homepage",
+      "placeholders": [
+        "{citizenName}",
+        "{citizenEmail}",
+        "{ticketId}",
+        "{category}",
+        "{description}",
+        "{location}",
+        "{recipientName}"
+      ],
+      "editable": true,
+      "categoryId": "1770905273643",
+      "groupPath": [
+        "Extern",
+        "Weiterleitung"
+      ],
+      "tags": [
+        "external",
+        "category"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "template-1770905340516",
+      "name": "Weiterleitung: EDV",
+      "subject": "Neue Bürgermeldung: EDV",
+      "placeholders": [
+        "{citizenName}",
+        "{citizenEmail}",
+        "{ticketId}",
+        "{category}",
+        "{description}",
+        "{location}",
+        "{recipientName}"
+      ],
+      "editable": true,
+      "categoryId": "1770905340516",
+      "groupPath": [
+        "Extern",
+        "Weiterleitung"
+      ],
+      "tags": [
+        "external",
+        "category"
+      ],
+      "lifecycle": "active"
+    },
+    {
+      "id": "escalation",
+      "name": "Ticket ist eskaliert",
+      "subject": "Eskalationsmeldung: Ticket {ticketId} erfordert Aufmerksamkeit",
+      "placeholders": [],
+      "editable": true
+    }
+  ]
+}
