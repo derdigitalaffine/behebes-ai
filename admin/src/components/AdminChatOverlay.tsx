@@ -1362,15 +1362,56 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
       const audioElement = remoteAudioRef.current as SinkCapableAudioElement | null;
       if (!audioElement?.setSinkId) return true;
       const requestedSink = normalizeText(sinkId || selectedAudioOutputId) || DEFAULT_AUDIO_OUTPUT_DEVICE_ID;
+      const knownSinkIds = new Set(
+        availableAudioOutputOptions
+          .map((entry) => normalizeText(entry.id))
+          .filter(Boolean)
+      );
+      const targetSink =
+        knownSinkIds.size > 0 && !knownSinkIds.has(requestedSink)
+          ? DEFAULT_AUDIO_OUTPUT_DEVICE_ID
+          : requestedSink;
+      const currentSink =
+        normalizeText((audioElement as SinkCapableAudioElement).sinkId) || DEFAULT_AUDIO_OUTPUT_DEVICE_ID;
+      if (currentSink === targetSink) return true;
+      if (targetSink !== requestedSink) {
+        appendCallDebugEntry(
+          'warn',
+          `Gewähltes Ausgabegerät nicht mehr verfügbar (${requestedSink}); nutze Systemstandard`
+        );
+        setSelectedAudioOutputId(DEFAULT_AUDIO_OUTPUT_DEVICE_ID);
+      }
       try {
-        await audioElement.setSinkId(requestedSink);
+        await audioElement.setSinkId(targetSink);
         return true;
-      } catch {
+      } catch (error: any) {
+        const errorName = normalizeText(error?.name) || 'UnknownError';
+        const errorText = normalizeText(error?.message);
+        appendCallDebugEntry(
+          'error',
+          `Audioausgabe-Umschaltung fehlgeschlagen (${errorName})${errorText ? `: ${errorText}` : ''}`
+        );
+        if (targetSink !== DEFAULT_AUDIO_OUTPUT_DEVICE_ID) {
+          try {
+            await audioElement.setSinkId(DEFAULT_AUDIO_OUTPUT_DEVICE_ID);
+            setSelectedAudioOutputId(DEFAULT_AUDIO_OUTPUT_DEVICE_ID);
+            setErrorMessage('Ausgabegerät war nicht verfügbar. Systemstandard wird verwendet.');
+            appendCallDebugEntry('warn', 'Fallback auf Systemstandard-Ausgabegerät angewendet');
+            return true;
+          } catch (fallbackError: any) {
+            const fallbackName = normalizeText(fallbackError?.name) || 'UnknownError';
+            const fallbackText = normalizeText(fallbackError?.message);
+            appendCallDebugEntry(
+              'error',
+              `Fallback auf Systemstandard fehlgeschlagen (${fallbackName})${fallbackText ? `: ${fallbackText}` : ''}`
+            );
+          }
+        }
         setErrorMessage('Audioausgabe konnte nicht auf das gewählte Gerät umgestellt werden.');
         return false;
       }
     },
-    [selectedAudioOutputId]
+    [appendCallDebugEntry, availableAudioOutputOptions, selectedAudioOutputId]
   );
 
   const resumeRemoteAudioPlayback = useCallback(
