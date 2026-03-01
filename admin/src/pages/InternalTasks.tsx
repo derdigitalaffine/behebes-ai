@@ -1111,225 +1111,185 @@ const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
       {error && <div className="internal-tasks-alert error">{error}</div>}
       {message && <div className="internal-tasks-alert success">{message}</div>}
 
-      <div className="internal-tasks-layout">
-        <div className="internal-tasks-list card">
-          <div className="internal-tasks-list-head">
-            <h3>Smart Table</h3>
-            <span>{sortedAndFilteredTasks.length} Aufgaben</span>
-          </div>
-
-          {loading && tasks.length === 0 ? (
-            <p className="internal-tasks-empty">
-              <i className="fa-solid fa-spinner fa-spin" /> Lade interne Aufgaben...
-            </p>
-          ) : sortedAndFilteredTasks.length === 0 ? (
-            <p className="internal-tasks-empty">Keine passenden Aufgaben gefunden.</p>
-          ) : (
-            <SmartTable<InternalTaskTableRow>
-              tableId="internal-tasks-overview"
-              userId={token}
-              title="Interne Aufgaben"
-              rows={internalTaskRows}
-              columns={internalTaskColumns}
-              loading={loading || refreshing}
-              onRefresh={loadTasks}
-              defaultPageSize={25}
-              pageSizeOptions={[10, 25, 50, 100]}
-              onRowClick={(row) => {
-                void loadTaskDetail(row.id);
-              }}
-              getRowClassName={(row) => {
-                const parts: string[] = [];
-                if (selectedTaskId === row.id) parts.push('is-selected');
-                if (row.overdue) parts.push('is-overdue');
-                return parts.join(' ');
-              }}
-            />
-          )}
+      <section className="internal-tasks-list card">
+        <div className="internal-tasks-list-head">
+          <h3>Aufgabenliste</h3>
+          <span>{sortedAndFilteredTasks.length} Aufgaben</span>
         </div>
 
-        <div className="internal-tasks-detail card">
-          {!selectedTask ? (
-            <p className="internal-tasks-empty">Aufgabe in der Liste auswählen, um Details zu sehen.</p>
+        {loading && tasks.length === 0 ? (
+          <p className="internal-tasks-empty">
+            <i className="fa-solid fa-spinner fa-spin" /> Lade interne Aufgaben...
+          </p>
+        ) : sortedAndFilteredTasks.length === 0 ? (
+          <p className="internal-tasks-empty">Keine passenden Aufgaben gefunden.</p>
+        ) : (
+          <SmartTable<InternalTaskTableRow>
+            tableId="internal-tasks-overview"
+            userId={token}
+            title="Interne Aufgaben"
+            rows={internalTaskRows}
+            columns={internalTaskColumns}
+            loading={loading || refreshing}
+            onRefresh={loadTasks}
+            defaultPageSize={25}
+            pageSizeOptions={[10, 25, 50, 100]}
+            onRowClick={(row) => {
+              void loadTaskDetail(row.id);
+            }}
+            getRowClassName={(row) => {
+              const parts: string[] = [];
+              if (selectedTaskId === row.id) parts.push('is-selected');
+              if (row.overdue) parts.push('is-overdue');
+              return parts.join(' ');
+            }}
+          />
+        )}
+      </section>
+
+      <section className="internal-tasks-detail card">
+        <div className="internal-tasks-detail-headline">
+          <h3>Interne Bearbeitung</h3>
+          {selectedTask ? (
+            <span>{selectedTask.id}</span>
           ) : (
-            <>
-              <div className="detail-head">
-                <div>
-                  <h3>{selectedTask.title || selectedTask.id}</h3>
-                  <p className="detail-meta">
-                    <Link to={`/tickets/${encodeURIComponent(selectedTask.ticketId)}`}>Ticket {selectedTask.ticketId}</Link>
-                    <span>Workflow {selectedTask.workflowExecutionId}</span>
-                    <span>Schritt {selectedTask.stepId}</span>
-                  </p>
-                </div>
-                <div className="detail-head-badges">
-                  <span className={`status-pill status-${selectedTask.status}`}>
-                    {STATUS_LABELS[selectedTask.status] || selectedTask.status}
-                  </span>
-                  <span className="mode-pill">{selectedTask.mode === 'parallel' ? 'Parallel' : 'Blockierend'}</span>
-                </div>
+            <span>Keine Aufgabe ausgewählt</span>
+          )}
+        </div>
+        {!selectedTask ? (
+          <p className="internal-tasks-empty">Aufgabe in der Liste auswählen, um Details zu sehen.</p>
+        ) : (
+          <>
+            <div className="detail-head">
+              <div>
+                <h3>{selectedTask.title || selectedTask.id}</h3>
+                <p className="detail-meta">
+                  <Link to={`/tickets/${encodeURIComponent(selectedTask.ticketId)}`}>Ticket {selectedTask.ticketId}</Link>
+                  <span>Workflow {selectedTask.workflowExecutionId}</span>
+                  <span>Schritt {selectedTask.stepId}</span>
+                </p>
               </div>
-
-              {selectedTask.description && <p className="detail-description">{selectedTask.description}</p>}
-              {selectedTask.instructions && (
-                <div className="detail-instructions">
-                  <strong>Anweisungen</strong>
-                  <p>{selectedTask.instructions}</p>
-                </div>
-              )}
-
-              <div className="detail-grid">
-                <div>
-                  <strong>Zuweisung</strong>
-                  <span>{selectedAssignmentLabel}</span>
-                </div>
-                <div>
-                  <strong>Fällig</strong>
-                  <span>{formatDateTime(selectedTask.dueAt)}</span>
-                </div>
-                <div>
-                  <strong>Erstellt</strong>
-                  <span>{formatDateTime(selectedTask.createdAt)}</span>
-                </div>
-                <div>
-                  <strong>Abgeschlossen</strong>
-                  <span>{formatDateTime(selectedTask.completedAt)}</span>
-                </div>
-                <div>
-                  <strong>Ticketstatus</strong>
-                  <span>{selectedTask.ticketStatus || '–'}</span>
-                </div>
-                <div>
-                  <strong>Kategorie / Priorität</strong>
-                  <span>
-                    {selectedTask.ticketCategory || '–'} / {selectedTask.ticketPriority || '–'}
-                  </span>
-                </div>
+              <div className="detail-head-badges">
+                <span className={`status-pill status-${selectedTask.status}`}>
+                  {STATUS_LABELS[selectedTask.status] || selectedTask.status}
+                </span>
+                <span className="mode-pill">{selectedTask.mode === 'parallel' ? 'Parallel' : 'Blockierend'}</span>
               </div>
+            </div>
 
-              <section className="detail-section">
-                <h4>Zuweisung ändern</h4>
-                <div className="detail-form-row">
-                  <select value={assignmentTarget} onChange={(event) => setAssignmentTarget(event.target.value)}>
-                    <option value="">Unzugewiesen</option>
-                    <optgroup label="Benutzer">
-                      {sortedUsers.map((user) => (
-                        <option key={`user-${user.id}`} value={`user:${user.id}`}>
-                          {buildUserLabel(user)}
-                        </option>
-                      ))}
-                    </optgroup>
-                    <optgroup label="Organisationseinheiten">
-                      {sortedOrgUnits.map((orgUnit) => (
-                        <option key={`org-${orgUnit.id}`} value={`org:${orgUnit.id}`}>
-                          {orgUnit.label}
-                        </option>
-                      ))}
-                    </optgroup>
-                  </select>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    onClick={() => void handleReassign()}
-                    disabled={!assignmentDirty || reassigning}
-                  >
-                    {reassigning ? (
-                      <>
-                        <i className="fa-solid fa-spinner fa-spin" /> Speichern...
-                      </>
-                    ) : (
-                      'Speichern'
-                    )}
-                  </button>
-                </div>
-                {assignmentDirectoryLoading && <p className="helper-text">Lade verfügbare Benutzer und Bereiche…</p>}
-                {assignmentDirectoryError && <p className="helper-text error">{assignmentDirectoryError}</p>}
-              </section>
+            {selectedTask.description && <p className="detail-description">{selectedTask.description}</p>}
+            {selectedTask.instructions && (
+              <div className="detail-instructions">
+                <strong>Anweisungen</strong>
+                <p>{selectedTask.instructions}</p>
+              </div>
+            )}
 
-              <section className="detail-section">
-                <h4>Aktion ausführen</h4>
-                {selectedTaskFormFields.length > 0 && (
-                  <>
-                    {!selectedTaskFormEditable && isTaskActionable(selectedTask.status) && (
-                      <p className="helper-text">
-                        Antwortformular wird erst nach dem Start der Aufgabe freigeschaltet.
-                      </p>
-                    )}
-                    <div className="internal-task-form-grid">
-                      {selectedTaskFormFields.map((field) => {
-                        const rawValue = responseFormValues[field.key];
-                        if (field.type === 'boolean') {
-                          return (
-                            <label key={`${selectedTask.id}-field-${field.key}`} className="internal-task-form-check">
-                              <input
-                                type="checkbox"
-                                checked={rawValue === true}
-                                disabled={!selectedTaskFormEditable}
-                                onChange={(event) =>
-                                  setResponseFormValues((current) => ({
-                                    ...current,
-                                    [field.key]: event.target.checked,
-                                  }))
-                                }
-                              />
-                              <span>{field.required ? `${field.label} *` : field.label}</span>
-                            </label>
-                          );
-                        }
+            <div className="detail-grid">
+              <div>
+                <strong>Zuweisung</strong>
+                <span>{selectedAssignmentLabel}</span>
+              </div>
+              <div>
+                <strong>Fällig</strong>
+                <span>{formatDateTime(selectedTask.dueAt)}</span>
+              </div>
+              <div>
+                <strong>Erstellt</strong>
+                <span>{formatDateTime(selectedTask.createdAt)}</span>
+              </div>
+              <div>
+                <strong>Abgeschlossen</strong>
+                <span>{formatDateTime(selectedTask.completedAt)}</span>
+              </div>
+              <div>
+                <strong>Ticketstatus</strong>
+                <span>{selectedTask.ticketStatus || '–'}</span>
+              </div>
+              <div>
+                <strong>Kategorie / Priorität</strong>
+                <span>
+                  {selectedTask.ticketCategory || '–'} / {selectedTask.ticketPriority || '–'}
+                </span>
+              </div>
+            </div>
 
-                        if (field.type === 'textarea') {
-                          return (
-                            <label key={`${selectedTask.id}-field-${field.key}`} className="internal-task-form-field span-2">
-                              <span>{field.required ? `${field.label} *` : field.label}</span>
-                              <textarea
-                                rows={3}
-                                value={String(rawValue ?? '')}
-                                disabled={!selectedTaskFormEditable}
-                                onChange={(event) =>
-                                  setResponseFormValues((current) => ({
-                                    ...current,
-                                    [field.key]: event.target.value,
-                                  }))
-                                }
-                                placeholder={field.placeholder || ''}
-                              />
-                              {field.helpText && <small className="helper-text">{field.helpText}</small>}
-                            </label>
-                          );
-                        }
+            <section className="detail-section">
+              <h4>Zuweisung ändern</h4>
+              <div className="detail-form-row">
+                <select value={assignmentTarget} onChange={(event) => setAssignmentTarget(event.target.value)}>
+                  <option value="">Unzugewiesen</option>
+                  <optgroup label="Benutzer">
+                    {sortedUsers.map((user) => (
+                      <option key={`user-${user.id}`} value={`user:${user.id}`}>
+                        {buildUserLabel(user)}
+                      </option>
+                    ))}
+                  </optgroup>
+                  <optgroup label="Organisationseinheiten">
+                    {sortedOrgUnits.map((orgUnit) => (
+                      <option key={`org-${orgUnit.id}`} value={`org:${orgUnit.id}`}>
+                        {orgUnit.label}
+                      </option>
+                    ))}
+                  </optgroup>
+                </select>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  onClick={() => void handleReassign()}
+                  disabled={!assignmentDirty || reassigning}
+                >
+                  {reassigning ? (
+                    <>
+                      <i className="fa-solid fa-spinner fa-spin" /> Speichern...
+                    </>
+                  ) : (
+                    'Speichern'
+                  )}
+                </button>
+              </div>
+              {assignmentDirectoryLoading && <p className="helper-text">Lade verfügbare Benutzer und Bereiche…</p>}
+              {assignmentDirectoryError && <p className="helper-text error">{assignmentDirectoryError}</p>}
+            </section>
 
-                        if (field.type === 'select') {
-                          return (
-                            <label key={`${selectedTask.id}-field-${field.key}`} className="internal-task-form-field">
-                              <span>{field.required ? `${field.label} *` : field.label}</span>
-                              <select
-                                value={String(rawValue ?? '')}
-                                disabled={!selectedTaskFormEditable}
-                                onChange={(event) =>
-                                  setResponseFormValues((current) => ({
-                                    ...current,
-                                    [field.key]: event.target.value,
-                                  }))
-                                }
-                              >
-                                <option value="">Bitte wählen…</option>
-                                {(field.options || []).map((option) => (
-                                  <option key={`${field.key}-option-${option.value}`} value={option.value}>
-                                    {option.label || option.value}
-                                  </option>
-                                ))}
-                              </select>
-                              {field.helpText && <small className="helper-text">{field.helpText}</small>}
-                            </label>
-                          );
-                        }
-
-                        const inputType = field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text';
+            <section className="detail-section">
+              <h4>Aktion ausführen</h4>
+              {selectedTaskFormFields.length > 0 && (
+                <>
+                  {!selectedTaskFormEditable && isTaskActionable(selectedTask.status) && (
+                    <p className="helper-text">
+                      Antwortformular wird erst nach dem Start der Aufgabe freigeschaltet.
+                    </p>
+                  )}
+                  <div className="internal-task-form-grid">
+                    {selectedTaskFormFields.map((field) => {
+                      const rawValue = responseFormValues[field.key];
+                      if (field.type === 'boolean') {
                         return (
-                          <label key={`${selectedTask.id}-field-${field.key}`} className="internal-task-form-field">
-                            <span>{field.required ? `${field.label} *` : field.label}</span>
+                          <label key={`${selectedTask.id}-field-${field.key}`} className="internal-task-form-check">
                             <input
-                              type={inputType}
+                              type="checkbox"
+                              checked={rawValue === true}
+                              disabled={!selectedTaskFormEditable}
+                              onChange={(event) =>
+                                setResponseFormValues((current) => ({
+                                  ...current,
+                                  [field.key]: event.target.checked,
+                                }))
+                              }
+                            />
+                            <span>{field.required ? `${field.label} *` : field.label}</span>
+                          </label>
+                        );
+                      }
+
+                      if (field.type === 'textarea') {
+                        return (
+                          <label key={`${selectedTask.id}-field-${field.key}`} className="internal-task-form-field span-2">
+                            <span>{field.required ? `${field.label} *` : field.label}</span>
+                            <textarea
+                              rows={3}
                               value={String(rawValue ?? '')}
                               disabled={!selectedTaskFormEditable}
                               onChange={(event) =>
@@ -1343,127 +1303,173 @@ const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
                             {field.helpText && <small className="helper-text">{field.helpText}</small>}
                           </label>
                         );
-                      })}
-                    </div>
-                    <p className="helper-text">
-                      Formularwerte werden beim Speichern in die Antwortdaten übernommen und überschreiben gleichnamige JSON-Keys.
-                    </p>
-                    {selectedTaskHasRequiredFormFields && <p className="helper-text">Pflichtfelder sind mit * markiert.</p>}
-                  </>
-                )}
-                <label>
-                  <span>Notiz</span>
-                  <textarea
-                    value={actionNote}
-                    onChange={(event) => setActionNote(event.target.value)}
-                    rows={3}
-                    placeholder="Optionaler Kommentar für den Workflow-Verlauf"
-                  />
-                </label>
-                <label>
-                  <span>Antwortdaten (JSON)</span>
-                  <textarea
-                    value={actionResponse}
-                    onChange={(event) => setActionResponse(event.target.value)}
-                    rows={6}
-                    disabled={!selectedTaskFormEditable}
-                  />
-                </label>
-                {actionError && <div className="internal-tasks-alert error">{actionError}</div>}
-                <div className="detail-actions">
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    disabled={!isTaskActionable(selectedTask.status) || submittingTaskId === selectedTask.id}
-                    onClick={() => void startTask(selectedTask, false)}
-                  >
-                    {submittingTaskId === selectedTask.id ? (
-                      <>
-                        <i className="fa-solid fa-spinner fa-spin" /> Verarbeite...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fa-solid fa-play" /> Starten
-                      </>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-secondary"
-                    disabled={!isTaskActionable(selectedTask.status) || submittingTaskId === selectedTask.id}
-                    onClick={() => void startTask(selectedTask, true)}
-                  >
-                    {submittingTaskId === selectedTask.id ? (
-                      <>
-                        <i className="fa-solid fa-spinner fa-spin" /> Verarbeite...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fa-solid fa-hand" /> Übernehmen
-                      </>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-primary"
-                    disabled={!isTaskActionable(selectedTask.status) || submittingTaskId === selectedTask.id}
-                    onClick={() => void executeTaskAction(selectedTask, 'complete')}
-                  >
-                    {submittingTaskId === selectedTask.id ? (
-                      <>
-                        <i className="fa-solid fa-spinner fa-spin" /> Verarbeite...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fa-solid fa-check" /> Abschließen
-                      </>
-                    )}
-                  </button>
-                  <button
-                    type="button"
-                    className="btn btn-danger"
-                    disabled={!isTaskActionable(selectedTask.status) || submittingTaskId === selectedTask.id}
-                    onClick={() => void executeTaskAction(selectedTask, 'reject')}
-                  >
-                    {submittingTaskId === selectedTask.id ? (
-                      <>
-                        <i className="fa-solid fa-spinner fa-spin" /> Verarbeite...
-                      </>
-                    ) : (
-                      <>
-                        <i className="fa-solid fa-ban" /> Ablehnen
-                      </>
-                    )}
-                  </button>
-                </div>
-                {!isTaskActionable(selectedTask.status) && (
-                  <p className="helper-text">Diese Aufgabe ist bereits abgeschlossen und kann nicht erneut bearbeitet werden.</p>
-                )}
-              </section>
+                      }
 
-              <section className="detail-section">
-                <h4>Ereignisjournal</h4>
-                {selectedEvents.length === 0 ? (
-                  <p className="internal-tasks-empty">Keine Ereignisse vorhanden.</p>
-                ) : (
-                  <ul className="event-list">
-                    {selectedEvents.map((event) => (
-                      <li key={event.id}>
-                        <div className="event-head">
-                          <strong>{EVENT_LABELS[event.eventType] || event.eventType}</strong>
-                          <span>{formatDateTime(event.createdAt)}</span>
-                        </div>
-                        <div className="event-meta">Akteur: {event.actorUserId || 'system'}</div>
-                        {event.payload && <pre>{JSON.stringify(event.payload, null, 2)}</pre>}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-            </>
-          )}
-        </div>
-      </div>
+                      if (field.type === 'select') {
+                        return (
+                          <label key={`${selectedTask.id}-field-${field.key}`} className="internal-task-form-field">
+                            <span>{field.required ? `${field.label} *` : field.label}</span>
+                            <select
+                              value={String(rawValue ?? '')}
+                              disabled={!selectedTaskFormEditable}
+                              onChange={(event) =>
+                                setResponseFormValues((current) => ({
+                                  ...current,
+                                  [field.key]: event.target.value,
+                                }))
+                              }
+                            >
+                              <option value="">Bitte wählen…</option>
+                              {(field.options || []).map((option) => (
+                                <option key={`${field.key}-option-${option.value}`} value={option.value}>
+                                  {option.label || option.value}
+                                </option>
+                              ))}
+                            </select>
+                            {field.helpText && <small className="helper-text">{field.helpText}</small>}
+                          </label>
+                        );
+                      }
+
+                      const inputType = field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text';
+                      return (
+                        <label key={`${selectedTask.id}-field-${field.key}`} className="internal-task-form-field">
+                          <span>{field.required ? `${field.label} *` : field.label}</span>
+                          <input
+                            type={inputType}
+                            value={String(rawValue ?? '')}
+                            disabled={!selectedTaskFormEditable}
+                            onChange={(event) =>
+                              setResponseFormValues((current) => ({
+                                ...current,
+                                [field.key]: event.target.value,
+                              }))
+                            }
+                            placeholder={field.placeholder || ''}
+                          />
+                          {field.helpText && <small className="helper-text">{field.helpText}</small>}
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <p className="helper-text">
+                    Formularwerte werden beim Speichern in die Antwortdaten übernommen und überschreiben gleichnamige JSON-Keys.
+                  </p>
+                  {selectedTaskHasRequiredFormFields && <p className="helper-text">Pflichtfelder sind mit * markiert.</p>}
+                </>
+              )}
+              <label>
+                <span>Notiz</span>
+                <textarea
+                  value={actionNote}
+                  onChange={(event) => setActionNote(event.target.value)}
+                  rows={3}
+                  placeholder="Optionaler Kommentar für den Workflow-Verlauf"
+                />
+              </label>
+              <label>
+                <span>Antwortdaten (JSON)</span>
+                <textarea
+                  value={actionResponse}
+                  onChange={(event) => setActionResponse(event.target.value)}
+                  rows={6}
+                  disabled={!selectedTaskFormEditable}
+                />
+              </label>
+              {actionError && <div className="internal-tasks-alert error">{actionError}</div>}
+              <div className="detail-actions">
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={!isTaskActionable(selectedTask.status) || submittingTaskId === selectedTask.id}
+                  onClick={() => void startTask(selectedTask, false)}
+                >
+                  {submittingTaskId === selectedTask.id ? (
+                    <>
+                      <i className="fa-solid fa-spinner fa-spin" /> Verarbeite...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-play" /> Starten
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary"
+                  disabled={!isTaskActionable(selectedTask.status) || submittingTaskId === selectedTask.id}
+                  onClick={() => void startTask(selectedTask, true)}
+                >
+                  {submittingTaskId === selectedTask.id ? (
+                    <>
+                      <i className="fa-solid fa-spinner fa-spin" /> Verarbeite...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-hand" /> Übernehmen
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-primary"
+                  disabled={!isTaskActionable(selectedTask.status) || submittingTaskId === selectedTask.id}
+                  onClick={() => void executeTaskAction(selectedTask, 'complete')}
+                >
+                  {submittingTaskId === selectedTask.id ? (
+                    <>
+                      <i className="fa-solid fa-spinner fa-spin" /> Verarbeite...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-check" /> Abschließen
+                    </>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-danger"
+                  disabled={!isTaskActionable(selectedTask.status) || submittingTaskId === selectedTask.id}
+                  onClick={() => void executeTaskAction(selectedTask, 'reject')}
+                >
+                  {submittingTaskId === selectedTask.id ? (
+                    <>
+                      <i className="fa-solid fa-spinner fa-spin" /> Verarbeite...
+                    </>
+                  ) : (
+                    <>
+                      <i className="fa-solid fa-ban" /> Ablehnen
+                    </>
+                  )}
+                </button>
+              </div>
+              {!isTaskActionable(selectedTask.status) && (
+                <p className="helper-text">Diese Aufgabe ist bereits abgeschlossen und kann nicht erneut bearbeitet werden.</p>
+              )}
+            </section>
+
+            <section className="detail-section">
+              <h4>Ereignisjournal</h4>
+              {selectedEvents.length === 0 ? (
+                <p className="internal-tasks-empty">Keine Ereignisse vorhanden.</p>
+              ) : (
+                <ul className="event-list">
+                  {selectedEvents.map((event) => (
+                    <li key={event.id}>
+                      <div className="event-head">
+                        <strong>{EVENT_LABELS[event.eventType] || event.eventType}</strong>
+                        <span>{formatDateTime(event.createdAt)}</span>
+                      </div>
+                      <div className="event-meta">Akteur: {event.actorUserId || 'system'}</div>
+                      {event.payload && <pre>{JSON.stringify(event.payload, null, 2)}</pre>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          </>
+        )}
+      </section>
     </div>
   );
 };

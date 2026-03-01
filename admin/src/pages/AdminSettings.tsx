@@ -35,6 +35,8 @@ type SettingsSection =
   | 'keywording'
   | 'tenants'
   | 'organization'
+  | 'organization-structure'
+  | 'organization-types'
   | 'weather-api'
   | 'categories'
   | 'ai'
@@ -58,7 +60,8 @@ const CategoriesSettings: React.FC = () => <Knowledge />;
 const AISituationOverviewSettings: React.FC = () => <AISituationReport initialTab="reports" />;
 const AIPseudonymSettings: React.FC = () => <AISituationReport initialTab="pseudonyms" />;
 const TenantSettings: React.FC = () => <OrganizationSettings mode="tenants" />;
-const OrganizationStructureSettings: React.FC = () => <OrganizationSettings mode="organization" />;
+const OrganizationStructureSettings: React.FC = () => <OrganizationSettings mode="organization-structure" />;
+const OrganizationTypeSettings: React.FC = () => <OrganizationSettings mode="organization-types" />;
 
 const SECTION_LABELS: Record<SettingsSection, { title: string; subtitle: string; icon: string }> = {
   'general-base': {
@@ -125,6 +128,16 @@ const SECTION_LABELS: Record<SettingsSection, { title: string; subtitle: string;
     title: 'Organisationsstruktur',
     subtitle: 'Organisationstypen, Hierarchie, Gruppenzuordnung und Zuständigkeits-Schlagworte im Mandanten',
     icon: 'fa-sitemap',
+  },
+  'organization-structure': {
+    title: 'Organisationsstruktur',
+    subtitle: 'Hierarchie, Gruppenzuordnung und Zuständigkeits-Schlagworte im Mandanten',
+    icon: 'fa-sitemap',
+  },
+  'organization-types': {
+    title: 'Organisationstypen',
+    subtitle: 'Typen pro Mandant verwalten, inkl. Sortierung, Aktivstatus und Schlagworten',
+    icon: 'fa-shapes',
   },
   'weather-api': {
     title: 'Wetter API',
@@ -193,6 +206,7 @@ const SECTION_ALIASES: Record<string, SettingsSection> = {
   'system-info': 'systeminfos',
   'translation-planner': 'general-languages',
   prompts: 'ai',
+  organization: 'organization-structure',
 };
 
 const isSection = (value: string): value is SettingsSection =>
@@ -218,6 +232,8 @@ const SECTION_COMPONENTS: Record<SettingsSection, React.FC> = {
   keywording: KeywordingAssistant,
   tenants: TenantSettings,
   organization: OrganizationStructureSettings,
+  'organization-structure': OrganizationStructureSettings,
+  'organization-types': OrganizationTypeSettings,
   'weather-api': WeatherApiSettings,
   categories: CategoriesSettings,
   ai: AIProvider,
@@ -246,6 +262,8 @@ const SECTION_CAPABILITY_REQUIREMENTS: Partial<Record<SettingsSection, string[]>
   keywording: ['users.manage', 'settings.organization.global.manage', 'settings.organization.tenant.manage', 'settings.categories.manage'],
   tenants: ['settings.organization.global.manage'],
   organization: ['settings.organization.global.manage', 'settings.organization.tenant.manage'],
+  'organization-structure': ['settings.organization.global.manage', 'settings.organization.tenant.manage'],
+  'organization-types': ['settings.organization.global.manage', 'settings.organization.tenant.manage'],
   'weather-api': ['settings.weather.manage'],
   categories: ['settings.categories.manage'],
   ai: ['settings.ai.global.manage'],
