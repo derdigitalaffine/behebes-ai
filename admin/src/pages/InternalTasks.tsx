@@ -1,6 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import axios from 'axios';
+import {
+  SmartTable,
+  SmartTableRowActionButton,
+  SmartTableRowActions,
+  type SmartTableColumnDef,
+} from '../modules/smart-table';
 import './InternalTasks.css';
 
 interface InternalTaskItem {
@@ -32,6 +38,17 @@ interface InternalTaskEvent {
   createdAt?: string | null;
   payload?: Record<string, any> | null;
 }
+
+type InternalTaskTableRow = InternalTaskItem & {
+  assigneeLabel: string;
+  dueAtLabel: string;
+  createdAtLabel: string;
+  ticketSummary: string;
+  overdue: boolean;
+  actionable: boolean;
+  startable: boolean;
+  quickActionLocked: boolean;
+};
 
 interface InternalTaskDetailResponse {
   task: InternalTaskItem;
@@ -72,7 +89,6 @@ interface InternalTaskFormField {
   options?: InternalTaskFormFieldOption[];
 }
 
-type TaskSortKey = 'title' | 'status' | 'mode' | 'assignee' | 'dueAt' | 'createdAt' | 'ticketId';
 type DueFilter = 'all' | 'overdue' | 'today' | 'without_due';
 
 const STATUS_OPTIONS = [
@@ -104,22 +120,12 @@ const DUE_OPTIONS: Array<{ value: DueFilter; label: string }> = [
   { value: 'without_due', label: 'Ohne Fälligkeit' },
 ];
 
-const PAGE_SIZE_OPTIONS = [10, 25, 50, 100] as const;
-
 const STATUS_LABELS: Record<InternalTaskItem['status'], string> = {
   pending: 'Offen',
   in_progress: 'In Bearbeitung',
   completed: 'Abgeschlossen',
   rejected: 'Abgelehnt',
   cancelled: 'Abgebrochen',
-};
-
-const STATUS_SORT_ORDER: Record<InternalTaskItem['status'], number> = {
-  pending: 1,
-  in_progress: 2,
-  completed: 3,
-  rejected: 4,
-  cancelled: 5,
 };
 
 const EVENT_LABELS: Record<string, string> = {
@@ -356,6 +362,7 @@ const validateInternalTaskRequiredFields = (
 
 const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
   const location = useLocation();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [submittingTaskId, setSubmittingTaskId] = useState<string | null>(null);
@@ -369,10 +376,6 @@ const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
   const [modeFilter, setModeFilter] = useState('');
   const [dueFilter, setDueFilter] = useState<DueFilter>('all');
   const [onlyActionable, setOnlyActionable] = useState(false);
-  const [tableSortKey, setTableSortKey] = useState<TaskSortKey>('dueAt');
-  const [tableSortDirection, setTableSortDirection] = useState<'asc' | 'desc'>('asc');
-  const [tablePageSize, setTablePageSize] = useState<number>(25);
-  const [tablePage, setTablePage] = useState<number>(1);
   const [assignmentTarget, setAssignmentTarget] = useState('');
   const [actionNote, setActionNote] = useState('');
   const [actionResponse, setActionResponse] = useState('{}');
@@ -746,7 +749,8 @@ const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
   const sortedAndFilteredTasks = useMemo(() => {
     const nowMs = Date.now();
     const searchTerm = search.trim().toLowerCase();
-    const filtered = tasks.filter((task) => {
+    return tasks
+      .filter((task) => {
       if (modeFilter && task.mode !== modeFilter) return false;
       if (onlyActionable && !isTaskActionable(task.status)) return false;
       if (dueFilter === 'overdue' && !isTaskOverdue(task, nowMs)) return false;
@@ -771,67 +775,183 @@ const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
         .join(' ')
         .toLowerCase();
       return haystack.includes(searchTerm);
-    });
-
-    const sorted = [...filtered].sort((left, right) => {
-      let comparison = 0;
-      switch (tableSortKey) {
-        case 'title':
-          comparison = compareText(String(left.title || left.id), String(right.title || right.id));
-          break;
-        case 'status':
-          comparison = STATUS_SORT_ORDER[left.status] - STATUS_SORT_ORDER[right.status];
-          break;
-        case 'mode':
-          comparison = compareText(left.mode === 'parallel' ? 'parallel' : 'blocking', right.mode === 'parallel' ? 'parallel' : 'blocking');
-          break;
-        case 'assignee':
-          comparison = compareText(getAssigneeLabel(left), getAssigneeLabel(right));
-          break;
-        case 'ticketId':
-          comparison = compareText(String(left.ticketId || ''), String(right.ticketId || ''));
-          break;
-        case 'createdAt': {
-          const leftMs = parseDateMs(left.createdAt) ?? 0;
-          const rightMs = parseDateMs(right.createdAt) ?? 0;
-          comparison = leftMs - rightMs;
-          break;
+      })
+      .sort((left, right) => {
+        const leftDueMs = parseDateMs(left.dueAt);
+        const rightDueMs = parseDateMs(right.dueAt);
+        if (leftDueMs === null && rightDueMs !== null) return 1;
+        if (leftDueMs !== null && rightDueMs === null) return -1;
+        if (leftDueMs !== null && rightDueMs !== null && leftDueMs !== rightDueMs) {
+          return leftDueMs - rightDueMs;
         }
-        case 'dueAt':
-        default: {
-          const leftMs = parseDateMs(left.dueAt);
-          const rightMs = parseDateMs(right.dueAt);
-          if (leftMs === null && rightMs === null) comparison = 0;
-          else if (leftMs === null) comparison = 1;
-          else if (rightMs === null) comparison = -1;
-          else comparison = leftMs - rightMs;
-          break;
-        }
-      }
-      if (comparison === 0) comparison = compareText(String(left.id || ''), String(right.id || ''));
-      return tableSortDirection === 'asc' ? comparison : -comparison;
+        const leftCreatedMs = parseDateMs(left.createdAt) ?? 0;
+        const rightCreatedMs = parseDateMs(right.createdAt) ?? 0;
+        if (leftCreatedMs !== rightCreatedMs) return rightCreatedMs - leftCreatedMs;
+        return compareText(String(left.id || ''), String(right.id || ''));
+      });
+  }, [dueFilter, getAssigneeLabel, modeFilter, onlyActionable, search, tasks]);
+
+  const internalTaskRows = useMemo<InternalTaskTableRow[]>(() => {
+    const nowMs = Date.now();
+    return sortedAndFilteredTasks.map((task) => {
+      const overdue = isTaskOverdue(task, nowMs);
+      const actionable = isTaskActionable(task.status);
+      const startable = task.status === 'pending' || task.status === 'in_progress';
+      const quickActionLocked = normalizeInternalTaskFormFields(task.formSchema).some((field) => field.required);
+      return {
+        ...task,
+        assigneeLabel: getAssigneeLabel(task),
+        dueAtLabel: formatDateTime(task.dueAt),
+        createdAtLabel: formatDateTime(task.createdAt),
+        ticketSummary: [task.ticketCategory || '–', task.ticketPriority || '–'].join(' / '),
+        overdue,
+        actionable,
+        startable,
+        quickActionLocked,
+      };
     });
+  }, [getAssigneeLabel, sortedAndFilteredTasks]);
 
-    return sorted;
-  }, [dueFilter, getAssigneeLabel, modeFilter, onlyActionable, search, tableSortDirection, tableSortKey, tasks]);
-
-  const tableTotalPages = useMemo(
-    () => Math.max(1, Math.ceil(sortedAndFilteredTasks.length / tablePageSize)),
-    [sortedAndFilteredTasks.length, tablePageSize]
-  );
-
-  const pagedTasks = useMemo(() => {
-    const start = (tablePage - 1) * tablePageSize;
-    return sortedAndFilteredTasks.slice(start, start + tablePageSize);
-  }, [sortedAndFilteredTasks, tablePage, tablePageSize]);
-
-  useEffect(() => {
-    setTablePage(1);
-  }, [statusFilter, assignmentFilter, modeFilter, dueFilter, onlyActionable, search, tablePageSize]);
-
-  useEffect(() => {
-    setTablePage((current) => Math.min(current, tableTotalPages));
-  }, [tableTotalPages]);
+  const internalTaskColumns = useMemo<SmartTableColumnDef<InternalTaskTableRow>[]>(() => {
+    return [
+      {
+        field: 'title',
+        headerName: 'Aufgabe',
+        minWidth: 280,
+        flex: 1.2,
+        valueGetter: (_value, row) => `${row.title || row.id} ${row.ticketId} ${row.workflowExecutionId}`,
+        renderCell: (params) => {
+          const row = params.row;
+          return (
+            <div className="task-cell">
+              <strong className="task-title">{row.title || row.id}</strong>
+              <div className="task-sub">
+                <span className="ticket-id">Ticket {row.ticketId}</span>
+                <span>Workflow {row.workflowExecutionId}</span>
+              </div>
+              <div className="task-sub">
+                <span>Kategorie / Priorität: {row.ticketSummary}</span>
+              </div>
+            </div>
+          );
+        },
+      },
+      {
+        field: 'status',
+        headerName: 'Status',
+        minWidth: 160,
+        flex: 0.55,
+        valueGetter: (_value, row) => STATUS_LABELS[row.status] || row.status,
+        renderCell: (params) => (
+          <span className={`status-pill status-${params.row.status}`}>{STATUS_LABELS[params.row.status] || params.row.status}</span>
+        ),
+      },
+      {
+        field: 'mode',
+        headerName: 'Modus',
+        minWidth: 130,
+        flex: 0.45,
+        valueGetter: (_value, row) => (row.mode === 'parallel' ? 'Parallel' : 'Blockierend'),
+        renderCell: (params) => <span className="mode-pill">{params.row.mode === 'parallel' ? 'Parallel' : 'Blockierend'}</span>,
+      },
+      {
+        field: 'assigneeLabel',
+        headerName: 'Zuweisung',
+        minWidth: 220,
+        flex: 0.9,
+      },
+      {
+        field: 'dueAtLabel',
+        headerName: 'Fällig',
+        minWidth: 180,
+        flex: 0.65,
+        valueGetter: (_value, row) => parseDateMs(row.dueAt) ?? Number.MAX_SAFE_INTEGER,
+        renderCell: (params) => (
+          <div className="due-cell">
+            <span>{params.row.dueAtLabel}</span>
+            {params.row.overdue && <small>Überfällig</small>}
+          </div>
+        ),
+      },
+      {
+        field: 'createdAtLabel',
+        headerName: 'Erstellt',
+        minWidth: 180,
+        flex: 0.65,
+        valueGetter: (_value, row) => parseDateMs(row.createdAt) ?? 0,
+      },
+      {
+        field: 'actions',
+        headerName: 'Aktionen',
+        minWidth: 220,
+        flex: 0.9,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        renderCell: (params) => {
+          const row = params.row;
+          return (
+            <SmartTableRowActions>
+              <SmartTableRowActionButton
+                label="Aufgabe öffnen"
+                icon={<i className="fa-solid fa-up-right-from-square" aria-hidden="true" />}
+                onClick={() => {
+                  void loadTaskDetail(row.id);
+                }}
+              />
+              <SmartTableRowActionButton
+                label="Ticket öffnen"
+                icon={<i className="fa-solid fa-ticket" aria-hidden="true" />}
+                onClick={() => navigate(`/tickets/${encodeURIComponent(row.ticketId)}`)}
+              />
+              <SmartTableRowActionButton
+                label="Starten"
+                icon={<i className="fa-solid fa-play" aria-hidden="true" />}
+                onClick={() => {
+                  void startTask(row, false);
+                }}
+                disabled={!row.startable || submittingTaskId === row.id}
+                loading={submittingTaskId === row.id}
+              />
+              <SmartTableRowActionButton
+                label="Übernehmen"
+                icon={<i className="fa-solid fa-hand" aria-hidden="true" />}
+                onClick={() => {
+                  void startTask(row, true);
+                }}
+                disabled={!row.startable || submittingTaskId === row.id}
+                loading={submittingTaskId === row.id}
+              />
+              <SmartTableRowActionButton
+                label="Abschließen"
+                icon={<i className="fa-solid fa-check" aria-hidden="true" />}
+                tone="success"
+                onClick={() =>
+                  void executeTaskAction(row, 'complete', {
+                    note: '',
+                    payload: {},
+                  })
+                }
+                disabled={!row.actionable || submittingTaskId === row.id || row.quickActionLocked}
+              />
+              <SmartTableRowActionButton
+                label="Ablehnen"
+                icon={<i className="fa-solid fa-ban" aria-hidden="true" />}
+                tone="danger"
+                onClick={() =>
+                  void executeTaskAction(row, 'reject', {
+                    note: '',
+                    payload: {},
+                  })
+                }
+                disabled={!row.actionable || submittingTaskId === row.id || row.quickActionLocked}
+              />
+            </SmartTableRowActions>
+          );
+        },
+      },
+    ];
+  }, [executeTaskAction, loadTaskDetail, navigate, startTask, submittingTaskId]);
 
   const statusCounts = useMemo(() => {
     const counts = {
@@ -859,6 +979,7 @@ const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
     () => normalizeInternalTaskFormFields(selectedTask?.formSchema),
     [selectedTask?.formSchema]
   );
+  const selectedTaskFormEditable = selectedTask?.status === 'in_progress';
   const selectedTaskHasRequiredFormFields = useMemo(
     () => selectedTaskFormFields.some((field) => field.required),
     [selectedTaskFormFields]
@@ -874,20 +995,6 @@ const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
     return assignmentTarget !== current;
   }, [assignmentTarget, selectedTask]);
 
-  const toggleSort = (key: TaskSortKey) => {
-    if (tableSortKey === key) {
-      setTableSortDirection((previous) => (previous === 'asc' ? 'desc' : 'asc'));
-      return;
-    }
-    setTableSortKey(key);
-    setTableSortDirection('asc');
-  };
-
-  const sortIndicator = (key: TaskSortKey) => {
-    if (tableSortKey !== key) return '↕';
-    return tableSortDirection === 'asc' ? '↑' : '↓';
-  };
-
   const clearAllFilters = () => {
     setStatusFilter('');
     setAssignmentFilter('');
@@ -895,13 +1002,7 @@ const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
     setDueFilter('all');
     setOnlyActionable(false);
     setSearch('');
-    setTableSortKey('dueAt');
-    setTableSortDirection('asc');
-    setTablePageSize(25);
   };
-
-  const firstVisible = sortedAndFilteredTasks.length === 0 ? 0 : (tablePage - 1) * tablePageSize + 1;
-  const lastVisible = Math.min(tablePage * tablePageSize, sortedAndFilteredTasks.length);
 
   return (
     <div className="internal-tasks-page">
@@ -988,16 +1089,6 @@ const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
               placeholder="Titel, Ticket, Workflow, Kategorie, Zuweisung ..."
             />
           </label>
-          <label className="filter-group filter-pagesize">
-            <span>Zeilen</span>
-            <select value={String(tablePageSize)} onChange={(event) => setTablePageSize(Number(event.target.value) || 25)}>
-              {PAGE_SIZE_OPTIONS.map((size) => (
-                <option key={size} value={String(size)}>
-                  {size}
-                </option>
-              ))}
-            </select>
-          </label>
         </div>
         <div className="internal-tasks-filters-footer">
           <label className="inline-check">
@@ -1009,7 +1100,7 @@ const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
             <span>Nur offene Aufgaben anzeigen</span>
           </label>
           <div className="filter-hint">
-            {refreshing ? 'Aktualisiere…' : `Treffer ${firstVisible}–${lastVisible} von ${sortedAndFilteredTasks.length}`}
+            {refreshing ? 'Aktualisiere…' : `${sortedAndFilteredTasks.length} Treffer`}
           </div>
           <button type="button" className="btn btn-secondary" onClick={clearAllFilters}>
             Filter zurücksetzen
@@ -1034,169 +1125,26 @@ const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
           ) : sortedAndFilteredTasks.length === 0 ? (
             <p className="internal-tasks-empty">Keine passenden Aufgaben gefunden.</p>
           ) : (
-            <>
-              <div className="internal-tasks-table-wrap">
-                <table className="internal-tasks-table">
-                  <thead>
-                    <tr>
-                      <th>
-                        <button type="button" className="table-sort" onClick={() => toggleSort('title')}>
-                          Aufgabe <span className="sort-indicator">{sortIndicator('title')}</span>
-                        </button>
-                      </th>
-                      <th>
-                        <button type="button" className="table-sort" onClick={() => toggleSort('status')}>
-                          Status <span className="sort-indicator">{sortIndicator('status')}</span>
-                        </button>
-                      </th>
-                      <th>
-                        <button type="button" className="table-sort" onClick={() => toggleSort('mode')}>
-                          Modus <span className="sort-indicator">{sortIndicator('mode')}</span>
-                        </button>
-                      </th>
-                      <th>
-                        <button type="button" className="table-sort" onClick={() => toggleSort('assignee')}>
-                          Zuweisung <span className="sort-indicator">{sortIndicator('assignee')}</span>
-                        </button>
-                      </th>
-                      <th>
-                        <button type="button" className="table-sort" onClick={() => toggleSort('dueAt')}>
-                          Fällig <span className="sort-indicator">{sortIndicator('dueAt')}</span>
-                        </button>
-                      </th>
-                      <th>
-                        <button type="button" className="table-sort" onClick={() => toggleSort('createdAt')}>
-                          Erstellt <span className="sort-indicator">{sortIndicator('createdAt')}</span>
-                        </button>
-                      </th>
-                      <th>Aktionen</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pagedTasks.map((task) => {
-                      const overdue = isTaskOverdue(task, Date.now());
-                      const actionable = isTaskActionable(task.status);
-                      const startable = task.status === 'pending' || task.status === 'in_progress';
-                      const quickActionLocked = normalizeInternalTaskFormFields(task.formSchema).some(
-                        (field) => field.required
-                      );
-                      const selected = selectedTaskId === task.id;
-                      return (
-                        <tr
-                          key={task.id}
-                          className={`${selected ? 'is-selected' : ''} ${overdue ? 'is-overdue' : ''}`.trim()}
-                          onClick={() => void loadTaskDetail(task.id)}
-                        >
-                          <td>
-                            <div className="task-cell">
-                              <strong className="task-title">{task.title || task.id}</strong>
-                              <div className="task-sub">
-                                <span className="ticket-id">Ticket {task.ticketId}</span>
-                                <span>Workflow {task.workflowExecutionId}</span>
-                              </div>
-                              <div className="task-sub">
-                                <span>Kategorie: {task.ticketCategory || '–'}</span>
-                                <span>Priorität: {task.ticketPriority || '–'}</span>
-                              </div>
-                            </div>
-                          </td>
-                          <td>
-                            <span className={`status-pill status-${task.status}`}>{STATUS_LABELS[task.status] || task.status}</span>
-                          </td>
-                          <td>
-                            <span className="mode-pill">{task.mode === 'parallel' ? 'Parallel' : 'Blockierend'}</span>
-                          </td>
-                          <td>{getAssigneeLabel(task)}</td>
-                          <td>
-                            <div className="due-cell">
-                              <span>{formatDateTime(task.dueAt)}</span>
-                              {overdue && <small>Überfällig</small>}
-                            </div>
-                          </td>
-                          <td>{formatDateTime(task.createdAt)}</td>
-                          <td onClick={(event) => event.stopPropagation()}>
-                            <div className="task-actions">
-                              <button type="button" className="btn btn-secondary btn-compact" onClick={() => void loadTaskDetail(task.id)}>
-                                Öffnen
-                              </button>
-                              <Link to={`/tickets/${encodeURIComponent(task.ticketId)}`} className="btn btn-secondary btn-compact">
-                                Ticket
-                              </Link>
-                              <button
-                                type="button"
-                                className="btn btn-secondary btn-compact"
-                                disabled={!startable || submittingTaskId === task.id}
-                                onClick={() => void startTask(task, false)}
-                              >
-                                Start
-                              </button>
-                              <button
-                                type="button"
-                                className="btn btn-secondary btn-compact"
-                                disabled={!startable || submittingTaskId === task.id}
-                                onClick={() => void startTask(task, true)}
-                              >
-                                Übernehmen
-                              </button>
-                              <button
-                                type="button"
-                                className="btn btn-primary btn-compact"
-                                disabled={!actionable || submittingTaskId === task.id || quickActionLocked}
-                                title={quickActionLocked ? 'Pflichtfelder vorhanden: bitte Detailansicht nutzen.' : undefined}
-                                onClick={() =>
-                                  void executeTaskAction(task, 'complete', {
-                                    note: '',
-                                    payload: {},
-                                  })
-                                }
-                              >
-                                Abschluss
-                              </button>
-                              <button
-                                type="button"
-                                className="btn btn-danger btn-compact"
-                                disabled={!actionable || submittingTaskId === task.id || quickActionLocked}
-                                title={quickActionLocked ? 'Pflichtfelder vorhanden: bitte Detailansicht nutzen.' : undefined}
-                                onClick={() =>
-                                  void executeTaskAction(task, 'reject', {
-                                    note: '',
-                                    payload: {},
-                                  })
-                                }
-                              >
-                                Ablehnen
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-
-              <div className="internal-tasks-pagination">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setTablePage((current) => Math.max(1, current - 1))}
-                  disabled={tablePage <= 1}
-                >
-                  Zurück
-                </button>
-                <span>
-                  Seite {tablePage} von {tableTotalPages}
-                </span>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setTablePage((current) => Math.min(tableTotalPages, current + 1))}
-                  disabled={tablePage >= tableTotalPages}
-                >
-                  Weiter
-                </button>
-              </div>
-            </>
+            <SmartTable<InternalTaskTableRow>
+              tableId="internal-tasks-overview"
+              userId={token}
+              title="Interne Aufgaben"
+              rows={internalTaskRows}
+              columns={internalTaskColumns}
+              loading={loading || refreshing}
+              onRefresh={loadTasks}
+              defaultPageSize={25}
+              pageSizeOptions={[10, 25, 50, 100]}
+              onRowClick={(row) => {
+                void loadTaskDetail(row.id);
+              }}
+              getRowClassName={(row) => {
+                const parts: string[] = [];
+                if (selectedTaskId === row.id) parts.push('is-selected');
+                if (row.overdue) parts.push('is-overdue');
+                return parts.join(' ');
+              }}
+            />
           )}
         </div>
 
@@ -1302,6 +1250,11 @@ const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
                 <h4>Aktion ausführen</h4>
                 {selectedTaskFormFields.length > 0 && (
                   <>
+                    {!selectedTaskFormEditable && isTaskActionable(selectedTask.status) && (
+                      <p className="helper-text">
+                        Antwortformular wird erst nach dem Start der Aufgabe freigeschaltet.
+                      </p>
+                    )}
                     <div className="internal-task-form-grid">
                       {selectedTaskFormFields.map((field) => {
                         const rawValue = responseFormValues[field.key];
@@ -1311,6 +1264,7 @@ const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
                               <input
                                 type="checkbox"
                                 checked={rawValue === true}
+                                disabled={!selectedTaskFormEditable}
                                 onChange={(event) =>
                                   setResponseFormValues((current) => ({
                                     ...current,
@@ -1330,6 +1284,7 @@ const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
                               <textarea
                                 rows={3}
                                 value={String(rawValue ?? '')}
+                                disabled={!selectedTaskFormEditable}
                                 onChange={(event) =>
                                   setResponseFormValues((current) => ({
                                     ...current,
@@ -1349,6 +1304,7 @@ const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
                               <span>{field.required ? `${field.label} *` : field.label}</span>
                               <select
                                 value={String(rawValue ?? '')}
+                                disabled={!selectedTaskFormEditable}
                                 onChange={(event) =>
                                   setResponseFormValues((current) => ({
                                     ...current,
@@ -1375,6 +1331,7 @@ const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
                             <input
                               type={inputType}
                               value={String(rawValue ?? '')}
+                              disabled={!selectedTaskFormEditable}
                               onChange={(event) =>
                                 setResponseFormValues((current) => ({
                                   ...current,
@@ -1405,7 +1362,12 @@ const InternalTasks: React.FC<{ token: string }> = ({ token }) => {
                 </label>
                 <label>
                   <span>Antwortdaten (JSON)</span>
-                  <textarea value={actionResponse} onChange={(event) => setActionResponse(event.target.value)} rows={6} />
+                  <textarea
+                    value={actionResponse}
+                    onChange={(event) => setActionResponse(event.target.value)}
+                    rows={6}
+                    disabled={!selectedTaskFormEditable}
+                  />
                 </label>
                 {actionError && <div className="internal-tasks-alert error">{actionError}</div>}
                 <div className="detail-actions">

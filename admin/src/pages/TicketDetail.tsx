@@ -123,6 +123,43 @@ interface TicketDataRequest {
   answers: Record<string, any>;
 }
 
+type InternalTaskFormFieldType = 'text' | 'textarea' | 'boolean' | 'select' | 'date' | 'number' | string;
+type InternalTaskStatus = 'pending' | 'in_progress' | 'completed' | 'rejected' | 'cancelled' | string;
+
+interface InternalTaskFormFieldOption {
+  value: string;
+  label?: string;
+}
+
+interface InternalTaskFormField {
+  key: string;
+  label: string;
+  type: InternalTaskFormFieldType;
+  required: boolean;
+  helpText?: string;
+  placeholder?: string;
+  options?: InternalTaskFormFieldOption[];
+}
+
+interface TicketInternalTask {
+  id: string;
+  ticketId: string;
+  workflowExecutionId?: string | null;
+  stepId?: string | null;
+  title?: string;
+  description?: string;
+  status: InternalTaskStatus;
+  mode?: string;
+  formSchema?: Record<string, any> | null;
+  response?: Record<string, any> | null;
+  completedAt?: string | null;
+  completedBy?: string | null;
+  dueAt?: string | null;
+  createdAt?: string | null;
+  cycleIndex?: number;
+  maxCycles?: number;
+}
+
 interface TicketCollaborator {
   id: string;
   userId?: string | null;
@@ -719,6 +756,122 @@ const formatDataRequestAnswerValue = (value: unknown, field?: TicketDataRequestF
   return '–';
 };
 
+const normalizeInternalTaskFormFields = (schema: any): InternalTaskFormField[] => {
+  const source = Array.isArray(schema?.fields) ? schema.fields : [];
+  return source
+    .map((entry: any) => {
+      const key = typeof entry?.key === 'string' ? entry.key.trim() : '';
+      if (!key) return null;
+      const typeRaw = typeof entry?.type === 'string' ? entry.type.trim().toLowerCase() : 'text';
+      const type: InternalTaskFormFieldType =
+        typeRaw === 'textarea' ||
+        typeRaw === 'boolean' ||
+        typeRaw === 'select' ||
+        typeRaw === 'date' ||
+        typeRaw === 'number'
+          ? typeRaw
+          : 'text';
+      const options = Array.isArray(entry?.options)
+        ? entry.options
+            .map((option: any) => {
+              const value = typeof option?.value === 'string' ? option.value.trim() : '';
+              if (!value) return null;
+              const label = typeof option?.label === 'string' ? option.label.trim() : '';
+              return {
+                value,
+                label: label || value,
+              } as InternalTaskFormFieldOption;
+            })
+            .filter((option: InternalTaskFormFieldOption | null): option is InternalTaskFormFieldOption => option !== null)
+        : undefined;
+      return {
+        key,
+        label: typeof entry?.label === 'string' && entry.label.trim() ? entry.label.trim() : key,
+        type,
+        required: !!entry?.required,
+        helpText: typeof entry?.helpText === 'string' && entry.helpText.trim() ? entry.helpText.trim() : undefined,
+        placeholder:
+          typeof entry?.placeholder === 'string' && entry.placeholder.trim() ? entry.placeholder.trim() : undefined,
+        options,
+      } as InternalTaskFormField;
+    })
+    .filter((field: InternalTaskFormField | null): field is InternalTaskFormField => field !== null);
+};
+
+const hasInternalTaskResponseValue = (value: unknown): boolean => {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (typeof value === 'boolean') return true;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'object') return Object.keys(value as Record<string, unknown>).length > 0;
+  return String(value).trim().length > 0;
+};
+
+const formatInternalTaskResponseValue = (value: unknown, field?: InternalTaskFormField): string => {
+  if (field?.type === 'select' && typeof value === 'string' && Array.isArray(field.options)) {
+    const selectedOption = field.options.find((option) => option.value === value);
+    if (selectedOption?.label) return selectedOption.label;
+  }
+  if (typeof value === 'boolean') return value ? 'Ja' : 'Nein';
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '–';
+  if (typeof value === 'string') return value.trim() || '–';
+  if (Array.isArray(value)) {
+    return value.length > 0
+      ? value.map((entry) => formatInternalTaskResponseValue(entry, field)).join(', ')
+      : '–';
+  }
+  if (value && typeof value === 'object') return JSON.stringify(value);
+  return '–';
+};
+
+const normalizeInternalTasks = (input: unknown): TicketInternalTask[] => {
+  if (!Array.isArray(input)) return [];
+  return input
+    .map((entry) => {
+      if (!entry || typeof entry !== 'object') return null;
+      const source = entry as Record<string, any>;
+      const id = typeof source.id === 'string' ? source.id.trim() : '';
+      const ticketId =
+        typeof source.ticketId === 'string'
+          ? source.ticketId.trim()
+          : typeof source.ticket_id === 'string'
+            ? source.ticket_id.trim()
+            : '';
+      if (!id || !ticketId) return null;
+      const response =
+        source.response && typeof source.response === 'object' && !Array.isArray(source.response)
+          ? (source.response as Record<string, any>)
+          : null;
+      const formSchema =
+        source.formSchema && typeof source.formSchema === 'object' && !Array.isArray(source.formSchema)
+          ? (source.formSchema as Record<string, any>)
+          : null;
+      return {
+        id,
+        ticketId,
+        workflowExecutionId: typeof source.workflowExecutionId === 'string' ? source.workflowExecutionId : null,
+        stepId: typeof source.stepId === 'string' ? source.stepId : null,
+        title: typeof source.title === 'string' ? source.title : '',
+        description: typeof source.description === 'string' ? source.description : '',
+        status:
+          typeof source.status === 'string' && source.status.trim()
+            ? (source.status.trim().toLowerCase() as InternalTaskStatus)
+            : 'pending',
+        mode: typeof source.mode === 'string' ? source.mode : '',
+        formSchema,
+        response,
+        completedAt: typeof source.completedAt === 'string' ? source.completedAt : null,
+        completedBy: typeof source.completedBy === 'string' ? source.completedBy : null,
+        dueAt: typeof source.dueAt === 'string' ? source.dueAt : null,
+        createdAt: typeof source.createdAt === 'string' ? source.createdAt : null,
+        cycleIndex: Number.isFinite(Number(source.cycleIndex)) ? Math.max(1, Math.floor(Number(source.cycleIndex))) : 1,
+        maxCycles: Number.isFinite(Number(source.maxCycles)) ? Math.max(1, Math.floor(Number(source.maxCycles))) : 1,
+      } as TicketInternalTask;
+    })
+    .filter((entry): entry is TicketInternalTask => entry !== null);
+};
+
 const TicketDetail: React.FC<TicketDetailProps> = ({ token }) => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -798,6 +951,7 @@ const TicketDetail: React.FC<TicketDetailProps> = ({ token }) => {
   const [liveLastSyncAt, setLiveLastSyncAt] = useState<string | null>(null);
   const [isLiveRefreshing, setIsLiveRefreshing] = useState(false);
   const [ticketComments, setTicketComments] = useState<TicketComment[]>([]);
+  const [internalTasks, setInternalTasks] = useState<TicketInternalTask[]>([]);
   const [commentDraft, setCommentDraft] = useState('');
   const [commentVisibility, setCommentVisibility] = useState<TicketCommentVisibility>('internal');
   const [commentType, setCommentType] = useState<TicketCommentType>('note');
@@ -1399,16 +1553,27 @@ const normalizeTicketPayload = (payload: any): Ticket => ({
       const headers = { Authorization: `Bearer ${token}` };
       const shouldLoadCategories = !lightweight || categoryOptions.length === 0;
       const shouldLoadAuthorities = !lightweight || responsibilityAuthorityOptions.length === 0;
-      const [ticketRes, knowledgeRes, generalRes] = await Promise.all([
+      const [ticketRes, knowledgeRes, generalRes, internalTasksRes] = await Promise.all([
         axios.get(`/api/tickets/${id}`, { headers }),
         shouldLoadCategories ? axios.get('/api/knowledge', { headers }).catch(() => null) : Promise.resolve(null),
         shouldLoadAuthorities
           ? axios.get('/api/admin/config/general', { headers }).catch(() => null)
           : Promise.resolve(null),
+        axios
+          .get('/api/admin/internal-tasks', {
+            headers,
+            params: {
+              limit: 300,
+              offset: 0,
+              ticketId: id,
+            },
+          })
+          .catch(() => null),
       ]);
       const normalizedTicket = normalizeTicketPayload(ticketRes.data);
       setTicket(normalizedTicket);
       setTicketComments(normalizeTicketComments(ticketRes.data?.comments));
+      setInternalTasks(normalizeInternalTasks(internalTasksRes?.data?.items));
       if (knowledgeRes?.data) {
         const loadedCategories = Array.isArray(knowledgeRes.data?.categories)
           ? knowledgeRes.data.categories.map((entry: any) => String(entry?.name || '').trim()).filter(Boolean)
@@ -2467,6 +2632,7 @@ const normalizeTicketPayload = (payload: any): Ticket => ({
             ...ticket,
             comments: ticket.comments || [],
             dataRequests: ticket.dataRequests || [],
+            internalTasks: internalTasks || [],
             images: ticket.images || [],
             emailMessages: ticket.emailMessages || [],
             nominatimRaw: ticket.nominatimRaw || null,
@@ -2968,6 +3134,26 @@ const normalizeTicketPayload = (payload: any): Ticket => ({
     ticket.reporterPseudoEmail,
   ].some((value) => typeof value === 'string' && value.trim().length > 0);
   const ticketDataRequests = Array.isArray(ticket.dataRequests) ? ticket.dataRequests : [];
+  const internalTaskStatusLabelMap: Record<string, string> = {
+    pending: 'Ausstehend',
+    in_progress: 'In Bearbeitung',
+    completed: 'Abgeschlossen',
+    rejected: 'Zurückgewiesen',
+    cancelled: 'Abgebrochen',
+  };
+  const internalTaskResults = [...internalTasks]
+    .filter((task) => {
+      if (task.status === 'completed' || task.status === 'rejected' || task.status === 'cancelled') return true;
+      if (!task.response || typeof task.response !== 'object' || Array.isArray(task.response)) return false;
+      return Object.values(task.response).some((value) => hasInternalTaskResponseValue(value));
+    })
+    .sort((a, b) => {
+      const aTime = Date.parse(String(a.completedAt || a.createdAt || ''));
+      const bTime = Date.parse(String(b.completedAt || b.createdAt || ''));
+      const aSafe = Number.isFinite(aTime) ? aTime : 0;
+      const bSafe = Number.isFinite(bTime) ? bTime : 0;
+      return bSafe - aSafe;
+    });
   const workflowDataRequestsByTaskId = ticketDataRequests.reduce<Record<string, TicketDataRequest[]>>((acc, request) => {
     const taskId = typeof request.taskId === 'string' ? request.taskId.trim() : '';
     if (!taskId) return acc;
@@ -3851,13 +4037,15 @@ const normalizeTicketPayload = (payload: any): Ticket => ({
                           );
                         }
                         if (isDiamond) {
+                          const diamondLabel =
+                            node.type === 'IF' ? 'IF' : node.type === 'SPLIT' ? 'Split' : node.type === 'JOIN' ? 'Join' : 'Knoten';
                           return (
                             <g key={node.id} className={nodeClass}>
                               <polygon
                                 points={`${node.x},${node.y - workflowGraph.diamondSize / 2} ${node.x + workflowGraph.diamondSize / 2},${node.y} ${node.x},${node.y + workflowGraph.diamondSize / 2} ${node.x - workflowGraph.diamondSize / 2},${node.y}`}
                               />
                               <text x={node.x} y={node.y - 4} textAnchor="middle" className="workflow-visual-node-title centered">
-                                Join
+                                {diamondLabel}
                               </text>
                               <text x={node.x} y={node.y + 13} textAnchor="middle" className="workflow-visual-node-meta centered">
                                 {node.status || ''}
@@ -4037,6 +4225,87 @@ const normalizeTicketPayload = (payload: any): Ticket => ({
           )}
         </div>
       )}
+
+      <details className="ticket-comments-card" data-section="internal-task-results">
+        <summary className="ticket-comments-header" style={{ cursor: 'pointer', listStyle: 'none' }}>
+          <h3>
+            <i className="fa-solid fa-clipboard-check" /> Interne Bearbeitung – Formularergebnisse
+          </h3>
+          <span className="ticket-comment-chip ref">{internalTaskResults.length} Einträge</span>
+        </summary>
+        <div style={{ paddingTop: '0.5rem' }}>
+          {internalTaskResults.length === 0 ? (
+            <p className="ticket-comments-empty">
+              Für dieses Ticket sind noch keine Ergebnisse aus Formularen der internen Bearbeitung vorhanden.
+            </p>
+          ) : (
+            <div className="ticket-comment-list">
+              {internalTaskResults.map((task, index) => {
+                const responsePayload =
+                  task.response && typeof task.response === 'object' && !Array.isArray(task.response)
+                    ? task.response
+                    : {};
+                const responseEntries = Object.entries(responsePayload).filter(([, value]) =>
+                  hasInternalTaskResponseValue(value)
+                );
+                const formFieldByKey = new Map(
+                  normalizeInternalTaskFormFields(task.formSchema).map((field) => [field.key, field])
+                );
+                const statusLabel = internalTaskStatusLabelMap[String(task.status || '').toLowerCase()] || task.status || 'Unbekannt';
+                return (
+                  <article key={task.id || `internal-task-result-${index}`} className="ticket-comment-item visibility-internal">
+                    <header className="ticket-comment-head">
+                      <div className="ticket-comment-head-left">
+                        <span className="ticket-comment-chip author-system">Interne Bearbeitung</span>
+                        <span className="ticket-comment-chip type">{statusLabel}</span>
+                        {task.stepId ? <span className="ticket-comment-chip ref">Schritt {task.stepId}</span> : null}
+                        <span className="ticket-comment-chip ref">
+                          Zyklus {task.cycleIndex || 1}/{task.maxCycles || 1}
+                        </span>
+                        {task.completedAt ? (
+                          <span className="ticket-comment-chip ref">Abschluss: {formatDate(task.completedAt)}</span>
+                        ) : null}
+                      </div>
+                    </header>
+                    <div className="ticket-comment-content">
+                      <p style={{ margin: '0 0 0.65rem 0' }}>
+                        <strong>{task.title || 'Interne Aufgabe'}</strong>
+                        {task.description ? ` – ${task.description}` : ''}
+                      </p>
+                      {responseEntries.length === 0 ? (
+                        <p style={{ margin: 0 }}>Für diesen Schritt wurden keine ausgefüllten Formularwerte gespeichert.</p>
+                      ) : (
+                        <div style={{ display: 'grid', gap: '0.5rem' }}>
+                          {responseEntries.map(([key, value]) => {
+                            const field = formFieldByKey.get(key);
+                            return (
+                              <div
+                                key={`${task.id}-${key}`}
+                                style={{
+                                  display: 'grid',
+                                  gridTemplateColumns: 'minmax(180px, 35%) 1fr',
+                                  gap: '0.65rem',
+                                  padding: '0.55rem 0.7rem',
+                                  borderRadius: '10px',
+                                  border: '1px solid rgba(148, 163, 184, 0.35)',
+                                  background: 'rgba(248, 250, 252, 0.72)',
+                                }}
+                              >
+                                <span style={{ fontWeight: 700, color: '#334155' }}>{field?.label || key}</span>
+                                <span style={{ color: '#0f172a' }}>{formatInternalTaskResponseValue(value, field)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </details>
 
       <div className="ticket-comments-card">
         <div className="ticket-comments-header">

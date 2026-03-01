@@ -2,6 +2,12 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { getAdminToken } from '../lib/auth';
 import KeywordChipsInput from '../components/KeywordChipsInput';
+import {
+  SmartTable,
+  SmartTableRowActionButton,
+  SmartTableRowActions,
+  type SmartTableColumnDef,
+} from '../modules/smart-table';
 
 interface Tenant {
   id: string;
@@ -869,13 +875,273 @@ const OrganizationSettings: React.FC<OrganizationSettingsProps> = ({ mode = 'all
       ? 'Organisationsstruktur'
       : 'Organisationsstruktur & Mandanten';
 
+  const renderKeywordBadges = (keywords: string[], tone: 'emerald' | 'slate' = 'emerald') => {
+    if (!Array.isArray(keywords) || keywords.length === 0) return '–';
+    const badgeClass = tone === 'emerald' ? 'badge bg-emerald-50 text-emerald-700' : 'badge bg-slate-200 text-slate-700';
+    return (
+      <div className="flex flex-wrap gap-1">
+        {keywords.slice(0, 3).map((keyword) => (
+          <span key={`${keyword}-${tone}`} className={badgeClass}>
+            {keyword}
+          </span>
+        ))}
+        {keywords.length > 3 && <span className="text-xs text-slate-500">+{keywords.length - 3}</span>}
+      </div>
+    );
+  };
+
+  const tenantColumns = useMemo<SmartTableColumnDef<Tenant>[]>(() => {
+    return [
+      {
+        field: 'name',
+        headerName: 'Name',
+        minWidth: 220,
+        flex: 1,
+      },
+      {
+        field: 'slug',
+        headerName: 'Slug',
+        minWidth: 160,
+        flex: 0.75,
+      },
+      {
+        field: 'tenantType',
+        headerName: 'Typ',
+        minWidth: 180,
+        flex: 0.75,
+      },
+      {
+        field: 'registrationEmailDomains',
+        headerName: 'Registrierungs-Domains',
+        minWidth: 190,
+        flex: 0.7,
+        valueGetter: (_value, row) => row.registrationEmailDomains.length,
+        renderCell: (params) => {
+          const count = params.row.registrationEmailDomains.length;
+          return <span>{count > 0 ? `${count} Domain(s)` : 'Keine'}</span>;
+        },
+      },
+      {
+        field: 'assignmentKeywords',
+        headerName: 'Schlagworte',
+        minWidth: 220,
+        flex: 1.1,
+        sortable: false,
+        valueGetter: (_value, row) => row.assignmentKeywords.join(', '),
+        renderCell: (params) => renderKeywordBadges(params.row.assignmentKeywords),
+      },
+      {
+        field: 'active',
+        headerName: 'Status',
+        minWidth: 120,
+        flex: 0.5,
+        valueGetter: (_value, row) => (row.active ? 'Aktiv' : 'Inaktiv'),
+        renderCell: (params) => (
+          <span className={`badge ${params.row.active ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
+            {params.row.active ? 'Aktiv' : 'Inaktiv'}
+          </span>
+        ),
+      },
+      {
+        field: 'actions',
+        headerName: 'Aktionen',
+        minWidth: 150,
+        flex: 0.65,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        renderCell: (params) => (
+          <SmartTableRowActions>
+            <SmartTableRowActionButton
+              label="Mandant öffnen"
+              icon={<i className="fa-solid fa-folder-open" aria-hidden="true" />}
+              onClick={() => setSelectedTenantId(params.row.id)}
+            />
+            <SmartTableRowActionButton
+              label="Mandant bearbeiten"
+              icon={<i className="fa-solid fa-pen" aria-hidden="true" />}
+              onClick={() => editTenant(params.row)}
+            />
+            <SmartTableRowActionButton
+              label="Mandant löschen"
+              icon={<i className="fa-solid fa-trash" aria-hidden="true" />}
+              tone="danger"
+              onClick={() => {
+                void deleteTenant(params.row.id);
+              }}
+              disabled={params.row.id === 'tenant_default' || saving}
+            />
+          </SmartTableRowActions>
+        ),
+      },
+    ];
+  }, [deleteTenant, editTenant, saving]);
+
+  const orgTypeColumns = useMemo<SmartTableColumnDef<OrgUnitType>[]>(() => {
+    return [
+      {
+        field: 'label',
+        headerName: 'Label',
+        minWidth: 190,
+        flex: 1,
+      },
+      {
+        field: 'key',
+        headerName: 'Key',
+        minWidth: 150,
+        flex: 0.75,
+      },
+      {
+        field: 'sortOrder',
+        headerName: 'Sort',
+        minWidth: 100,
+        flex: 0.45,
+      },
+      {
+        field: 'assignmentKeywords',
+        headerName: 'Schlagworte',
+        minWidth: 220,
+        flex: 1.1,
+        sortable: false,
+        valueGetter: (_value, row) => row.assignmentKeywords.join(', '),
+        renderCell: (params) => renderKeywordBadges(params.row.assignmentKeywords),
+      },
+      {
+        field: 'active',
+        headerName: 'Status',
+        minWidth: 110,
+        flex: 0.5,
+        valueGetter: (_value, row) => (row.active ? 'Aktiv' : 'Inaktiv'),
+      },
+      {
+        field: 'actions',
+        headerName: 'Aktionen',
+        minWidth: 130,
+        flex: 0.6,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        renderCell: (params) => (
+          <SmartTableRowActions>
+            <SmartTableRowActionButton
+              label="Typ bearbeiten"
+              icon={<i className="fa-solid fa-pen" aria-hidden="true" />}
+              onClick={() => editType(params.row)}
+            />
+            <SmartTableRowActionButton
+              label="Typ löschen"
+              icon={<i className="fa-solid fa-trash" aria-hidden="true" />}
+              tone="danger"
+              onClick={() => {
+                void deleteType(params.row.id);
+              }}
+              disabled={saving}
+            />
+          </SmartTableRowActions>
+        ),
+      },
+    ];
+  }, [deleteType, editType, saving]);
+
+  const orgUnitColumns = useMemo<SmartTableColumnDef<OrgUnit>[]>(() => {
+    return [
+      {
+        field: 'name',
+        headerName: 'Name',
+        minWidth: 220,
+        flex: 1.1,
+      },
+      {
+        field: 'typeId',
+        headerName: 'Typ',
+        minWidth: 170,
+        flex: 0.8,
+        valueGetter: (_value, row) => (row.typeId ? unitTypeById.get(row.typeId)?.label || row.typeId : '–'),
+      },
+      {
+        field: 'parentId',
+        headerName: 'Parent',
+        minWidth: 220,
+        flex: 1,
+        valueGetter: (_value, row) => (row.parentId ? orgUnitLabelById[row.parentId] || row.parentId : '–'),
+      },
+      {
+        field: 'contactEmail',
+        headerName: 'Kontakt-E-Mail',
+        minWidth: 220,
+        flex: 0.95,
+        valueGetter: (_value, row) => row.contactEmail || '–',
+      },
+      {
+        field: 'assignmentKeywords',
+        headerName: 'Schlagworte',
+        minWidth: 220,
+        flex: 1.1,
+        sortable: false,
+        valueGetter: (_value, row) => row.assignmentKeywords.join(', '),
+        renderCell: (params) => renderKeywordBadges(params.row.assignmentKeywords),
+      },
+      {
+        field: 'active',
+        headerName: 'Status',
+        minWidth: 110,
+        flex: 0.5,
+        valueGetter: (_value, row) => (row.active ? 'Aktiv' : 'Inaktiv'),
+      },
+      {
+        field: 'actions',
+        headerName: 'Aktionen',
+        minWidth: 160,
+        flex: 0.7,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        renderCell: (params) => (
+          <SmartTableRowActions>
+            <SmartTableRowActionButton
+              label="Einheit bearbeiten"
+              icon={<i className="fa-solid fa-pen" aria-hidden="true" />}
+              onClick={() => editUnit(params.row)}
+            />
+            <SmartTableRowActionButton
+              label="Gruppe öffnen"
+              icon={<i className="fa-solid fa-users" aria-hidden="true" />}
+              onClick={() => setSelectedGroupUnitId(params.row.id)}
+            />
+            <SmartTableRowActionButton
+              label="Einheit löschen"
+              icon={<i className="fa-solid fa-trash" aria-hidden="true" />}
+              tone="danger"
+              onClick={() => {
+                void deleteUnit(params.row.id);
+              }}
+              disabled={saving}
+            />
+          </SmartTableRowActions>
+        ),
+      },
+    ];
+  }, [deleteUnit, editUnit, orgUnitLabelById, saving, unitTypeById]);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
         <h2 className="text-2xl font-semibold">{pageTitle}</h2>
-        <button className="btn btn-secondary" onClick={() => void fullReload(selectedTenantId)} disabled={loading || saving}>
-          <i className="fa-solid fa-rotate" /> Neu laden
-        </button>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button
+            type="button"
+            className="btn btn-secondary"
+            onClick={() => {
+              const tenantQuery = selectedTenantId ? `&tenantId=${encodeURIComponent(selectedTenantId)}` : '';
+              window.location.assign(`/admin-settings/keywording?targetType=org_unit${tenantQuery}`);
+            }}
+          >
+            <i className="fa-solid fa-wand-magic-sparkles" /> KI-Schlagworte aus Leistungen
+          </button>
+          <button className="btn btn-secondary" onClick={() => void fullReload(selectedTenantId)} disabled={loading || saving}>
+            <i className="fa-solid fa-rotate" /> Neu laden
+          </button>
+        </div>
       </div>
 
       {message && (
@@ -911,78 +1177,19 @@ const OrganizationSettings: React.FC<OrganizationSettingsProps> = ({ mode = 'all
         {loading ? (
           <p className="text-slate-500">Lade Mandanten...</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-slate-500">
-                  <th className="py-2">Name</th>
-                  <th className="py-2">Slug</th>
-                  <th className="py-2">Typ</th>
-                  <th className="py-2">Registrierungs-Domains</th>
-                  <th className="py-2">Schlagworte</th>
-                  <th className="py-2">Status</th>
-                  <th className="py-2">Aktion</th>
-                </tr>
-              </thead>
-              <tbody>
-                {tenants.map((tenant) => (
-                  <tr key={tenant.id} className={`border-t border-slate-200 ${tenant.id === selectedTenantId ? 'bg-slate-50' : ''}`}>
-                    <td className="py-2 font-semibold">{tenant.name}</td>
-                    <td className="py-2 text-slate-600">{tenant.slug}</td>
-                    <td className="py-2 text-slate-600">{tenant.tenantType}</td>
-                    <td className="py-2 text-slate-600">
-                      {tenant.registrationEmailDomains.length > 0
-                        ? `${tenant.registrationEmailDomains.length} Domain(s)`
-                        : 'Keine'}
-                    </td>
-                    <td className="py-2 text-slate-600">
-                      {tenant.assignmentKeywords.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {tenant.assignmentKeywords.slice(0, 3).map((keyword) => (
-                            <span key={`${tenant.id}-${keyword}`} className="badge bg-emerald-50 text-emerald-700">
-                              {keyword}
-                            </span>
-                          ))}
-                          {tenant.assignmentKeywords.length > 3 && (
-                            <span className="text-xs text-slate-500">+{tenant.assignmentKeywords.length - 3}</span>
-                          )}
-                        </div>
-                      ) : (
-                        '–'
-                      )}
-                    </td>
-                    <td className="py-2">
-                      <span className={`badge ${tenant.active ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
-                        {tenant.active ? 'Aktiv' : 'Inaktiv'}
-                      </span>
-                    </td>
-                    <td className="py-2">
-                      <div className="flex flex-wrap gap-2">
-                        <button className="btn btn-secondary" onClick={() => setSelectedTenantId(tenant.id)}>
-                          Öffnen
-                        </button>
-                        <button className="btn btn-secondary" onClick={() => editTenant(tenant)}>
-                          Bearbeiten
-                        </button>
-                        {tenant.id !== 'tenant_default' && (
-                          <button className="btn btn-danger" onClick={() => void deleteTenant(tenant.id)} disabled={saving}>
-                            Löschen
-                          </button>
-                        )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {tenants.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="py-4 text-center text-slate-500">
-                      Keine Mandanten vorhanden.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <SmartTable<Tenant>
+            tableId="organization-settings-tenants"
+            userId={token}
+            title="Mandantenliste"
+            rows={tenants}
+            columns={tenantColumns}
+            loading={loading}
+            onRefresh={() => fullReload(selectedTenantId)}
+            defaultPageSize={10}
+            pageSizeOptions={[10, 25, 50, 100]}
+            onRowClick={(row) => setSelectedTenantId(row.id)}
+            getRowClassName={(row) => (row.id === selectedTenantId ? 'is-selected' : '')}
+          />
         )}
 
         <form className="grid grid-cols-1 md:grid-cols-4 gap-3 border border-slate-200 rounded-lg p-4" onSubmit={submitTenant}>
@@ -1345,63 +1552,21 @@ const OrganizationSettings: React.FC<OrganizationSettingsProps> = ({ mode = 'all
             </div>
           </form>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-slate-500">
-                  <th className="py-2">Label</th>
-                  <th className="py-2">Key</th>
-                  <th className="py-2">Sort</th>
-                  <th className="py-2">Schlagworte</th>
-                  <th className="py-2">Status</th>
-                  <th className="py-2">Aktion</th>
-                </tr>
-              </thead>
-              <tbody>
-                {unitTypes.map((entry) => (
-                  <tr key={entry.id} className="border-t border-slate-200">
-                    <td className="py-2 font-semibold">{entry.label}</td>
-                    <td className="py-2 text-slate-600">{entry.key}</td>
-                    <td className="py-2 text-slate-600">{entry.sortOrder}</td>
-                    <td className="py-2 text-slate-600">
-                      {entry.assignmentKeywords.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {entry.assignmentKeywords.slice(0, 2).map((keyword) => (
-                            <span key={`${entry.id}-${keyword}`} className="badge bg-emerald-50 text-emerald-700">
-                              {keyword}
-                            </span>
-                          ))}
-                          {entry.assignmentKeywords.length > 2 && (
-                            <span className="text-xs text-slate-500">+{entry.assignmentKeywords.length - 2}</span>
-                          )}
-                        </div>
-                      ) : (
-                        '–'
-                      )}
-                    </td>
-                    <td className="py-2 text-slate-600">{entry.active ? 'Aktiv' : 'Inaktiv'}</td>
-                    <td className="py-2">
-                      <div className="flex gap-2">
-                        <button className="btn btn-secondary" onClick={() => editType(entry)}>
-                          Bearbeiten
-                        </button>
-                        <button className="btn btn-danger" onClick={() => void deleteType(entry.id)} disabled={saving}>
-                          Löschen
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {unitTypes.length === 0 && (
-                  <tr>
-                    <td colSpan={6} className="py-4 text-center text-slate-500">
-                      Keine Typen vorhanden.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <SmartTable<OrgUnitType>
+            tableId="organization-settings-unit-types"
+            userId={token}
+            title="Organisationstypen"
+            rows={unitTypes}
+            columns={orgTypeColumns}
+            loading={loading}
+            onRefresh={() => {
+              if (!selectedTenantId) return;
+              return loadTenantDetails(selectedTenantId);
+            }}
+            defaultPageSize={10}
+            pageSizeOptions={[10, 25, 50]}
+            onRowClick={(row) => editType(row)}
+          />
         </div>
 
         <div className="card p-6 space-y-4">
@@ -1508,74 +1673,22 @@ const OrganizationSettings: React.FC<OrganizationSettingsProps> = ({ mode = 'all
             </div>
           </form>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-slate-500">
-                  <th className="py-2">Name</th>
-                  <th className="py-2">Typ</th>
-                  <th className="py-2">Parent</th>
-                  <th className="py-2">Kontakt-E-Mail</th>
-                  <th className="py-2">Schlagworte</th>
-                  <th className="py-2">Status</th>
-                  <th className="py-2">Aktion</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orgUnits.map((entry) => (
-                  <tr
-                    key={entry.id}
-                    className={`border-t border-slate-200 ${selectedGroupUnitId === entry.id ? 'bg-sky-50' : ''}`}
-                  >
-                    <td className="py-2 font-semibold">{entry.name}</td>
-                    <td className="py-2 text-slate-600">{entry.typeId ? unitTypeById.get(entry.typeId)?.label || entry.typeId : '–'}</td>
-                    <td className="py-2 text-slate-600">{entry.parentId ? orgUnitLabelById[entry.parentId] || entry.parentId : '–'}</td>
-                    <td className="py-2 text-slate-600">{entry.contactEmail || '–'}</td>
-                    <td className="py-2 text-slate-600">
-                      {entry.assignmentKeywords.length > 0 ? (
-                        <div className="flex flex-wrap gap-1">
-                          {entry.assignmentKeywords.slice(0, 2).map((keyword) => (
-                            <span key={`${entry.id}-${keyword}`} className="badge bg-emerald-50 text-emerald-700">
-                              {keyword}
-                            </span>
-                          ))}
-                          {entry.assignmentKeywords.length > 2 && (
-                            <span className="text-xs text-slate-500">+{entry.assignmentKeywords.length - 2}</span>
-                          )}
-                        </div>
-                      ) : (
-                        '–'
-                      )}
-                    </td>
-                    <td className="py-2 text-slate-600">{entry.active ? 'Aktiv' : 'Inaktiv'}</td>
-                    <td className="py-2">
-                      <div className="flex gap-2">
-                        <button className="btn btn-secondary" onClick={() => editUnit(entry)}>
-                          Bearbeiten
-                        </button>
-                        <button
-                          className="btn btn-secondary"
-                          onClick={() => setSelectedGroupUnitId(entry.id)}
-                        >
-                          Gruppe
-                        </button>
-                        <button className="btn btn-danger" onClick={() => void deleteUnit(entry.id)} disabled={saving}>
-                          Löschen
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {orgUnits.length === 0 && (
-                  <tr>
-                    <td colSpan={7} className="py-4 text-center text-slate-500">
-                      Keine Einheiten vorhanden.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          <SmartTable<OrgUnit>
+            tableId="organization-settings-units"
+            userId={token}
+            title="Organisationseinheiten"
+            rows={orgUnits}
+            columns={orgUnitColumns}
+            loading={loading}
+            onRefresh={() => {
+              if (!selectedTenantId) return;
+              return loadTenantDetails(selectedTenantId);
+            }}
+            defaultPageSize={10}
+            pageSizeOptions={[10, 25, 50, 100]}
+            onRowClick={(row) => setSelectedGroupUnitId(row.id)}
+            getRowClassName={(row) => (selectedGroupUnitId === row.id ? 'is-selected' : '')}
+          />
 
           <div className="border border-slate-200 rounded-lg p-4 space-y-3">
             <div className="flex items-center justify-between flex-wrap gap-2">
