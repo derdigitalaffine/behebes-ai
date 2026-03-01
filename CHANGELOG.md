@@ -12,6 +12,26 @@ Das Format orientiert sich an Keep a Changelog und folgt Semantic Versioning.
 - DE: Laufende Weiterentwicklung fuer Messenger-Stabilitaet, Mobile-UX und Admin-Konsistenz.
   EN: Ongoing development for messenger stability, mobile UX, and admin consistency.
 
+## [v1.0.6] - 2026-03-01
+
+### Added / Hinzugefuegt
+- DE: Ticket-PDF-Auszug erweitert um OPS-Deep-Link inkl. QR-Code fuer direkten App-Einstieg.
+  EN: Extended ticket PDF export with an OPS deep link including QR code for direct app entry.
+- DE: Chat-Call-Session-Erweiterung fuer Medienstatus (Audio/Video), Client-Connection-Tracking und Endgruende.
+  EN: Extended chat call sessions with media state (audio/video), client-connection tracking, and end reasons.
+
+### Changed / Geaendert
+- DE: SMTP/IMAP-Einstellungen, E-Mail-Templates und IMAP-Postfach im Admin konsistent auf MUI-/SmartTable-Design umgestellt.
+  EN: Consolidated SMTP/IMAP settings, email templates, and IMAP mailbox in admin to a consistent MUI/SmartTable design.
+- DE: Weitere Admin-Seiten auf den einheitlichen SmartTable-/AdminSurface-Standard gehoben (u. a. Dashboard, Logs, Sessions, Analytics).
+  EN: Brought additional admin pages to the unified SmartTable/AdminSurface standard (including dashboard, logs, sessions, analytics).
+
+### Fixed / Behoben
+- DE: Realtime-/Messenger-Stabilitaet verbessert (401/403-Handling, robustere Reconnect-Logik, idempotentes Call-Release ohne 404-Rauschen).
+  EN: Improved realtime/messenger stability (401/403 handling, more robust reconnect logic, idempotent call release without 404 noise).
+- DE: Chat-Overlay in Admin und OPS gegen Send-Fehler bei schliessender Verbindung gehaertet.
+  EN: Hardened admin and OPS chat overlays against send errors when the connection is closing.
+
 ## [v1.0.3] - 2026-03-01
 
 ### Added / Hinzugefuegt
@@ -87,7 +107,8 @@ Das Format orientiert sich an Keep a Changelog und folgt Semantic Versioning.
 ---
 
 ## Links
-- [Unreleased]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.3...HEAD
+- [Unreleased]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.6...HEAD
+- [v1.0.6]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.5...v1.0.6
 - [v1.0.3]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.2a...v1.0.3
 - [v1.0.2a]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.2...v1.0.2a
 - [v1.0.2]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.1...v1.0.2

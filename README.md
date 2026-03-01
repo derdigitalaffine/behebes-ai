@@ -11,6 +11,17 @@ behebes.AI is a multi-tenant platform for modern municipal operations. It combin
 **DE**  
 behebes.AI ist eine mandantenfaehige Plattform fuer moderne Verwaltungsprozesse. Sie vereint Buerger-Frontend, Admin-Kontrollzentrum und mobile Ops-App in einem durchgaengigen System. Der Fokus liegt auf Verlaesslichkeit, Nachvollziehbarkeit, Datenschutz und praktischer Einsatzfaehigkeit im Verwaltungsalltag.
 
+## Latest Release | Aktueller Release
+
+**Version:** `v1.0.6` (2026-03-01)
+
+- **EN:** Admin mail operations were consolidated to a consistent MUI/SmartTable UI (`SMTP/IMAP`, templates, mailbox).
+- **DE:** Die Admin-Mailoberflaechen wurden konsistent auf MUI/SmartTable vereinheitlicht (`SMTP/IMAP`, Templates, Postfach).
+- **EN:** Realtime/chat stability was hardened for admin and OPS (auth-failure handling, reconnect behavior, call-session lifecycle).
+- **DE:** Realtime-/Chat-Stabilitaet fuer Admin und OPS wurde gehaertet (Auth-Fehlerhandling, Reconnect-Verhalten, Call-Session-Lifecycle).
+- **EN:** Ticket PDF exports now include an OPS deep-link QR code for direct mobile handoff.
+- **DE:** Ticket-PDF-Exporte enthalten jetzt einen OPS-Deep-Link als QR-Code fuer den direkten mobilen Uebergang.
+
 ## Mission | Leitbild
 
 **EN**  

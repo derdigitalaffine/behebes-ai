@@ -47,6 +47,7 @@ This document describes the current production model for chat presence, multi-cl
 ### Calls
 - `POST /api/admin/chat/calls/:callId/claim`
 - `POST /api/admin/chat/calls/:callId/release`
+- `POST /api/admin/chat/calls/:callId/media`
 - `GET /api/admin/chat/calls/:callId/state`
 
 ### Realtime topics (SSE)
@@ -67,6 +68,7 @@ This document describes the current production model for chat presence, multi-cl
   - call claim state, winner resource, lifecycle and expiry
 
 Migration: `202603011530_create_chat_presence_heartbeats_and_call_sessions`
+Additional migration: `202603011700_extend_chat_call_sessions_for_media_and_first_catch`
 
 ## Konfiguration | Configuration
 
