@@ -15,6 +15,13 @@ export const STRINGS: Record<string, string> = {
   platform_cta_github: 'Zum GitHub Repository',
   platform_cta_note: 'Ein Produkt, drei Frontends, ein Anspruch: verlässliche digitale Verwaltung.',
   platform_language_selector_aria: 'Sprachauswahl für das Plattformportal',
+  platform_hero_keywords_aria: 'Zentrale Plattform-Schlagworte',
+  platform_hero_keyword_1: 'Privacy-first',
+  platform_hero_keyword_2: 'Mandantenfähig',
+  platform_hero_keyword_3: 'Modular',
+  platform_hero_keyword_4: 'Schnittstellenstark',
+  platform_hero_keyword_5: 'Realtime-Betrieb',
+  platform_hero_keyword_6: 'PWA-ready',
   platform_stats_aria: 'Plattform-Kennzahlen',
   platform_stat_1_label: 'Tickets gesamt',
   platform_stat_2_label: 'Tickets offen',
@@ -69,6 +76,8 @@ export const STRINGS: Record<string, string> = {
     'Verwaltungsteams erhalten strukturierte Inhalte und können Rückfragen reduzieren.',
   platform_multilingual_point_3:
     'Mehr Inklusion bedeutet mehr digitale Teilhabe und höhere Servicequalität.',
+  platform_detail_modularity_kicker: 'Modular & anschlussfähig',
+  platform_detail_modularity_title: 'Skalierbar im kommunalen Alltag',
   platform_modularity_intro:
     'behebes kombiniert Modularität und Schnittstellenvielfalt zu einer Plattform, die mit Organisationen mitwächst statt sie zu begrenzen.',
   platform_modularity_point_1:
@@ -114,6 +123,13 @@ export const STRINGS: Record<string, string> = {
   platform_blog_date_fallback: 'Ohne Datum',
   platform_blog_published_label: 'Veröffentlicht',
   platform_blog_created_label: 'Erstellt',
+  platform_blog_status_published: 'Live',
+  platform_blog_status_scheduled: 'Geplant',
+  platform_blog_status_draft: 'Entwurf',
+  platform_blog_status_archived: 'Archiv',
+  platform_blog_teaser_fallback: 'Noch kein Kurztext hinterlegt.',
+  platform_blog_show_more: '+{count} weitere Beiträge anzeigen',
+  platform_blog_show_less: 'Weniger anzeigen',
 
   language_label: 'Sprache',
   language_translating: 'Übersetzung läuft...',
