@@ -70,8 +70,8 @@ services:
       XMPP_MUC_SERVICE: ${XMPP_MUC_SERVICE:-conference.localhost}
       XMPP_WEBSOCKET_URL: ${XMPP_WEBSOCKET_URL:-/xmpp-websocket}
       XMPP_API_URL: ${XMPP_API_URL:-http://xmpp:5280/api}
-      XMPP_API_USER: ${XMPP_API_USER:-xmppadmin@localhost}
-      XMPP_API_PASSWORD: ${XMPP_API_PASSWORD:-xmppadmin-change-me}
+      XMPP_API_USER: ${XMPP_API_USER:-}
+      XMPP_API_PASSWORD: ${XMPP_API_PASSWORD:-}
       XMPP_EMAIL_NOTIFICATIONS_DEFAULT: ${XMPP_EMAIL_NOTIFICATIONS_DEFAULT:-true}
     volumes:
       - ./backend/data:/app/data
@@ -138,7 +138,6 @@ services:
     image: ghcr.io/processone/ejabberd:24.12
     environment:
       EJABBERD_MACRO_HOST: ${XMPP_DOMAIN:-localhost}
-      EJABBERD_MACRO_ADMIN: ${XMPP_API_USER:-xmppadmin@localhost}
       REGISTER_ADMIN_PASSWORD: ${XMPP_API_PASSWORD:-xmppadmin-change-me}
     volumes:
       - ./xmpp/ejabberd.yml:/opt/ejabberd/conf/ejabberd.yml:ro

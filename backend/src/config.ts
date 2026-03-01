@@ -254,8 +254,12 @@ export function loadConfig(): Config {
   }
 
   if (config.xmpp.enabled) {
-    if (!config.xmpp.apiUser || !config.xmpp.apiPassword) {
-      console.warn('Warning: XMPP enabled but API credentials are missing (XMPP_API_USER / XMPP_API_PASSWORD).');
+    const hasApiUser = !!String(config.xmpp.apiUser || '').trim();
+    const hasApiPassword = !!String(config.xmpp.apiPassword || '').trim();
+    if (hasApiUser !== hasApiPassword) {
+      console.warn(
+        'Warning: XMPP API credentials are partially configured. Set both XMPP_API_USER and XMPP_API_PASSWORD, or leave both empty.'
+      );
     }
   }
   
