@@ -220,7 +220,7 @@ const buildUserLabel = (user: AdminUserOption): string => {
 };
 
 interface OrganizationSettingsProps {
-  mode?: 'all' | 'tenants' | 'organization';
+  mode?: 'all' | 'tenants' | 'organization' | 'organization-structure' | 'organization-types';
 }
 
 const OrganizationSettings: React.FC<OrganizationSettingsProps> = ({ mode = 'all' }) => {
@@ -867,11 +867,16 @@ const OrganizationSettings: React.FC<OrganizationSettingsProps> = ({ mode = 'all
   };
 
   const showTenantManagement = mode === 'all' || mode === 'tenants';
-  const showOrganizationManagement = mode === 'all' || mode === 'organization';
+  const showOrganizationManagement =
+    mode === 'all' || mode === 'organization' || mode === 'organization-structure' || mode === 'organization-types';
+  const showOrganizationTypeManagement = mode === 'all' || mode === 'organization-types';
+  const showOrganizationStructureManagement = mode === 'all' || mode === 'organization' || mode === 'organization-structure';
   const pageTitle =
     mode === 'tenants'
       ? 'Mandanten'
-      : mode === 'organization'
+      : mode === 'organization-types'
+      ? 'Organisationstypen'
+      : mode === 'organization' || mode === 'organization-structure'
       ? 'Organisationsstruktur'
       : 'Organisationsstruktur & Mandanten';
 
@@ -1469,9 +1474,8 @@ const OrganizationSettings: React.FC<OrganizationSettingsProps> = ({ mode = 'all
       </div>
       ) : null}
 
-      {showOrganizationManagement && (
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-        <div className="card p-6 space-y-4">
+      {showOrganizationTypeManagement && (
+      <div className="card p-6 space-y-4">
           <h3 className="text-lg font-semibold">Organisationstypen</h3>
           <p className="text-sm text-slate-500">
             {selectedTenant ? `Mandant: ${selectedTenant.name}` : 'Bitte zuerst einen Mandanten auswählen.'}
@@ -1567,9 +1571,11 @@ const OrganizationSettings: React.FC<OrganizationSettingsProps> = ({ mode = 'all
             pageSizeOptions={[10, 25, 50]}
             onRowClick={(row) => editType(row)}
           />
-        </div>
+      </div>
+      )}
 
-        <div className="card p-6 space-y-4">
+      {showOrganizationStructureManagement && (
+      <div className="card p-6 space-y-4">
           <h3 className="text-lg font-semibold">Organisationseinheiten</h3>
           <p className="text-sm text-slate-500">
             {selectedTenant ? `Mandant: ${selectedTenant.name}` : 'Bitte zuerst einen Mandanten auswählen.'}
@@ -1789,11 +1795,10 @@ const OrganizationSettings: React.FC<OrganizationSettingsProps> = ({ mode = 'all
               </>
             )}
           </div>
-        </div>
       </div>
       )}
 
-      {showOrganizationManagement && (
+      {showOrganizationStructureManagement && (
       <div className="card p-6 space-y-3">
         <h3 className="text-lg font-semibold">Organisationsbaum</h3>
         {roots.roots.length === 0 ? (

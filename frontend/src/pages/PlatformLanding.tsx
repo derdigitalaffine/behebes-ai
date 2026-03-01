@@ -1,11 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import LanguageSelector from '../components/LanguageSelector';
 import { useI18n } from '../i18n/I18nProvider';
 import './PlatformLanding.css';
 
 const PLATFORM_WORDMARK_REGEX = /(behebes)/gi;
-const BLOG_VISIBLE_DEFAULT = 4;
+const BLOG_VISIBLE_DEFAULT = 3;
 
 const normalizePath = (value: unknown, fallback = '/'): string => {
   const raw = String(value || '').trim();
@@ -33,15 +33,11 @@ interface PlatformStatsResponse {
     openTickets?: number;
     tenants?: number;
     adminUsers?: number;
-    citizens?: number;
-    activeInternalTasks?: number;
-    publishedBlogPosts?: number;
   };
-  lastTicketUpdateAt?: string | null;
   generatedAt?: string;
 }
 
-const summarizeMarkdown = (value: string, maxLength = 150): string => {
+const summarizeMarkdown = (value: string, maxLength = 96): string => {
   const cleaned = String(value || '')
     .replace(/```[\s\S]*?```/g, ' ')
     .replace(/^#{1,6}\s+/gm, '')
@@ -60,7 +56,7 @@ const formatBlogDate = (value: string | null, locale: string, fallback: string):
   if (Number.isNaN(parsed.getTime())) return fallback;
   return parsed.toLocaleDateString(locale || 'de-DE', {
     day: '2-digit',
-    month: 'long',
+    month: '2-digit',
     year: 'numeric',
   });
 };
@@ -102,14 +98,12 @@ const resolveBlogStatusLabel = (
 
 const PlatformLanding: React.FC = () => {
   const { routing, canonicalBasePath, locale, t } = useI18n();
-  const landingRef = useRef<HTMLElement | null>(null);
   const [blogItems, setBlogItems] = useState<PlatformBlogPost[]>([]);
   const [blogLoading, setBlogLoading] = useState(true);
   const [blogError, setBlogError] = useState(false);
   const [showAllBlogItems, setShowAllBlogItems] = useState(false);
   const [platformStats, setPlatformStats] = useState<PlatformStatsResponse | null>(null);
   const [statsLoading, setStatsLoading] = useState(true);
-  const [parallaxOffset, setParallaxOffset] = useState(0);
 
   const citizenPortalPath = useMemo(() => {
     if (routing.rootMode === 'tenant') return '/';
@@ -119,99 +113,47 @@ const PlatformLanding: React.FC = () => {
     return `/c/${fallbackSlug}`;
   }, [canonicalBasePath, routing.resolvedTenantSlug, routing.rootMode]);
 
-  const heroKeywords = useMemo(
+  const signals = useMemo(
     () => [
-      t('platform_hero_keyword_1'),
-      t('platform_hero_keyword_2'),
-      t('platform_hero_keyword_3'),
-      t('platform_hero_keyword_4'),
-      t('platform_hero_keyword_5'),
-      t('platform_hero_keyword_6'),
+      t('platform_v2_signal_1'),
+      t('platform_v2_signal_2'),
+      t('platform_v2_signal_3'),
+      t('platform_v2_signal_4'),
+      t('platform_v2_signal_5'),
     ],
     [t]
   );
 
-  const featureCards = [
-    {
-      title: t('platform_feature_privacy_title'),
-      text: t('platform_feature_privacy_text'),
-    },
-    {
-      title: t('platform_feature_multilingual_title'),
-      text: t('platform_feature_multilingual_text'),
-    },
-    {
-      title: t('platform_feature_modularity_title'),
-      text: t('platform_feature_modularity_text'),
-    },
-    {
-      title: t('platform_feature_interfaces_title'),
-      text: t('platform_feature_interfaces_text'),
-    },
-  ];
-
-  const privacyFilterPoints = [
-    t('platform_privacy_filter_point_1'),
-    t('platform_privacy_filter_point_2'),
-    t('platform_privacy_filter_point_3'),
-    t('platform_privacy_filter_point_4'),
-  ];
-
-  const multilingualPoints = [
-    t('platform_multilingual_point_1'),
-    t('platform_multilingual_point_2'),
-    t('platform_multilingual_point_3'),
-  ];
-
-  const modularityPoints = [
-    t('platform_modularity_point_1'),
-    t('platform_modularity_point_2'),
-    t('platform_modularity_point_3'),
-    t('platform_modularity_point_4'),
-  ];
-
-  const architecturePoints = [
-    t('platform_architecture_point_1'),
-    t('platform_architecture_point_2'),
-    t('platform_architecture_point_3'),
-  ];
+  const valueCards = useMemo(
+    () => [
+      { title: t('platform_v2_value_title_1'), text: t('platform_v2_value_text_1') },
+      { title: t('platform_v2_value_title_2'), text: t('platform_v2_value_text_2') },
+      { title: t('platform_v2_value_title_3'), text: t('platform_v2_value_text_3') },
+      { title: t('platform_v2_value_title_4'), text: t('platform_v2_value_text_4') },
+    ],
+    [t]
+  );
 
   const heroStats = useMemo(
     () => [
       {
         label: t('platform_stat_1_label'),
-        value: statsLoading
-          ? t('platform_stat_loading')
-          : formatNumber(platformStats?.totals?.tickets, locale),
+        value: statsLoading ? t('platform_stat_loading') : formatNumber(platformStats?.totals?.tickets, locale),
       },
       {
         label: t('platform_stat_2_label'),
-        value: statsLoading
-          ? t('platform_stat_loading')
-          : formatNumber(platformStats?.totals?.openTickets, locale),
+        value: statsLoading ? t('platform_stat_loading') : formatNumber(platformStats?.totals?.openTickets, locale),
       },
       {
         label: t('platform_stat_3_label'),
-        value: statsLoading
-          ? t('platform_stat_loading')
-          : formatNumber(platformStats?.totals?.adminUsers, locale),
+        value: statsLoading ? t('platform_stat_loading') : formatNumber(platformStats?.totals?.adminUsers, locale),
       },
       {
         label: t('platform_stat_4_label'),
-        value: statsLoading
-          ? t('platform_stat_loading')
-          : formatNumber(platformStats?.totals?.tenants, locale),
+        value: statsLoading ? t('platform_stat_loading') : formatNumber(platformStats?.totals?.tenants, locale),
       },
     ],
-    [
-      locale,
-      platformStats?.totals?.adminUsers,
-      platformStats?.totals?.openTickets,
-      platformStats?.totals?.tenants,
-      platformStats?.totals?.tickets,
-      statsLoading,
-      t,
-    ]
+    [locale, platformStats?.totals?.adminUsers, platformStats?.totals?.openTickets, platformStats?.totals?.tenants, platformStats?.totals?.tickets, statsLoading, t]
   );
 
   useEffect(() => {
@@ -223,9 +165,7 @@ const PlatformLanding: React.FC = () => {
           method: 'GET',
           headers: { Accept: 'application/json' },
         });
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const payload = await response.json();
         if (!active) return;
         const items = Array.isArray(payload?.items) ? payload.items : [];
@@ -255,9 +195,7 @@ const PlatformLanding: React.FC = () => {
           method: 'GET',
           headers: { Accept: 'application/json' },
         });
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const payload = (await response.json()) as PlatformStatsResponse;
         if (!active) return;
         setPlatformStats(payload);
@@ -268,53 +206,12 @@ const PlatformLanding: React.FC = () => {
         if (active) setStatsLoading(false);
       }
     };
+
     void loadStats();
     return () => {
       active = false;
     };
   }, []);
-
-  useEffect(() => {
-    if (typeof window === 'undefined') return;
-    let rafId = 0;
-
-    const updateParallax = () => {
-      const node = landingRef.current;
-      if (!node) return;
-      const rect = node.getBoundingClientRect();
-      const viewportHeight = Math.max(window.innerHeight || 0, 1);
-      const distanceFromCenter = rect.top + rect.height / 2 - viewportHeight / 2;
-      const normalized = Math.max(-1, Math.min(1, distanceFromCenter / (viewportHeight * 0.85)));
-      const nextOffset = Number((-normalized * 38).toFixed(2));
-      setParallaxOffset((current) => (Math.abs(current - nextOffset) < 0.2 ? current : nextOffset));
-    };
-
-    const scheduleUpdate = () => {
-      if (rafId) return;
-      rafId = window.requestAnimationFrame(() => {
-        rafId = 0;
-        updateParallax();
-      });
-    };
-
-    scheduleUpdate();
-    window.addEventListener('scroll', scheduleUpdate, { passive: true });
-    window.addEventListener('resize', scheduleUpdate);
-
-    return () => {
-      if (rafId) window.cancelAnimationFrame(rafId);
-      window.removeEventListener('scroll', scheduleUpdate);
-      window.removeEventListener('resize', scheduleUpdate);
-    };
-  }, []);
-
-  const landingStyle = useMemo(
-    () =>
-      ({
-        '--platform-parallax-y': `${parallaxOffset}px`,
-      }) as React.CSSProperties,
-    [parallaxOffset]
-  );
 
   const visibleBlogItems = useMemo(() => {
     if (showAllBlogItems) return blogItems;
@@ -323,255 +220,160 @@ const PlatformLanding: React.FC = () => {
 
   const hiddenBlogItemsCount = Math.max(0, blogItems.length - BLOG_VISIBLE_DEFAULT);
 
-  useEffect(() => {
-    if (blogItems.length <= BLOG_VISIBLE_DEFAULT && showAllBlogItems) {
-      setShowAllBlogItems(false);
-    }
-  }, [blogItems.length, showAllBlogItems]);
-
   return (
-    <section ref={landingRef} className="platform-landing" style={landingStyle} aria-label={t('platform_aria_overview')}>
-      <div className="platform-landing-mesh" aria-hidden="true" />
-      <div className="platform-parallax-grid" aria-hidden="true" />
-      <div className="platform-parallax-layers" aria-hidden="true">
-        <span className="platform-parallax-orb platform-parallax-orb--one" />
-        <span className="platform-parallax-orb platform-parallax-orb--two" />
-        <span className="platform-parallax-orb platform-parallax-orb--three" />
-      </div>
+    <section className="platform-v2" aria-label={t('platform_aria_overview')}>
+      <div className="platform-v2-bg" aria-hidden="true" />
+      <div className="platform-v2-gridfx" aria-hidden="true" />
 
-      <header className="platform-hero">
-        <div className="platform-hero-main">
-          <div className="platform-hero-tools">
-            <p className="platform-kicker">{renderPlatformText(t('platform_kicker'))}</p>
-            <div className="platform-language-wrap" aria-label={t('platform_language_selector_aria')}>
-              <LanguageSelector />
-            </div>
+      <header className="platform-v2-topbar">
+        <Link to={citizenPortalPath} className="platform-v2-brand" aria-label={t('platform_cta_citizen')}>
+          <img src="/logo.png" alt={t('platform_brand_product_alt')} />
+          <PlatformWordmark className="platform-v2-brand-word" />
+        </Link>
+        <div className="platform-v2-topbar-right">
+          <span className="platform-v2-badge">{renderPlatformText(t('platform_v2_top_badge'))}</span>
+          <div className="platform-v2-lang">
+            <LanguageSelector />
           </div>
+        </div>
+      </header>
 
-          <h2>{renderPlatformText(t('platform_hero_title'))}</h2>
-          <p className="platform-hero-copy">{renderPlatformText(t('platform_hero_copy'))}</p>
+      <section className="platform-v2-hero">
+        <div className="platform-v2-hero-copy">
+          <p className="platform-v2-kicker">{renderPlatformText(t('platform_v2_kicker'))}</p>
+          <h1>{renderPlatformText(t('platform_v2_title'))}</h1>
+          <p>{renderPlatformText(t('platform_v2_subtitle'))}</p>
 
-          <ul className="platform-hero-keywords" aria-label={t('platform_hero_keywords_aria')}>
-            {heroKeywords.map((keyword) => (
-              <li key={keyword}>{renderPlatformText(keyword)}</li>
-            ))}
-          </ul>
-
-          <div className="platform-hero-cta">
-            <Link to={citizenPortalPath} className="platform-btn">
-              {renderPlatformText(t('platform_cta_citizen'))}
+          <div className="platform-v2-cta-row">
+            <Link to={citizenPortalPath} className="platform-v2-btn">
+              {renderPlatformText(t('platform_v2_cta_citizen'))}
             </Link>
-            <a href="/ops" className="platform-btn platform-btn--ops">
-              {renderPlatformText(t('platform_cta_ops'))}
+            <a href="/ops" className="platform-v2-btn platform-v2-btn--ops">
+              {renderPlatformText(t('platform_v2_cta_ops'))}
             </a>
             <a
               href="https://github.com/derdigitalaffine/behebes-ai"
               target="_blank"
               rel="noreferrer"
-              className="platform-btn platform-btn--ghost"
+              className="platform-v2-btn platform-v2-btn--ghost"
             >
-              {renderPlatformText(t('platform_cta_github'))}
+              {renderPlatformText(t('platform_v2_cta_github'))}
             </a>
           </div>
 
-          <span className="platform-cta-note">{renderPlatformText(t('platform_cta_note'))}</span>
-
-          <div className="platform-stats" role="list" aria-label={t('platform_stats_aria')}>
-            {heroStats.map((item) => (
-              <div key={item.label} className="platform-stat" role="listitem">
-                <p>{renderPlatformText(item.label)}</p>
-                <strong>{renderPlatformText(item.value)}</strong>
-              </div>
+          <ul className="platform-v2-signals" aria-label={t('platform_hero_keywords_aria')}>
+            {signals.map((signal) => (
+              <li key={signal}>{renderPlatformText(signal)}</li>
             ))}
-          </div>
-          <p className="platform-meta-line">
-            {renderPlatformText(t('platform_stats_updated_label'))}:{' '}
-            {formatBlogDate(
-              platformStats?.lastTicketUpdateAt || platformStats?.generatedAt || null,
-              locale,
-              t('platform_blog_date_fallback')
-            )}
-          </p>
+          </ul>
         </div>
 
-        <aside className="platform-hero-aside" aria-label={t('platform_brand_stack_aria')}>
-          <article className="platform-brand-card">
-            <p>{renderPlatformText(t('platform_brand_product_label'))}</p>
-            <img src="/logo.png" alt={t('platform_brand_product_alt')} />
-            <span>{renderPlatformText(t('platform_brand_product_caption'))}</span>
-          </article>
+        <aside className="platform-v2-hero-side" aria-label={t('platform_brand_stack_aria')}>
+          <div className="platform-v2-metrics" role="list" aria-label={t('platform_stats_aria')}>
+            {heroStats.map((item) => (
+              <article key={item.label} className="platform-v2-metric" role="listitem">
+                <span>{renderPlatformText(item.label)}</span>
+                <strong>{renderPlatformText(item.value)}</strong>
+              </article>
+            ))}
+          </div>
 
-          <article className="platform-brand-card platform-brand-card--partner">
-            <p>{renderPlatformText(t('platform_brand_partner_label'))}</p>
-            <img src="/verbandsgemeinde-otterbach-otterberg-logo.jpg" alt={t('platform_brand_partner_alt')} />
-            <span>{renderPlatformText(t('platform_brand_partner_caption'))}</span>
-          </article>
+          <div className="platform-v2-brandwall">
+            <article>
+              <img src="/logo.png" alt={t('platform_brand_product_alt')} />
+              <p>{renderPlatformText(t('platform_brand_product_caption'))}</p>
+            </article>
+            <article>
+              <img src="/verbandsgemeinde-otterbach-otterberg-logo.jpg" alt={t('platform_brand_partner_alt')} />
+              <p>{renderPlatformText(t('platform_brand_partner_caption'))}</p>
+            </article>
+          </div>
         </aside>
-      </header>
+      </section>
 
-      <div className="platform-main-layout">
-        <aside className="platform-blog-column" aria-label={t('platform_blog_aria')}>
-          <div className="platform-blog-sticky">
-            <div className="platform-section-head platform-section-head--compact">
-              <p>{renderPlatformText(t('platform_blog_kicker'))}</p>
-              <h3>{renderPlatformText(t('platform_blog_title'))}</h3>
-            </div>
+      <main className="platform-v2-main">
+        <section className="platform-v2-values" aria-label={t('platform_v2_values_aria')}>
+          <div className="platform-v2-headline">
+            <h2>{renderPlatformText(t('platform_v2_values_title'))}</h2>
+            <p>{renderPlatformText(t('platform_v2_values_subtitle'))}</p>
+          </div>
+          <div className="platform-v2-value-grid">
+            {valueCards.map((card, idx) => (
+              <article key={card.title} className="platform-v2-value-card">
+                <span>{`0${idx + 1}`}</span>
+                <h3>{renderPlatformText(card.title)}</h3>
+                <p>{renderPlatformText(card.text)}</p>
+              </article>
+            ))}
+          </div>
+        </section>
 
-            {blogError ? (
-              <p className="platform-blog-empty">{renderPlatformText(t('platform_blog_error'))}</p>
-            ) : blogLoading ? (
-              <p className="platform-blog-empty">{renderPlatformText(t('platform_blog_loading'))}</p>
-            ) : blogItems.length === 0 ? (
-              <p className="platform-blog-empty">{renderPlatformText(t('platform_blog_empty'))}</p>
-            ) : (
-              <div className="platform-blog-stack">
+        <section className="platform-v2-story" aria-label={t('platform_v2_story_aria')}>
+          <div className="platform-v2-headline">
+            <h2>{renderPlatformText(t('platform_v2_story_title'))}</h2>
+          </div>
+          <ul>
+            <li>{renderPlatformText(t('platform_v2_story_point_1'))}</li>
+            <li>{renderPlatformText(t('platform_v2_story_point_2'))}</li>
+            <li>{renderPlatformText(t('platform_v2_story_point_3'))}</li>
+          </ul>
+          <p className="platform-v2-story-meta">
+            {renderPlatformText(t('platform_stats_updated_label'))}:{' '}
+            {formatBlogDate(platformStats?.generatedAt || null, locale, t('platform_blog_date_fallback'))}
+          </p>
+        </section>
+
+        <section className="platform-v2-blog" aria-label={t('platform_blog_aria')}>
+          <div className="platform-v2-headline platform-v2-headline--blog">
+            <h2>{renderPlatformText(t('platform_v2_blog_title'))}</h2>
+          </div>
+
+          {blogError ? (
+            <p className="platform-v2-blog-empty">{renderPlatformText(t('platform_blog_error'))}</p>
+          ) : blogLoading ? (
+            <p className="platform-v2-blog-empty">{renderPlatformText(t('platform_blog_loading'))}</p>
+          ) : blogItems.length === 0 ? (
+            <p className="platform-v2-blog-empty">{renderPlatformText(t('platform_blog_empty'))}</p>
+          ) : (
+            <>
+              <div className="platform-v2-blog-list">
                 {visibleBlogItems.map((post) => {
                   const teaser = post.excerpt || summarizeMarkdown(post.contentMd) || t('platform_blog_teaser_fallback');
                   const statusLabel = resolveBlogStatusLabel(post.status, t);
-                  const statusClass = `status-${post.status}`;
-                  const hasPublishedAt = !!post.publishedAt;
-                  const datePrefix = hasPublishedAt
-                    ? t('platform_blog_published_label')
-                    : t('platform_blog_created_label');
                   return (
-                    <article key={post.id} className="platform-blog-card-compact">
-                      <div className="platform-blog-card-meta">
+                    <article key={post.id} className="platform-v2-blog-card">
+                      <div className="platform-v2-blog-meta">
                         <time dateTime={post.publishedAt || post.createdAt || undefined}>
-                          {renderPlatformText(datePrefix)} ·{' '}
                           {formatBlogDate(post.publishedAt || post.createdAt, locale, t('platform_blog_date_fallback'))}
                         </time>
-                        <span className={`platform-blog-status ${statusClass}`}>{renderPlatformText(statusLabel)}</span>
+                        <span className={`platform-v2-blog-status status-${post.status}`}>{renderPlatformText(statusLabel)}</span>
                       </div>
-                      <h4>{renderPlatformText(post.title)}</h4>
+                      <h3>{renderPlatformText(post.title)}</h3>
                       <p>{renderPlatformText(teaser)}</p>
                     </article>
                   );
                 })}
-                {hiddenBlogItemsCount > 0 ? (
-                  <button
-                    type="button"
-                    className="platform-blog-toggle"
-                    onClick={() => setShowAllBlogItems((current) => !current)}
-                  >
-                    {showAllBlogItems
-                      ? renderPlatformText(t('platform_blog_show_less'))
-                      : renderPlatformText(
-                          t('platform_blog_show_more', {
-                            count: hiddenBlogItemsCount,
-                          })
-                        )}
-                  </button>
-                ) : null}
               </div>
-            )}
-          </div>
-        </aside>
 
-        <main className="platform-detail-column">
-          <section className="platform-detail-panel">
-            <div className="platform-section-head platform-section-head--compact">
-              <p>{renderPlatformText(t('platform_features_kicker'))}</p>
-              <h3>{renderPlatformText(t('platform_features_title'))}</h3>
-            </div>
-            <div className="platform-focus-grid">
-              {featureCards.map((card, index) => (
-                <article key={card.title} className="platform-focus-card">
-                  <span>{`0${index + 1}`}</span>
-                  <h4>{renderPlatformText(card.title)}</h4>
-                  <p>{renderPlatformText(card.text)}</p>
-                </article>
-              ))}
-            </div>
-          </section>
-
-          <section className="platform-detail-panel platform-detail-panel--split">
-            <article className="platform-panel">
-              <div className="platform-section-head platform-section-head--compact">
-                <p>{renderPlatformText(t('platform_privacy_kicker'))}</p>
-                <h3>{renderPlatformText(t('platform_privacy_title'))}</h3>
-              </div>
-              <p>{renderPlatformText(t('platform_privacy_intro'))}</p>
-              <ul className="platform-list">
-                {privacyFilterPoints.map((point) => (
-                  <li key={point}>{renderPlatformText(point)}</li>
-                ))}
-              </ul>
-              <p>{renderPlatformText(t('platform_privacy_why_intro'))}</p>
-              <p>{renderPlatformText(t('platform_privacy_why_detail'))}</p>
-            </article>
-
-            <article className="platform-panel">
-              <div className="platform-section-head platform-section-head--compact">
-                <p>{renderPlatformText(t('platform_architecture_kicker'))}</p>
-                <h3>{renderPlatformText(t('platform_architecture_title'))}</h3>
-              </div>
-              <p className="platform-quote">{renderPlatformText(t('platform_architecture_quote'))}</p>
-              <ul className="platform-list">
-                {architecturePoints.map((point) => (
-                  <li key={point}>{renderPlatformText(point)}</li>
-                ))}
-              </ul>
-            </article>
-          </section>
-
-          <section className="platform-detail-panel platform-detail-panel--split">
-            <article className="platform-panel">
-              <div className="platform-section-head platform-section-head--compact">
-                <p>{renderPlatformText(t('platform_multilingual_kicker'))}</p>
-                <h3>{renderPlatformText(t('platform_multilingual_title'))}</h3>
-              </div>
-              <p>{renderPlatformText(t('platform_multilingual_intro'))}</p>
-              <ul className="platform-list">
-                {multilingualPoints.map((point) => (
-                  <li key={point}>{renderPlatformText(point)}</li>
-                ))}
-              </ul>
-            </article>
-
-            <article className="platform-panel">
-              <div className="platform-section-head platform-section-head--compact">
-                <p>{renderPlatformText(t('platform_detail_modularity_kicker'))}</p>
-                <h3>{renderPlatformText(t('platform_detail_modularity_title'))}</h3>
-              </div>
-              <p>{renderPlatformText(t('platform_modularity_intro'))}</p>
-              <ul className="platform-list">
-                {modularityPoints.map((point) => (
-                  <li key={point}>{renderPlatformText(point)}</li>
-                ))}
-              </ul>
-            </article>
-          </section>
-
-          <section className="platform-detail-panel">
-            <div className="platform-section-head platform-section-head--compact">
-              <p>{renderPlatformText(t('platform_history_kicker'))}</p>
-              <h3>{renderPlatformText(t('platform_history_title'))}</h3>
-            </div>
-            <div className="platform-history-grid">
-              <article className="platform-panel">
-                <h4>{renderPlatformText(t('platform_history_phase_1_title'))}</h4>
-                <p>{renderPlatformText(t('platform_history_phase_1_text'))}</p>
-              </article>
-              <article className="platform-panel">
-                <h4>{renderPlatformText(t('platform_history_phase_2_title'))}</h4>
-                <p>{renderPlatformText(t('platform_history_phase_2_text'))}</p>
-              </article>
-              <article className="platform-panel">
-                <h4>{renderPlatformText(t('platform_history_phase_3_title'))}</h4>
-                <p>{renderPlatformText(t('platform_history_phase_3_text'))}</p>
-              </article>
-            </div>
-          </section>
-
-          <section className="platform-detail-panel" aria-label={t('platform_context_aria')}>
-            <div className="platform-section-head platform-section-head--compact">
-              <p>{renderPlatformText(t('platform_context_kicker'))}</p>
-              <h3>{renderPlatformText(t('platform_context_title'))}</h3>
-            </div>
-            <p className="platform-context-text">{renderPlatformText(t('platform_context_text'))}</p>
-          </section>
-        </main>
-      </div>
+              {hiddenBlogItemsCount > 0 ? (
+                <button
+                  type="button"
+                  className="platform-v2-blog-toggle"
+                  onClick={() => setShowAllBlogItems((current) => !current)}
+                >
+                  {showAllBlogItems
+                    ? renderPlatformText(t('platform_blog_show_less'))
+                    : renderPlatformText(
+                        t('platform_blog_show_more', {
+                          count: hiddenBlogItemsCount,
+                        })
+                      )}
+                </button>
+              ) : null}
+            </>
+          )}
+        </section>
+      </main>
     </section>
   );
 };
