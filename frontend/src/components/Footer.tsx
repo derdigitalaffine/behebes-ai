@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import './Footer.css';
-import { APP_BUILD_ID, APP_BUILD_TIME } from '../buildInfo';
+import { APP_BUILD_ID, APP_BUILD_TIME, APP_VERSION } from '../buildInfo';
 import { reloadAppWithServiceWorkerRefresh } from '../service-worker';
 import { useI18n } from '../i18n/I18nProvider';
 
@@ -15,8 +15,9 @@ const Footer: React.FC<FooterProps> = ({ compact = false }) => {
   const [reloadPending, setReloadPending] = useState(false);
   const buildStamp = APP_BUILD_ID;
   const buildTime = new Date(APP_BUILD_TIME).toLocaleString('de-DE');
+  const versionLabel = `Version: ${APP_VERSION}`;
   const buildLabel = `Build: ${buildStamp}`;
-  const buildWithTimeLabel = `Build: ${buildStamp} · erstellt: ${buildTime}`;
+  const buildWithTimeLabel = `${versionLabel} · Build: ${buildStamp} · erstellt: ${buildTime}`;
   const healthLabel = t('footer_status_online');
 
   const handleAppReload = async () => {
@@ -31,6 +32,9 @@ const Footer: React.FC<FooterProps> = ({ compact = false }) => {
         <div className="footer-compact-content">
           <div className="footer-compact-brand-block">
             <strong className="footer-compact-brand">behebes.AI</strong>
+            <span className="footer-build-tag" title={buildWithTimeLabel}>
+              {versionLabel}
+            </span>
             <span className="footer-build-tag" title={buildWithTimeLabel}>
               {buildLabel}
             </span>
@@ -107,7 +111,7 @@ const Footer: React.FC<FooterProps> = ({ compact = false }) => {
             <span>{healthLabel}</span>
           </div>
           <p className="health-meta" title={buildWithTimeLabel}>
-            {buildLabel}
+            {versionLabel} · {buildLabel}
           </p>
           <button type="button" className="footer-link-button footer-link-button--inline" onClick={handleAppReload} disabled={reloadPending}>
             {reloadPending ? t('footer_reloading') : t('footer_reload_app')}

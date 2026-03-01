@@ -47,6 +47,7 @@ import {
 import { isInstallPromptAvailable, registerServiceWorker, showInstallPrompt } from './service-worker';
 import { replayOfflineMutations } from './modules/offline/offlineQueue';
 import { revokeAdminPushSubscription } from './modules/pwa/push';
+import { APP_BUILD_ID, APP_BUILD_TIME, APP_VERSION } from './buildInfo';
 
 const queryClient = new QueryClient();
 const INITIAL_AUTH_STATE = loadAuthState();
@@ -104,6 +105,9 @@ function OpsShell(props: {
   }, [messengerRouteActive]);
 
   const canSwitchGlobal = accessContext?.isGlobalAdmin === true;
+  const buildTimeLabel = Number.isNaN(Date.parse(APP_BUILD_TIME))
+    ? APP_BUILD_TIME
+    : new Date(APP_BUILD_TIME).toLocaleString('de-DE');
 
   return (
     <Box
@@ -143,6 +147,13 @@ function OpsShell(props: {
             variant="filled"
             label={accessContext?.effectiveRole || auth.role || 'staff'}
             sx={{ maxWidth: 150 }}
+          />
+          <Chip
+            size="small"
+            variant="outlined"
+            label={`v${APP_VERSION}`}
+            title={`Build ${APP_BUILD_ID} · ${buildTimeLabel}`}
+            sx={{ bgcolor: 'white', borderColor: '#cbd5e1', color: '#334155', fontWeight: 700 }}
           />
 
           {canSwitchGlobal ? (

@@ -13,6 +13,7 @@ import {
 } from '@mui/material';
 import { api } from '../../lib/api';
 import type { AuthState } from '../../lib/auth';
+import { APP_BUILD_ID, APP_BUILD_TIME, APP_VERSION } from '../../buildInfo';
 
 interface LoginPageProps {
   onLogin: (next: AuthState) => void;
@@ -53,6 +54,10 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [error, setError] = useState('');
 
   const passkeyAvailable = useMemo(() => isPasskeySupported(), []);
+  const buildTimeLabel = useMemo(() => {
+    const parsed = Date.parse(APP_BUILD_TIME);
+    return Number.isNaN(parsed) ? APP_BUILD_TIME : new Date(parsed).toLocaleString('de-DE');
+  }, []);
 
   const commitLogin = (payload: any) => {
     const token = String(payload?.token || '').trim();
@@ -232,6 +237,9 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             </Button>
             <Typography variant="caption" color="text.secondary">
               Falls aktiviert, wird TOTP automatisch berücksichtigt.
+            </Typography>
+            <Typography variant="caption" color="text.secondary">
+              Version v{APP_VERSION} · Build {APP_BUILD_ID} · {buildTimeLabel}
             </Typography>
           </Stack>
         </CardContent>

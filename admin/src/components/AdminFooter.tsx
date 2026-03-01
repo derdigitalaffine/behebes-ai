@@ -32,7 +32,9 @@ const AdminFooter: React.FC<AdminFooterProps> = ({ compact = false, healthStatus
       <span>Verbandsgemeinde Otterbach-Otterberg</span>
       <span>© D. Tröster, Verbandgemeinde Otterbach-Otterberg</span>
       {!compact && (
-        <span title={`Version ${ADMIN_APP_VERSION} · ${buildTime}`}>Build {ADMIN_APP_BUILD_ID}</span>
+        <span title={`Version ${ADMIN_APP_VERSION} · ${buildTime}`}>
+          v{ADMIN_APP_VERSION} · Build {ADMIN_APP_BUILD_ID}
+        </span>
       )}
     </footer>
   );

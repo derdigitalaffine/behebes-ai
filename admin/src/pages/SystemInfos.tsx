@@ -174,6 +174,7 @@ interface SystemInfoResponse {
     ops: PackageMetadata;
   };
   build: {
+    appVersion: string | null;
     envBuildId: string | null;
     envBuildTime: string | null;
     envCommitRef: string | null;
@@ -455,6 +456,10 @@ const SystemInfos: React.FC = () => {
               <article className="systeminfos-card">
                 <h4>Build & Version</h4>
                 <dl>
+                  <div>
+                    <dt>Release</dt>
+                    <dd>{data.build.appVersion ? `v${data.build.appVersion}` : renderPackageVersion(data.versions.workspace)}</dd>
+                  </div>
                   <div><dt>Workspace</dt><dd>{renderPackageVersion(data.versions.workspace)}</dd></div>
                   <div><dt>Backend</dt><dd>{renderPackageVersion(data.versions.backend)}</dd></div>
                   <div><dt>Admin</dt><dd>{renderPackageVersion(data.versions.admin)}</dd></div>
