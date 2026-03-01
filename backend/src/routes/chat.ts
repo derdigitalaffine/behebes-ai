@@ -218,6 +218,54 @@ const SYSTEM_CHAT_SUBTITLE = 'Systemmeldungen und Ticket-Updates';
 const CHAT_PRESENCE_HEARTBEAT_TTL_MS = 90 * 1000;
 const CHAT_CALL_SESSION_EXPIRE_MS = 2 * 60 * 1000;
 const CHAT_CALL_TERMINAL_STATES = new Set(['ended', 'failed', 'cancelled', 'timeout', 'rejected']);
+let presenceHeartbeatTableAvailable: boolean | null = null;
+let callSessionTableAvailable: boolean | null = null;
+
+function isMissingTableError(error: unknown, tableName?: string): boolean {
+  const err = error as { message?: unknown; code?: unknown; errno?: unknown };
+  const message = String(err?.message || '').toLowerCase();
+  const code = String(err?.code || '').toUpperCase();
+  const errno = Number(err?.errno);
+  const normalizedTable = normalizeText(tableName).toLowerCase();
+  const mentionsTable = !normalizedTable || message.includes(normalizedTable);
+  if (code === 'ER_NO_SUCH_TABLE' || errno === 1146) {
+    return true;
+  }
+  if (code === 'SQLITE_ERROR' && message.includes('no such table')) {
+    return mentionsTable;
+  }
+  if (message.includes('no such table') || message.includes("doesn't exist")) {
+    return mentionsTable;
+  }
+  return false;
+}
+
+async function tableExistsByProbe(tableName: string): Promise<boolean> {
+  const db = getDatabase();
+  try {
+    await db.get(`SELECT 1 AS ok FROM ${tableName} LIMIT 1`);
+    return true;
+  } catch (error: unknown) {
+    if (isMissingTableError(error, tableName)) {
+      return false;
+    }
+    throw error;
+  }
+}
+
+async function hasPresenceHeartbeatTable(): Promise<boolean> {
+  if (presenceHeartbeatTableAvailable !== null) return presenceHeartbeatTableAvailable;
+  const available = await tableExistsByProbe('admin_chat_presence_heartbeats');
+  presenceHeartbeatTableAvailable = available;
+  return available;
+}
+
+async function hasCallSessionTable(): Promise<boolean> {
+  if (callSessionTableAvailable !== null) return callSessionTableAvailable;
+  const available = await tableExistsByProbe('admin_chat_call_sessions');
+  callSessionTableAvailable = available;
+  return available;
+}
 
 function normalizeChatbotRole(value: unknown): 'user' | 'assistant' {
   return String(value || '').trim().toLowerCase() === 'assistant' ? 'assistant' : 'user';
@@ -657,38 +705,59 @@ async function touchPresenceHeartbeat(input: {
   transport?: string;
   appKind?: string;
 }): Promise<void> {
+  if (!(await hasPresenceHeartbeatTable())) return;
   const adminUserId = normalizeText(input.adminUserId);
   if (!adminUserId) return;
   const resource = normalizeHeartbeatResource(input.resource);
   const transport = normalizeHeartbeatTransport(input.transport);
   const appKind = normalizeHeartbeatAppKind(input.appKind);
   const db = getDatabase();
-  await db.run(
-    `INSERT INTO admin_chat_presence_heartbeats (
-      admin_user_id, resource, transport, app_kind, last_seen_at
-    ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-    ON CONFLICT(admin_user_id, resource, app_kind)
-    DO UPDATE SET
-      transport = excluded.transport,
-      last_seen_at = CURRENT_TIMESTAMP`,
-    [adminUserId, resource, transport, appKind]
-  );
+  try {
+    await db.run(
+      `INSERT INTO admin_chat_presence_heartbeats (
+        admin_user_id, resource, transport, app_kind, last_seen_at
+      ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+      ON CONFLICT(admin_user_id, resource, app_kind)
+      DO UPDATE SET
+        transport = excluded.transport,
+        last_seen_at = CURRENT_TIMESTAMP`,
+      [adminUserId, resource, transport, appKind]
+    );
+  } catch (error: unknown) {
+    if (isMissingTableError(error, 'admin_chat_presence_heartbeats')) {
+      presenceHeartbeatTableAvailable = false;
+      return;
+    }
+    throw error;
+  }
 }
 
 async function loadLatestPresenceHeartbeat(adminUserId: string): Promise<{ lastSeenAt: string | null; source: 'xmpp' | 'fallback' }> {
+  if (!(await hasPresenceHeartbeatTable())) {
+    return { lastSeenAt: null, source: 'fallback' };
+  }
   const userId = normalizeText(adminUserId);
   if (!userId) {
     return { lastSeenAt: null, source: 'fallback' };
   }
   const db = getDatabase();
-  const row = await db.get<any>(
-    `SELECT last_seen_at
-     FROM admin_chat_presence_heartbeats
-     WHERE admin_user_id = ?
-     ORDER BY datetime(last_seen_at) DESC
-     LIMIT 1`,
-    [userId]
-  );
+  let row: any = null;
+  try {
+    row = await db.get<any>(
+      `SELECT last_seen_at
+       FROM admin_chat_presence_heartbeats
+       WHERE admin_user_id = ?
+       ORDER BY datetime(last_seen_at) DESC
+       LIMIT 1`,
+      [userId]
+    );
+  } catch (error: unknown) {
+    if (isMissingTableError(error, 'admin_chat_presence_heartbeats')) {
+      presenceHeartbeatTableAvailable = false;
+      return { lastSeenAt: null, source: 'fallback' };
+    }
+    throw error;
+  }
   const lastSeenAt = normalizePresenceExpiresAt(row?.last_seen_at);
   return {
     lastSeenAt,
@@ -708,15 +777,27 @@ async function listPresenceSnapshot(contactIds: string[]): Promise<Record<string
   if (scopedContactIds.length === 0) return {};
 
   const db = getDatabase();
-  const rows = await db.all<any>(
-    `SELECT h.admin_user_id, h.resource, h.transport, h.app_kind, h.last_seen_at,
-            s.status_key, s.custom_label, s.custom_color, s.custom_emoji, s.expires_at, s.updated_at
-     FROM admin_chat_presence_heartbeats h
-     LEFT JOIN admin_chat_presence_settings s ON s.admin_user_id = h.admin_user_id
-     WHERE h.admin_user_id IN (${scopedContactIds.map(() => '?').join(', ')})
-     ORDER BY datetime(h.last_seen_at) DESC`,
-    scopedContactIds
-  );
+  let rows: any[] = [];
+  if (await hasPresenceHeartbeatTable()) {
+    try {
+      rows = await db.all<any>(
+        `SELECT h.admin_user_id, h.resource, h.transport, h.app_kind, h.last_seen_at,
+                s.status_key, s.custom_label, s.custom_color, s.custom_emoji, s.expires_at, s.updated_at
+         FROM admin_chat_presence_heartbeats h
+         LEFT JOIN admin_chat_presence_settings s ON s.admin_user_id = h.admin_user_id
+         WHERE h.admin_user_id IN (${scopedContactIds.map(() => '?').join(', ')})
+         ORDER BY datetime(h.last_seen_at) DESC`,
+        scopedContactIds
+      );
+    } catch (error: unknown) {
+      if (isMissingTableError(error, 'admin_chat_presence_heartbeats')) {
+        presenceHeartbeatTableAvailable = false;
+        rows = [];
+      } else {
+        throw error;
+      }
+    }
+  }
 
   const byUser = new Map<string, ChatPresenceSnapshotEntry>();
   const settingsOnlyRows = await db.all<any>(
@@ -815,26 +896,55 @@ function computeCallExpiresAt(): string {
 }
 
 async function cleanupExpiredCallSessions(): Promise<void> {
+  const hasCallSession = await hasCallSessionTable();
+  const hasPresenceHeartbeat = await hasPresenceHeartbeatTable();
+  if (!hasCallSession && !hasPresenceHeartbeat) return;
   const db = getDatabase();
-  await db.run(
-    `UPDATE admin_chat_call_sessions
-     SET state = 'timeout',
-         ended_at = COALESCE(ended_at, CURRENT_TIMESTAMP),
-         updated_at = CURRENT_TIMESTAMP
-     WHERE state NOT IN ('ended', 'failed', 'cancelled', 'timeout', 'rejected')
-       AND expires_at IS NOT NULL
-       AND datetime(expires_at) <= datetime(CURRENT_TIMESTAMP)`
-  );
-  await db.run(
-    `DELETE FROM admin_chat_presence_heartbeats
-     WHERE datetime(last_seen_at) <= datetime(CURRENT_TIMESTAMP, '-2 day')`
-  );
+  if (hasCallSession) {
+    try {
+      await db.run(
+        `UPDATE admin_chat_call_sessions
+         SET state = 'timeout',
+             ended_at = COALESCE(ended_at, CURRENT_TIMESTAMP),
+             updated_at = CURRENT_TIMESTAMP
+         WHERE state NOT IN ('ended', 'failed', 'cancelled', 'timeout', 'rejected')
+           AND expires_at IS NOT NULL
+           AND datetime(expires_at) <= datetime(CURRENT_TIMESTAMP)`
+      );
+    } catch (error: unknown) {
+      if (isMissingTableError(error, 'admin_chat_call_sessions')) {
+        callSessionTableAvailable = false;
+      } else {
+        throw error;
+      }
+    }
+  }
+  if (hasPresenceHeartbeat) {
+    try {
+      const heartbeatRetentionCutoff = toSqlDateTime(new Date(Date.now() - 2 * 24 * 60 * 60 * 1000));
+      await db.run(
+        `DELETE FROM admin_chat_presence_heartbeats
+         WHERE last_seen_at IS NOT NULL
+           AND datetime(last_seen_at) <= datetime(?)`,
+        [heartbeatRetentionCutoff]
+      );
+    } catch (error: unknown) {
+      if (isMissingTableError(error, 'admin_chat_presence_heartbeats')) {
+        presenceHeartbeatTableAvailable = false;
+      } else {
+        throw error;
+      }
+    }
+  }
 }
 
 async function loadChatCallPolicy(input: {
   access: Awaited<ReturnType<typeof loadAdminAccessContext>>;
   adminUserId: string;
 }): Promise<{ enabled: boolean; reason: string }> {
+  if (!(await hasCallSessionTable())) {
+    return { enabled: false, reason: 'call_session_table_missing' };
+  }
   const config = loadConfig();
   if (!config.xmpp.callsEnabled) {
     return { enabled: false, reason: 'global_env_disabled' };
@@ -1904,6 +2014,9 @@ router.get('/presence/snapshot', async (req: Request, res: Response) => {
 
 router.post('/calls/:callId/claim', async (req: Request, res: Response) => {
   try {
+    if (!(await hasCallSessionTable())) {
+      return res.status(503).json({ message: 'Call-Session-Speicher ist nicht verfügbar.', reason: 'call_session_table_missing' });
+    }
     const currentUserId = normalizeText(req.userId);
     if (!currentUserId) return res.status(401).json({ message: 'Nicht authentifiziert.' });
     const callId = normalizeText(req.params?.callId);
@@ -2016,6 +2129,9 @@ router.post('/calls/:callId/claim', async (req: Request, res: Response) => {
 
 router.post('/calls/:callId/release', async (req: Request, res: Response) => {
   try {
+    if (!(await hasCallSessionTable())) {
+      return res.status(503).json({ message: 'Call-Session-Speicher ist nicht verfügbar.', reason: 'call_session_table_missing' });
+    }
     const currentUserId = normalizeText(req.userId);
     if (!currentUserId) return res.status(401).json({ message: 'Nicht authentifiziert.' });
     const callId = normalizeText(req.params?.callId);
@@ -2088,6 +2204,9 @@ router.post('/calls/:callId/release', async (req: Request, res: Response) => {
 
 router.get('/calls/:callId/state', async (req: Request, res: Response) => {
   try {
+    if (!(await hasCallSessionTable())) {
+      return res.status(503).json({ message: 'Call-Session-Speicher ist nicht verfügbar.', reason: 'call_session_table_missing' });
+    }
     const currentUserId = normalizeText(req.userId);
     if (!currentUserId) return res.status(401).json({ message: 'Nicht authentifiziert.' });
     const callId = normalizeText(req.params?.callId);

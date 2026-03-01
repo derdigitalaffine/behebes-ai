@@ -12,7 +12,8 @@
     "start": "node dist/index.js",
     "lint": "eslint src/",
     "test": "vitest",
-    "db:init": "tsx src/scripts/init-db.ts"
+    "db:init": "node dist/scripts/init-db.js",
+    "db:init:src": "tsx src/scripts/init-db.ts"
   },
   "dependencies": {
     "axios": "^1.6.5",
