@@ -58,6 +58,55 @@ export async function migrationIndexExists(db: AppDatabase, indexName: string): 
   return Number(row?.count || 0) > 0;
 }
 
+export async function migrationColumnExists(
+  db: AppDatabase,
+  tableName: string,
+  columnName: string
+): Promise<boolean> {
+  const normalizedTable = String(tableName || '').trim();
+  const normalizedColumn = String(columnName || '').trim();
+  if (!normalizedTable || !normalizedColumn) return false;
+
+  const tableExists = await migrationTableExists(db, normalizedTable);
+  if (!tableExists) return false;
+
+  if (db.dialect === 'mysql') {
+    const row = await db.get(
+      `SELECT COUNT(*) AS count
+       FROM information_schema.columns
+       WHERE table_schema = DATABASE()
+         AND table_name = ?
+         AND column_name = ?`,
+      [normalizedTable, normalizedColumn]
+    );
+    return Number(row?.count || 0) > 0;
+  }
+
+  const rows = await db.all(`PRAGMA table_info(${quoteIdentifier(db.dialect, normalizedTable)})`);
+  return (rows || []).some((row: any) => String(row?.name || '').trim() === normalizedColumn);
+}
+
+export async function migrationAddColumnIfMissing(input: {
+  db: AppDatabase;
+  tableName: string;
+  columnName: string;
+  columnDefinition: string;
+}): Promise<void> {
+  const tableName = String(input.tableName || '').trim();
+  const columnName = String(input.columnName || '').trim();
+  const columnDefinition = String(input.columnDefinition || '').trim();
+  if (!tableName || !columnName || !columnDefinition) {
+    throw new Error('migrationAddColumnIfMissing: table/column/definition erforderlich');
+  }
+
+  const exists = await migrationColumnExists(input.db, tableName, columnName);
+  if (exists) return;
+
+  const quotedTable = quoteIdentifier(input.db.dialect, tableName);
+  const quotedColumn = quoteIdentifier(input.db.dialect, columnName);
+  await input.db.exec(`ALTER TABLE ${quotedTable} ADD COLUMN ${quotedColumn} ${columnDefinition}`);
+}
+
 export async function migrationCreateIndexIfNotExists(input: {
   db: AppDatabase;
   tableName: string;

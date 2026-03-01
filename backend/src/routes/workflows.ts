@@ -46,6 +46,7 @@ import { buildUnifiedEmailLayout, ensureUnifiedEmailTemplateHtml } from '../util
 import { formatSqlDateTime } from '../utils/sql-date.js';
 import { buildTicketVisibilitySql, loadAdminAccessContext, requireTicketAccess } from '../services/rbac.js';
 import { sendTicketAssignmentEmailNotifications } from '../services/ticket-notifications.js';
+import { queryResponsibilityCandidates } from '../services/responsibility.js';
 
 type WorkflowStepType =
   | 'REDMINE_TICKET'
@@ -297,6 +298,8 @@ type InternalProcessingAssigneeStrategy =
   | 'fixed_user'
   | 'fixed_org'
   | 'process_variable';
+type InternalTaskAssignmentUpdateMode = 'none' | 'primary_only' | 'primary_plus_participants';
+type InternalTaskAssignmentSource = 'static' | 'ai_suggested' | 'mixed';
 type InternalTaskDecision = 'completed' | 'rejected';
 type InternalTaskStatus = 'pending' | 'in_progress' | 'completed' | 'rejected' | 'cancelled';
 
@@ -11122,6 +11125,32 @@ function normalizeInternalProcessingAssigneeStrategy(
   return 'ticket_primary';
 }
 
+function normalizeInternalTaskAssignmentUpdateMode(value: unknown): InternalTaskAssignmentUpdateMode {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === 'primary_only') return 'primary_only';
+  if (raw === 'primary_plus_participants') return 'primary_plus_participants';
+  return 'none';
+}
+
+function normalizeInternalTaskAssignmentSource(value: unknown): InternalTaskAssignmentSource {
+  const raw = String(value || '').trim().toLowerCase();
+  if (raw === 'ai_suggested') return 'ai_suggested';
+  if (raw === 'mixed') return 'mixed';
+  return 'static';
+}
+
+function normalizeInternalTaskRejectAllowed(value: unknown, fallback = true): boolean {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'number') return value !== 0;
+  if (typeof value === 'string') {
+    const normalized = value.trim().toLowerCase();
+    if (!normalized) return fallback;
+    if (['1', 'true', 'yes', 'on', 'ja'].includes(normalized)) return true;
+    if (['0', 'false', 'no', 'off', 'nein'].includes(normalized)) return false;
+  }
+  return fallback;
+}
+
 function normalizeInternalFormFieldType(
   value: unknown
 ): InternalProcessingFormField['type'] {
@@ -11298,6 +11327,20 @@ function mapInternalTaskRow(row: any): Record<string, any> {
   const formSchema = parseJsonValue(row.form_schema_json, null);
   const responsePayload = parseJsonValue(row.response_json, null);
   const aiMeta = parseJsonValue(row.ai_meta_json, null);
+  const allowRejectRaw =
+    row.allow_reject !== undefined && row.allow_reject !== null
+      ? row.allow_reject
+      : (aiMeta as any)?.allowReject;
+  const maxCyclesRaw =
+    row.max_cycles !== undefined && row.max_cycles !== null ? row.max_cycles : (aiMeta as any)?.maxCycles;
+  const cycleIndexRaw =
+    row.cycle_index !== undefined && row.cycle_index !== null ? row.cycle_index : (aiMeta as any)?.cycleIndex;
+  const assignmentUpdateModeRaw =
+    asTrimmedString(row.assignment_update_mode) ||
+    asTrimmedString((aiMeta as any)?.assignmentUpdateMode) ||
+    'none';
+  const assignmentSourceRaw =
+    asTrimmedString(row.assignment_source) || asTrimmedString((aiMeta as any)?.assignmentSource) || 'static';
   return {
     id: asTrimmedString(row.id),
     tenantId: asTrimmedString(row.tenant_id),
@@ -11315,6 +11358,11 @@ function mapInternalTaskRow(row: any): Record<string, any> {
     formSchema,
     response: responsePayload,
     aiMeta,
+    allowReject: normalizeInternalTaskRejectAllowed(allowRejectRaw, true),
+    maxCycles: Number.isFinite(Number(maxCyclesRaw)) ? Math.max(1, Math.floor(Number(maxCyclesRaw))) : 1,
+    cycleIndex: Number.isFinite(Number(cycleIndexRaw)) ? Math.max(1, Math.floor(Number(cycleIndexRaw))) : 1,
+    assignmentUpdateMode: normalizeInternalTaskAssignmentUpdateMode(assignmentUpdateModeRaw),
+    assignmentSource: normalizeInternalTaskAssignmentSource(assignmentSourceRaw),
     dueAt: asTrimmedString(row.due_at) || null,
     createdAt: asTrimmedString(row.created_at) || null,
     completedAt: asTrimmedString(row.completed_at) || null,
@@ -11472,6 +11520,16 @@ async function executeInternalProcessingTask(
       ? 'ai_generated'
       : 'static';
   const dueAtIso = resolveInternalTaskDueAtIso(task.config || {});
+  const allowReject = normalizeInternalTaskRejectAllowed(task.config?.allowReject, true);
+  const maxCycles = Number.isFinite(Number(task.config?.maxCycles))
+    ? Math.max(1, Math.min(12, Math.floor(Number(task.config?.maxCycles))))
+    : 1;
+  const cycleIndexRaw = Number(task.executionData?.internalTaskCycleIndex || task.executionData?.cycleIndex || 1);
+  const cycleIndex = Number.isFinite(cycleIndexRaw) ? Math.max(1, Math.floor(cycleIndexRaw)) : 1;
+  const assignmentUpdateMode = normalizeInternalTaskAssignmentUpdateMode(
+    task.config?.assignmentUpdateMode || task.config?.assignmentMode
+  );
+  const assignmentSource = normalizeInternalTaskAssignmentSource(task.config?.assignmentSource);
   const existingTaskId = asTrimmedString(task.executionData?.internalTaskId);
 
   if (existingTaskId) {
@@ -11490,6 +11548,15 @@ async function executeInternalProcessingTask(
         internalTaskStatus: existingStatus,
         internalTaskAssigneeUserId: asTrimmedString(existing.assignee_user_id) || undefined,
         internalTaskAssigneeOrgUnitId: asTrimmedString(existing.assignee_org_unit_id) || undefined,
+        internalTaskAllowReject:
+          existing.allow_reject !== undefined
+            ? normalizeInternalTaskRejectAllowed(existing.allow_reject, true)
+            : allowReject,
+        internalTaskAssignmentUpdateMode:
+          asTrimmedString(existing.assignment_update_mode) || assignmentUpdateMode,
+        internalTaskAssignmentSource: asTrimmedString(existing.assignment_source) || assignmentSource,
+        internalTaskCycleIndex: Number(existing.cycle_index || cycleIndex) || cycleIndex,
+        internalTaskMaxCycles: Number(existing.max_cycles || maxCycles) || maxCycles,
         awaitingConfirmation: mode === 'blocking' && (existingStatus === 'pending' || existingStatus === 'in_progress'),
       };
     }
@@ -11513,6 +11580,15 @@ async function executeInternalProcessingTask(
       internalTaskStatus: currentStatus,
       internalTaskAssigneeUserId: asTrimmedString(openByStep.assignee_user_id) || undefined,
       internalTaskAssigneeOrgUnitId: asTrimmedString(openByStep.assignee_org_unit_id) || undefined,
+      internalTaskAllowReject:
+        openByStep.allow_reject !== undefined
+          ? normalizeInternalTaskRejectAllowed(openByStep.allow_reject, true)
+          : allowReject,
+      internalTaskAssignmentUpdateMode:
+        asTrimmedString(openByStep.assignment_update_mode) || assignmentUpdateMode,
+      internalTaskAssignmentSource: asTrimmedString(openByStep.assignment_source) || assignmentSource,
+      internalTaskCycleIndex: Number(openByStep.cycle_index || cycleIndex) || cycleIndex,
+      internalTaskMaxCycles: Number(openByStep.max_cycles || maxCycles) || maxCycles,
       awaitingConfirmation: mode === 'blocking',
     };
   }
@@ -11535,8 +11611,10 @@ async function executeInternalProcessingTask(
   await db.run(
     `INSERT INTO workflow_internal_tasks (
       id, tenant_id, workflow_execution_id, workflow_id, step_id, ticket_id, mode, status,
-      assignee_user_id, assignee_org_unit_id, title, description, instructions, form_schema_json, ai_meta_json, due_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?)`,
+      assignee_user_id, assignee_org_unit_id, title, description, instructions,
+      form_schema_json, ai_meta_json, due_at,
+      allow_reject, cycle_index, max_cycles, assignment_update_mode, assignment_source
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     [
       internalTaskId,
       tenantId,
@@ -11555,10 +11633,20 @@ async function executeInternalProcessingTask(
         sanitizeWorkflowStorageValue({
           source: taskSource,
           sourceDetail: assignee.source,
+          allowReject,
+          cycleIndex,
+          maxCycles,
+          assignmentUpdateMode,
+          assignmentSource,
           aiRaw: aiDraft?.raw ? aiDraft.raw.slice(0, 6000) : undefined,
         })
       ),
       dueAtIso ? toSqlDateTime(dueAtIso) : null,
+      allowReject ? 1 : 0,
+      cycleIndex,
+      maxCycles,
+      assignmentUpdateMode,
+      assignmentSource,
     ]
   );
 
@@ -11571,6 +11659,11 @@ async function executeInternalProcessingTask(
       assigneeUserId: assignee.assigneeUserId,
       assigneeOrgUnitId: assignee.assigneeOrgUnitId,
       dueAt: dueAtIso,
+      allowReject,
+      cycleIndex,
+      maxCycles,
+      assignmentUpdateMode,
+      assignmentSource,
     },
   });
 
@@ -11590,6 +11683,11 @@ async function executeInternalProcessingTask(
       assigneeOrgUnitId: assignee.assigneeOrgUnitId,
       dueAt: dueAtIso,
       taskSource,
+      allowReject,
+      cycleIndex,
+      maxCycles,
+      assignmentUpdateMode,
+      assignmentSource,
     },
   });
 
@@ -11605,6 +11703,11 @@ async function executeInternalProcessingTask(
       assigneeOrgUnitId: assignee.assigneeOrgUnitId,
       dueAt: dueAtIso,
       taskSource,
+      allowReject,
+      cycleIndex,
+      maxCycles,
+      assignmentUpdateMode,
+      assignmentSource,
     },
   });
 
@@ -11646,6 +11749,11 @@ async function executeInternalProcessingTask(
     internalTaskStatus: 'pending',
     internalTaskAssigneeUserId: assignee.assigneeUserId || undefined,
     internalTaskAssigneeOrgUnitId: assignee.assigneeOrgUnitId || undefined,
+    internalTaskAllowReject: allowReject,
+    internalTaskAssignmentUpdateMode: assignmentUpdateMode,
+    internalTaskAssignmentSource: assignmentSource,
+    internalTaskCycleIndex: cycleIndex,
+    internalTaskMaxCycles: maxCycles,
     awaitingConfirmation: mode === 'blocking',
   };
 }
@@ -14454,6 +14562,148 @@ async function applyInternalTaskDecisionToWorkflow(
     if (statusAfter) {
       patchCandidate = { status: statusAfter };
     }
+  }
+
+  let assignmentPatch: Record<string, any> | null = null;
+  if (decision === 'completed') {
+    const assignmentUpdateMode = normalizeInternalTaskAssignmentUpdateMode(
+      internalTaskRow.assignment_update_mode || task.config?.assignmentUpdateMode || task.config?.assignmentMode
+    );
+    const assignmentSource = normalizeInternalTaskAssignmentSource(
+      internalTaskRow.assignment_source || task.config?.assignmentSource
+    );
+    if (assignmentUpdateMode !== 'none') {
+      const asId = (value: unknown): string => asTrimmedString(value);
+      const parseIdArray = (value: unknown): string[] => {
+        const source = Array.isArray(value)
+          ? value
+          : typeof value === 'string'
+          ? value.split(/[\n,;|]+/g)
+          : [];
+        const seen = new Set<string>();
+        const out: string[] = [];
+        for (const entry of source) {
+          const id = asId(entry);
+          if (!id || seen.has(id)) continue;
+          seen.add(id);
+          out.push(id);
+        }
+        return out;
+      };
+
+      const staticUserId = asId(
+        responsePayload.assigneeUserId ||
+          responsePayload.assignedUserId ||
+          responsePayload.primaryAssigneeUserId ||
+          responsePayload.userId
+      );
+      const staticOrgId = asId(
+        responsePayload.assigneeOrgUnitId ||
+          responsePayload.assignedOrgUnitId ||
+          responsePayload.primaryAssigneeOrgUnitId ||
+          responsePayload.orgUnitId
+      );
+
+      const staticPatch: Record<string, any> = {};
+      if (staticUserId && !staticOrgId) {
+        staticPatch.primaryAssigneeUserId = staticUserId;
+        staticPatch.primaryAssigneeOrgUnitId = '';
+      } else if (!staticUserId && staticOrgId) {
+        staticPatch.primaryAssigneeUserId = '';
+        staticPatch.primaryAssigneeOrgUnitId = staticOrgId;
+      }
+      if (assignmentUpdateMode === 'primary_plus_participants') {
+        const collaboratorUserIds = parseIdArray(
+          responsePayload.collaboratorUserIds || responsePayload.participantUserIds
+        );
+        const collaboratorOrgUnitIds = parseIdArray(
+          responsePayload.collaboratorOrgUnitIds || responsePayload.participantOrgUnitIds
+        );
+        if (collaboratorUserIds.length > 0) staticPatch.collaboratorUserIds = collaboratorUserIds;
+        if (collaboratorOrgUnitIds.length > 0) staticPatch.collaboratorOrgUnitIds = collaboratorOrgUnitIds;
+      }
+
+      const useAi = assignmentSource === 'ai_suggested' || assignmentSource === 'mixed';
+      if (useAi) {
+        try {
+          const queryText = [
+            asTrimmedString(options.note),
+            asTrimmedString(task.title),
+            asTrimmedString(task.description),
+            Object.entries(responsePayload || {})
+              .slice(0, 12)
+              .map(([key, value]) => `${key}: ${String(value ?? '')}`)
+              .join('\n'),
+          ]
+            .filter(Boolean)
+            .join('\n')
+            .slice(0, 4000);
+          if (queryText) {
+            const aiCandidates = await queryResponsibilityCandidates(getDatabase(), {
+              query: queryText,
+              tenantId: asTrimmedString(internalTaskRow.tenant_id),
+              includeUsers: true,
+              limit: assignmentUpdateMode === 'primary_plus_participants' ? 6 : 1,
+            });
+            const top = aiCandidates[0];
+            if (top && Number(top.confidence || 0) >= 0.75) {
+              if (top.type === 'user') {
+                staticPatch.primaryAssigneeUserId = top.id;
+                staticPatch.primaryAssigneeOrgUnitId = '';
+              } else {
+                staticPatch.primaryAssigneeUserId = '';
+                staticPatch.primaryAssigneeOrgUnitId = top.id;
+              }
+              setDecisionVariable(
+                `${variablePrefix}.assignment.aiTopCandidate`,
+                {
+                  type: top.type,
+                  id: top.id,
+                  confidence: top.confidence,
+                  name: top.name,
+                  reasoning: top.reasoning,
+                },
+                'Interne Bearbeitung: KI-Zuweisungsvorschlag'
+              );
+              if (assignmentUpdateMode === 'primary_plus_participants' && aiCandidates.length > 1) {
+                const collaboratorUserIds = new Set<string>(parseIdArray(staticPatch.collaboratorUserIds));
+                const collaboratorOrgIds = new Set<string>(parseIdArray(staticPatch.collaboratorOrgUnitIds));
+                for (const candidate of aiCandidates.slice(1)) {
+                  if (Number(candidate.confidence || 0) < 0.62) continue;
+                  if (candidate.type === 'user') collaboratorUserIds.add(candidate.id);
+                  else collaboratorOrgIds.add(candidate.id);
+                }
+                staticPatch.collaboratorUserIds = Array.from(collaboratorUserIds);
+                staticPatch.collaboratorOrgUnitIds = Array.from(collaboratorOrgIds);
+              }
+            }
+          }
+        } catch (aiAssignmentError) {
+          appendWorkflowHistory(execution, 'INFO', 'Interne Bearbeitung: KI-Zuweisung nicht verfügbar.', {
+            taskId: task.id,
+            taskTitle: task.title,
+            taskType: task.type,
+            metadata: {
+              error:
+                aiAssignmentError instanceof Error
+                  ? aiAssignmentError.message
+                  : String(aiAssignmentError || 'unknown'),
+            },
+          });
+        }
+      }
+
+      if (Object.keys(staticPatch).length > 0) {
+        assignmentPatch = staticPatch;
+      }
+    }
+  }
+
+  if (assignmentPatch) {
+    patchCandidate = {
+      ...assignmentPatch,
+      ...(patchCandidate || {}),
+    };
   }
 
   let patchApplied: Record<string, any> | null = null;
@@ -17268,6 +17518,14 @@ function normalizeGeneratedWorkflowTemplate(
         : 0;
       config.formSchema = { fields: normalizeInternalTaskFormSchema(sourceConfig.formSchema) };
       config.processVarMappings = normalizeInternalProcessVarMappings(sourceConfig.processVarMappings);
+      config.allowReject = normalizeInternalTaskRejectAllowed(sourceConfig.allowReject, true);
+      config.maxCycles = Number.isFinite(Number(sourceConfig.maxCycles))
+        ? Math.max(1, Math.min(12, Math.floor(Number(sourceConfig.maxCycles))))
+        : 1;
+      config.assignmentUpdateMode = normalizeInternalTaskAssignmentUpdateMode(
+        sourceConfig.assignmentUpdateMode || sourceConfig.assignmentMode
+      );
+      config.assignmentSource = normalizeInternalTaskAssignmentSource(sourceConfig.assignmentSource);
       config.onComplete =
         sourceConfig.onComplete && typeof sourceConfig.onComplete === 'object' && !Array.isArray(sourceConfig.onComplete)
           ? sourceConfig.onComplete
@@ -18331,7 +18589,6 @@ router.post(
       if (currentStatus === 'completed' || currentStatus === 'rejected' || currentStatus === 'cancelled') {
         return res.status(409).json({ message: 'Interne Aufgabe ist bereits abgeschlossen.' });
       }
-
       const actorUserId = asTrimmedString((req as any).userId);
       const claimSelfRaw = (req.body as any)?.claimSelf;
       const claimSelf =
@@ -18476,6 +18733,10 @@ router.post(
       if (currentStatus === 'completed' || currentStatus === 'rejected' || currentStatus === 'cancelled') {
         return res.status(409).json({ message: 'Interne Aufgabe ist bereits abgeschlossen.' });
       }
+      const allowReject = normalizeInternalTaskRejectAllowed(row.allow_reject, true);
+      if (!allowReject) {
+        return res.status(409).json({ message: 'Ablehnung ist für diese interne Aufgabe deaktiviert.' });
+      }
 
       const actorUserId = asTrimmedString((req as any).userId);
       const note = asTrimmedString(req.body?.note || req.body?.comment);
@@ -18570,6 +18831,10 @@ router.post(
       const currentStatus = normalizeInternalTaskStatus(row.status);
       if (currentStatus === 'completed' || currentStatus === 'rejected' || currentStatus === 'cancelled') {
         return res.status(409).json({ message: 'Interne Aufgabe ist bereits abgeschlossen.' });
+      }
+      const allowReject = normalizeInternalTaskRejectAllowed(row.allow_reject, true);
+      if (!allowReject) {
+        return res.status(409).json({ message: 'Ablehnung ist für diese interne Aufgabe deaktiviert.' });
       }
 
       const actorUserId = asTrimmedString((req as any).userId);

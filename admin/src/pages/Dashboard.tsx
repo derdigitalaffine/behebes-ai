@@ -5,6 +5,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { isAdminRole } from '../lib/auth';
 import { subscribeAdminRealtime } from '../lib/realtime';
 import { useTableSelection } from '../lib/tableSelection';
+import { useAdminScopeContext } from '../lib/adminScopeContext';
 import {
   SmartTable,
   SmartTableRowActionButton,
@@ -245,8 +246,18 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
   const [liveLastEventAt, setLiveLastEventAt] = useState<string | null>(null);
   const [isLiveRefreshing, setIsLiveRefreshing] = useState(false);
   const [latestSituationReports, setLatestSituationReports] = useState<LatestSituationReport[]>([]);
+  const [responsibilityQuery, setResponsibilityQuery] = useState('');
+  const [responsibilityLoading, setResponsibilityLoading] = useState(false);
+  const [responsibilityResult, setResponsibilityResult] = useState<Array<{
+    type: string;
+    id: string;
+    name: string;
+    confidence: number;
+    reasoning?: string;
+  }>>([]);
 
   const admin = isAdminRole(role);
+  const { selection: scopeSelection } = useAdminScopeContext();
 
   const fetchData = useCallback(async (options?: { silent?: boolean }) => {
     const silent = options?.silent === true;
@@ -304,6 +315,31 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
       }
     }
   }, [token]);
+
+  const runResponsibilityQuery = useCallback(async () => {
+    const text = responsibilityQuery.trim();
+    if (!text) return;
+    try {
+      setResponsibilityLoading(true);
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await axios.post(
+        '/api/admin/responsibility/query',
+        {
+          query: text,
+          tenantId: scopeSelection.scope === 'tenant' ? scopeSelection.tenantId : undefined,
+          includeUsers: true,
+          limit: 6,
+        },
+        { headers }
+      );
+      const candidates = Array.isArray(response.data?.candidates) ? response.data.candidates : [];
+      setResponsibilityResult(candidates);
+    } catch (err) {
+      setError('Zuständigkeitsabfrage fehlgeschlagen.');
+    } finally {
+      setResponsibilityLoading(false);
+    }
+  }, [responsibilityQuery, scopeSelection.scope, scopeSelection.tenantId, token]);
 
   useEffect(() => {
     void fetchData();
@@ -843,6 +879,50 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
       </div>
 
       {error && <div className="error-message">{error}</div>}
+
+      <section className="dashboard-panel">
+        <div className="panel-header">
+          <h3>Zuständigkeit abfragen</h3>
+          <span className="panel-hint">Verwaltungs-Zuständigkeitsprüfung</span>
+        </div>
+        <div className="quick-actions">
+          <input
+            className="input w-full"
+            placeholder="Anliegen oder Stichworte eingeben (z. B. Straßenbeleuchtung defekt in Otterbach)"
+            value={responsibilityQuery}
+            onChange={(event) => setResponsibilityQuery(event.target.value)}
+          />
+          <button
+            type="button"
+            className="btn btn-primary"
+            disabled={responsibilityLoading || !responsibilityQuery.trim()}
+            onClick={() => void runResponsibilityQuery()}
+          >
+            <i className={`fa-solid ${responsibilityLoading ? 'fa-spinner fa-spin' : 'fa-magnifying-glass'}`} /> Prüfen
+          </button>
+        </div>
+        {responsibilityResult.length > 0 ? (
+          <div className="ticket-list">
+            {responsibilityResult.map((entry) => (
+              <div key={`${entry.type}-${entry.id}`} className="ticket-row">
+                <div className="ticket-row-header">
+                  <span className="ticket-id">{entry.name}</span>
+                  <span className="status-pill status-open">
+                    {Math.round(Math.max(0, Math.min(1, Number(entry.confidence || 0))) * 100)}%
+                  </span>
+                </div>
+                <div className="ticket-row-meta">
+                  <span>{entry.type === 'user' ? 'Benutzer' : 'Organisationseinheit'}</span>
+                  <span>{entry.id}</span>
+                  <span>{entry.reasoning || 'Regelbasiertes Matching'}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="timer-empty">Noch keine Abfrage durchgeführt.</p>
+        )}
+      </section>
 
       <section className="dashboard-panel my-tickets-panel">
         <div className="panel-header">

@@ -23,6 +23,12 @@ interface AdminUser {
   id: string;
   username: string;
   email?: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  jobTitle?: string | null;
+  workPhone?: string | null;
+  externalPersonId?: string | null;
+  profileData?: Record<string, any>;
   role: 'ADMIN' | 'SACHBEARBEITER';
   active: boolean;
   isGlobalAdmin?: boolean;
@@ -51,6 +57,12 @@ interface OrgUnitOption {
 interface CreateFormState {
   username: string;
   email: string;
+  firstName: string;
+  lastName: string;
+  jobTitle: string;
+  workPhone: string;
+  externalPersonId: string;
+  profileDataText: string;
   role: AdminUser['role'];
   password: string;
   isGlobalAdmin: boolean;
@@ -61,6 +73,12 @@ interface CreateFormState {
 
 interface EditFormState {
   email: string;
+  firstName: string;
+  lastName: string;
+  jobTitle: string;
+  workPhone: string;
+  externalPersonId: string;
+  profileDataText: string;
   role: AdminUser['role'];
   active: boolean;
   newPassword: string;
@@ -160,6 +178,20 @@ const normalizeOrgScopesPayload = (scopes: OrgScope[]): OrgScope[] => {
 const createEmptyTenantScope = (): TenantScope => ({ tenantId: '', isTenantAdmin: false });
 const createEmptyOrgScope = (): OrgScope => ({ tenantId: '', orgUnitId: '', canWrite: false });
 
+const parseProfileDataText = (raw: string): { ok: boolean; value: Record<string, any>; error?: string } => {
+  const trimmed = String(raw || '').trim();
+  if (!trimmed) return { ok: true, value: {} };
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      return { ok: false, value: {}, error: 'Erweiterte Profildaten müssen ein JSON-Objekt sein.' };
+    }
+    return { ok: true, value: parsed as Record<string, any> };
+  } catch {
+    return { ok: false, value: {}, error: 'Erweiterte Profildaten enthalten ungültiges JSON.' };
+  }
+};
+
 const Users: React.FC<UsersProps> = ({ token }) => {
   const { isGlobalAdmin: isPlatformAdmin } = useAdminScopeContext();
   const [users, setUsers] = useState<AdminUser[]>([]);
@@ -168,6 +200,7 @@ const Users: React.FC<UsersProps> = ({ token }) => {
   const [loading, setLoading] = useState(true);
   const [directoryLoading, setDirectoryLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [invitingUserId, setInvitingUserId] = useState<string | null>(null);
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'success' | 'error' | ''>('');
   const [search, setSearch] = useState('');
@@ -175,6 +208,12 @@ const Users: React.FC<UsersProps> = ({ token }) => {
   const [createForm, setCreateForm] = useState<CreateFormState>({
     username: '',
     email: '',
+    firstName: '',
+    lastName: '',
+    jobTitle: '',
+    workPhone: '',
+    externalPersonId: '',
+    profileDataText: '{}',
     role: 'SACHBEARBEITER' as AdminUser['role'],
     password: '',
     isGlobalAdmin: false,
@@ -186,6 +225,12 @@ const Users: React.FC<UsersProps> = ({ token }) => {
   const [editingUser, setEditingUser] = useState<AdminUser | null>(null);
   const [editForm, setEditForm] = useState<EditFormState>({
     email: '',
+    firstName: '',
+    lastName: '',
+    jobTitle: '',
+    workPhone: '',
+    externalPersonId: '',
+    profileDataText: '{}',
     role: 'SACHBEARBEITER' as AdminUser['role'],
     active: true,
     newPassword: '',
@@ -313,6 +358,12 @@ const Users: React.FC<UsersProps> = ({ token }) => {
       setMessage('Benutzername und Passwort sind erforderlich');
       return;
     }
+    const parsedProfile = parseProfileDataText(createForm.profileDataText);
+    if (!parsedProfile.ok) {
+      setMessageType('error');
+      setMessage(parsedProfile.error || 'Ungültige Profildaten');
+      return;
+    }
 
     setSaving(true);
     try {
@@ -327,6 +378,12 @@ const Users: React.FC<UsersProps> = ({ token }) => {
         {
           username: createForm.username,
           email: createForm.email || undefined,
+          firstName: createForm.firstName || undefined,
+          lastName: createForm.lastName || undefined,
+          jobTitle: createForm.jobTitle || undefined,
+          workPhone: createForm.workPhone || undefined,
+          externalPersonId: createForm.externalPersonId || undefined,
+          profileData: parsedProfile.value,
           password: createForm.password,
           role: createForm.role,
           isGlobalAdmin: isPlatformAdmin && createForm.role === 'ADMIN' && createForm.isGlobalAdmin === true,
@@ -341,6 +398,12 @@ const Users: React.FC<UsersProps> = ({ token }) => {
       setCreateForm({
         username: '',
         email: '',
+        firstName: '',
+        lastName: '',
+        jobTitle: '',
+        workPhone: '',
+        externalPersonId: '',
+        profileDataText: '{}',
         role: 'SACHBEARBEITER',
         password: '',
         isGlobalAdmin: false,
@@ -361,6 +424,12 @@ const Users: React.FC<UsersProps> = ({ token }) => {
     setEditingUser(user);
     setEditForm({
       email: user.email || '',
+      firstName: user.firstName || '',
+      lastName: user.lastName || '',
+      jobTitle: user.jobTitle || '',
+      workPhone: user.workPhone || '',
+      externalPersonId: user.externalPersonId || '',
+      profileDataText: JSON.stringify(user.profileData || {}, null, 2),
       role: user.role,
       active: user.active,
       newPassword: '',
@@ -382,6 +451,12 @@ const Users: React.FC<UsersProps> = ({ token }) => {
 
   const handleUpdateUser = async () => {
     if (!editingUser) return;
+    const parsedProfile = parseProfileDataText(editForm.profileDataText);
+    if (!parsedProfile.ok) {
+      setMessageType('error');
+      setMessage(parsedProfile.error || 'Ungültige Profildaten');
+      return;
+    }
     setSaving(true);
     try {
       const sanitizedTenantScopes = normalizeTenantScopesPayload(
@@ -394,6 +469,12 @@ const Users: React.FC<UsersProps> = ({ token }) => {
         `/api/admin/users/${editingUser.id}`,
         {
           email: editForm.email,
+          firstName: editForm.firstName || undefined,
+          lastName: editForm.lastName || undefined,
+          jobTitle: editForm.jobTitle || undefined,
+          workPhone: editForm.workPhone || undefined,
+          externalPersonId: editForm.externalPersonId || undefined,
+          profileData: parsedProfile.value,
           role: editForm.role,
           active: editForm.active,
           isGlobalAdmin: isPlatformAdmin && editForm.role === 'ADMIN' && editForm.isGlobalAdmin === true,
@@ -460,6 +541,85 @@ const Users: React.FC<UsersProps> = ({ token }) => {
     } catch (error: any) {
       setMessageType('error');
       setMessage(error.response?.data?.message || 'TFA konnte nicht deaktiviert werden.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleInviteUser = async (user: AdminUser, sendEmail = true) => {
+    const username = String(user?.username || '').trim() || 'Benutzer';
+    if (sendEmail && !String(user?.email || '').trim()) {
+      setMessageType('error');
+      setMessage(`Für ${username} ist keine E-Mail hinterlegt. Einladung kann nicht versendet werden.`);
+      return;
+    }
+    setInvitingUserId(user.id);
+    setMessage('');
+    setMessageType('');
+    try {
+      const response = await axios.post(
+        `/api/admin/users/${encodeURIComponent(user.id)}/invite`,
+        { sendEmail },
+        { headers }
+      );
+      const inviteLink = String(response?.data?.invite?.inviteLink || '').trim();
+      if (!sendEmail && inviteLink) {
+        await navigator.clipboard.writeText(inviteLink).catch(() => undefined);
+      }
+      setMessageType('success');
+      setMessage(
+        sendEmail
+          ? `Einladung an ${username} versendet.`
+          : `Einladungslink für ${username} erstellt${inviteLink ? ' und in die Zwischenablage kopiert' : ''}.`
+      );
+    } catch (error: any) {
+      setMessageType('error');
+      setMessage(error?.response?.data?.message || 'Einladung konnte nicht erstellt werden.');
+    } finally {
+      setInvitingUserId(null);
+    }
+  };
+
+  const handleBulkInvite = async (sendEmail = true) => {
+    if (selection.selectedRows.length === 0) {
+      setMessageType('error');
+      setMessage('Keine Benutzer ausgewählt');
+      return;
+    }
+    if (sendEmail) {
+      const usersWithoutEmail = selection.selectedRows.filter((entry) => !String(entry?.email || '').trim());
+      if (usersWithoutEmail.length > 0) {
+        setMessageType('error');
+        setMessage(
+          `Für ${usersWithoutEmail.length} ausgewählte Benutzer fehlt eine E-Mail-Adresse. Versand wurde nicht gestartet.`
+        );
+        return;
+      }
+    }
+    setSaving(true);
+    setMessage('');
+    setMessageType('');
+    try {
+      const response = await axios.post(
+        '/api/admin/users/invite/batch',
+        {
+          userIds: selection.selectedRows.map((row) => row.id),
+          sendEmail,
+        },
+        { headers }
+      );
+      const successCount = Number(response?.data?.successCount || 0);
+      const total = Number(response?.data?.total || selection.selectedRows.length);
+      setMessageType(successCount === total ? 'success' : 'error');
+      setMessage(
+        sendEmail
+          ? `Einladungen versendet: ${successCount}/${total}.`
+          : `Einladungslinks erstellt: ${successCount}/${total}.`
+      );
+      selection.clearSelection();
+    } catch (error: any) {
+      setMessageType('error');
+      setMessage(error?.response?.data?.message || 'Batch-Einladung fehlgeschlagen.');
     } finally {
       setSaving(false);
     }
@@ -679,6 +839,59 @@ const Users: React.FC<UsersProps> = ({ token }) => {
               value={createForm.email}
               onChange={(e) => setCreateForm({ ...createForm, email: e.target.value })}
             />
+            <small className="text-slate-500">
+              Ohne E-Mail wird der Account als inaktiv angelegt, bis eine E-Mail ergänzt wurde.
+            </small>
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1">Vorname (optional)</label>
+            <input
+              className="input"
+              value={createForm.firstName}
+              onChange={(e) => setCreateForm({ ...createForm, firstName: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1">Nachname (optional)</label>
+            <input
+              className="input"
+              value={createForm.lastName}
+              onChange={(e) => setCreateForm({ ...createForm, lastName: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1">Funktion / Stelle (optional)</label>
+            <input
+              className="input"
+              value={createForm.jobTitle}
+              onChange={(e) => setCreateForm({ ...createForm, jobTitle: e.target.value })}
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-semibold mb-1">Telefon (optional)</label>
+            <input
+              className="input"
+              value={createForm.workPhone}
+              onChange={(e) => setCreateForm({ ...createForm, workPhone: e.target.value })}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-semibold mb-1">Externe Personal-ID (optional)</label>
+            <input
+              className="input"
+              value={createForm.externalPersonId}
+              onChange={(e) => setCreateForm({ ...createForm, externalPersonId: e.target.value })}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-semibold mb-1">Erweiterte Profildaten (JSON, optional)</label>
+            <textarea
+              className="input font-mono text-xs"
+              rows={5}
+              value={createForm.profileDataText}
+              onChange={(e) => setCreateForm({ ...createForm, profileDataText: e.target.value })}
+              placeholder='{"zimmer":"1.14","sprechzeit":"Mo-Fr 08:00-12:00"}'
+            />
           </div>
           <KeywordChipsInput
             className="md:col-span-2"
@@ -866,6 +1079,55 @@ const Users: React.FC<UsersProps> = ({ token }) => {
                 onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
               />
             </div>
+            <div>
+              <label className="block text-sm font-semibold mb-1">Vorname</label>
+              <input
+                className="input"
+                value={editForm.firstName}
+                onChange={(e) => setEditForm({ ...editForm, firstName: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-1">Nachname</label>
+              <input
+                className="input"
+                value={editForm.lastName}
+                onChange={(e) => setEditForm({ ...editForm, lastName: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-1">Funktion / Stelle</label>
+              <input
+                className="input"
+                value={editForm.jobTitle}
+                onChange={(e) => setEditForm({ ...editForm, jobTitle: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold mb-1">Telefon</label>
+              <input
+                className="input"
+                value={editForm.workPhone}
+                onChange={(e) => setEditForm({ ...editForm, workPhone: e.target.value })}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold mb-1">Externe Personal-ID</label>
+              <input
+                className="input"
+                value={editForm.externalPersonId}
+                onChange={(e) => setEditForm({ ...editForm, externalPersonId: e.target.value })}
+              />
+            </div>
+            <div className="md:col-span-2">
+              <label className="block text-sm font-semibold mb-1">Erweiterte Profildaten (JSON)</label>
+              <textarea
+                className="input font-mono text-xs"
+                rows={5}
+                value={editForm.profileDataText}
+                onChange={(e) => setEditForm({ ...editForm, profileDataText: e.target.value })}
+              />
+            </div>
             <KeywordChipsInput
               className="md:col-span-2"
               label="Schlagworte für automatische Zuweisung"
@@ -1035,6 +1297,21 @@ const Users: React.FC<UsersProps> = ({ token }) => {
             <button className="btn btn-primary" onClick={handleUpdateUser} disabled={saving}>
               Änderungen speichern
             </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => void handleInviteUser(editingUser, true)}
+              disabled={saving || invitingUserId === editingUser.id || !String(editingUser.email || '').trim()}
+              title={!String(editingUser.email || '').trim() ? 'Keine E-Mail-Adresse hinterlegt.' : undefined}
+            >
+              <i className="fa-solid fa-envelope" /> Einladung senden
+            </button>
+            <button
+              className="btn btn-secondary"
+              onClick={() => void handleInviteUser(editingUser, false)}
+              disabled={saving || invitingUserId === editingUser.id}
+            >
+              <i className="fa-solid fa-link" /> Link erzeugen
+            </button>
             <button className="btn btn-secondary" onClick={() => void handleDisableUserTfa(editingUser)} disabled={saving}>
               <i className="fa-solid fa-shield-halved" /> TFA deaktivieren
             </button>
@@ -1085,6 +1362,12 @@ const Users: React.FC<UsersProps> = ({ token }) => {
               >
                 <i className="fa-solid fa-user-gear" /> Als Sachbearbeiter
               </button>
+              <button className="bulk-btn info" type="button" onClick={() => void handleBulkInvite(true)} disabled={saving}>
+                <i className="fa-solid fa-envelope" /> Einladung senden
+              </button>
+              <button className="bulk-btn info" type="button" onClick={() => void handleBulkInvite(false)} disabled={saving}>
+                <i className="fa-solid fa-link" /> Invite-Link
+              </button>
               <button className="bulk-btn danger" type="button" onClick={handleBulkDelete} disabled={saving}>
                 <i className="fa-solid fa-trash" /> Löschen
               </button>
@@ -1112,6 +1395,7 @@ const Users: React.FC<UsersProps> = ({ token }) => {
                     />
                   </th>
                   <th className="py-2">Benutzername</th>
+                  <th className="py-2">Name / Funktion</th>
                   <th className="py-2">Email</th>
                   <th className="py-2">Rolle</th>
                   <th className="py-2">Status</th>
@@ -1134,6 +1418,14 @@ const Users: React.FC<UsersProps> = ({ token }) => {
                       />
                     </td>
                     <td className="py-2 font-semibold text-slate-800">{user.username}</td>
+                    <td className="py-2 text-slate-600">
+                      <div className="flex flex-col">
+                        <span>{[user.firstName, user.lastName].filter(Boolean).join(' ') || '–'}</span>
+                        <span className="text-xs text-slate-500">
+                          {user.jobTitle || user.workPhone || user.externalPersonId || 'Keine Zusatzdaten'}
+                        </span>
+                      </div>
+                    </td>
                     <td className="py-2 text-slate-600">{user.email || '–'}</td>
                     <td className="py-2 text-slate-600">{roleLabels[user.role] || user.role}</td>
                     <td className="py-2">
@@ -1149,6 +1441,14 @@ const Users: React.FC<UsersProps> = ({ token }) => {
                         <button className="btn btn-secondary" onClick={() => handleEditUser(user)}>
                           Bearbeiten
                         </button>
+                        <button
+                          className="btn btn-secondary"
+                          onClick={() => void handleInviteUser(user, true)}
+                          disabled={saving || invitingUserId === user.id || !String(user.email || '').trim()}
+                          title={!String(user.email || '').trim() ? 'Keine E-Mail-Adresse hinterlegt.' : undefined}
+                        >
+                          <i className="fa-solid fa-envelope" /> Invite
+                        </button>
                         <button className="btn btn-secondary" onClick={() => void handleDisableUserTfa(user)} disabled={saving}>
                           <i className="fa-solid fa-shield-halved" /> TFA aus
                         </button>
@@ -1158,7 +1458,7 @@ const Users: React.FC<UsersProps> = ({ token }) => {
                 ))}
                 {filteredUsers.length === 0 && (
                   <tr>
-                    <td colSpan={9} className="py-4 text-center text-slate-500">
+                    <td colSpan={10} className="py-4 text-center text-slate-500">
                       Keine Benutzer gefunden.
                     </td>
                   </tr>
