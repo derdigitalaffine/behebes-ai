@@ -140,6 +140,7 @@ npm --prefix ops run build
 - Quick start and runtime operations: `QUICKSTART.md`
 - Versioning and system updates: `docs/versioning-and-updates.md`
 - Git governance and release workflow: `docs/git-governance.md`
+- RLP import/responsibility/internal-task package: `docs/rlp-imports-responsibility-internal-tasks.md`
 
 ## Operations and Updates | Betrieb und Updates
 
