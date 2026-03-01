@@ -19,6 +19,9 @@ export interface AdminRealtimeUpdate {
   emailQueueId?: string;
   chatUserId?: string;
   callId?: string;
+  mediaType?: string;
+  upgradeState?: string;
+  claimedByResource?: string;
 }
 
 type TopicPayload = Partial<Omit<AdminRealtimeUpdate, 'id' | 'topic' | 'at'>> & {
@@ -49,6 +52,9 @@ function flushPending() {
       ...(payload.emailQueueId ? { emailQueueId: payload.emailQueueId } : {}),
       ...(payload.chatUserId ? { chatUserId: payload.chatUserId } : {}),
       ...(payload.callId ? { callId: payload.callId } : {}),
+      ...(payload.mediaType ? { mediaType: payload.mediaType } : {}),
+      ...(payload.upgradeState ? { upgradeState: payload.upgradeState } : {}),
+      ...(payload.claimedByResource ? { claimedByResource: payload.claimedByResource } : {}),
     };
     emitter.emit('update', event);
   }

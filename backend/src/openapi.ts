@@ -341,6 +341,11 @@ export const openApiSpec: Record<string, any> = {
           routingMode: { type: 'string', example: 'parallel_first_accept' },
           reason: { type: 'string', nullable: true },
           resource: { type: 'string', nullable: true },
+          mediaType: { type: 'string', enum: ['audio', 'video'] },
+          requestedMediaType: { type: 'string', enum: ['audio', 'video'] },
+          videoState: { type: 'string', enum: ['disabled', 'enabled'] },
+          clientConnectionId: { type: 'string', nullable: true },
+          endedReason: { type: 'string', nullable: true },
         },
       },
       ChatBootstrapResponse: {
@@ -353,6 +358,12 @@ export const openApiSpec: Record<string, any> = {
               multiClientSync: { type: 'boolean' },
               firstCatchRouting: { type: 'boolean' },
               presenceHybrid: { type: 'boolean' },
+            },
+          },
+          connection: {
+            type: 'object',
+            properties: {
+              wsBoshFallback: { type: 'boolean' },
             },
           },
           xmpp: {
@@ -390,6 +401,15 @@ export const openApiSpec: Record<string, any> = {
               enabled: { type: 'boolean' },
               routingMode: { type: 'string', example: 'parallel_first_accept' },
               policyReason: { type: 'string' },
+              media: {
+                type: 'object',
+                properties: {
+                  audio: { type: 'boolean' },
+                  video: { type: 'boolean' },
+                  upgradeSupported: { type: 'boolean' },
+                  directOnly: { type: 'boolean' },
+                },
+              },
             },
           },
           assistant: { type: 'object', additionalProperties: true },
@@ -1926,6 +1946,8 @@ export const openApiSpec: Record<string, any> = {
                   resource: { type: 'string' },
                   appKind: { type: 'string', enum: ['admin', 'ops'] },
                   transport: { type: 'string', enum: ['xmpp', 'sse', 'poll', 'hybrid'] },
+                  mediaType: { type: 'string', enum: ['audio', 'video'] },
+                  clientConnectionId: { type: 'string' },
                 },
               },
             },
@@ -1967,6 +1989,8 @@ export const openApiSpec: Record<string, any> = {
                   },
                   reason: { type: 'string' },
                   resource: { type: 'string' },
+                  endedReason: { type: 'string' },
+                  mediaTypeFinal: { type: 'string', enum: ['audio', 'video'] },
                 },
               },
             },
@@ -1975,6 +1999,48 @@ export const openApiSpec: Record<string, any> = {
         responses: {
           '200': {
             description: 'Call-Session freigegeben.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ChatCallSessionState' },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/api/admin/chat/calls/{callId}/media': {
+      post: {
+        tags: ['Admin Chat'],
+        operationId: 'updateAdminChatCallMedia',
+        summary: 'Aktualisiert den Medienmodus (Audio/Video) einer bestehenden Call-Session für Upgrade/Downgrade-Audit.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'callId', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  mediaType: { type: 'string', enum: ['audio', 'video'] },
+                  requestedMediaType: { type: 'string', enum: ['audio', 'video'] },
+                  upgradeState: { type: 'string', example: 'audio_to_video' },
+                  resource: { type: 'string' },
+                  appKind: { type: 'string', enum: ['admin', 'ops'] },
+                  transport: { type: 'string', enum: ['xmpp', 'sse', 'poll', 'hybrid'] },
+                  clientConnectionId: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Media-Status aktualisiert.',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/ChatCallSessionState' },

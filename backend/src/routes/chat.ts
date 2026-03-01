@@ -218,6 +218,7 @@ const SYSTEM_CHAT_SUBTITLE = 'Systemmeldungen und Ticket-Updates';
 const CHAT_PRESENCE_HEARTBEAT_TTL_MS = 90 * 1000;
 const CHAT_CALL_SESSION_EXPIRE_MS = 2 * 60 * 1000;
 const CHAT_CALL_TERMINAL_STATES = new Set(['ended', 'failed', 'cancelled', 'timeout', 'rejected']);
+const CHAT_CALL_MEDIA_TYPES = new Set(['audio', 'video']);
 let presenceHeartbeatTableAvailable: boolean | null = null;
 let callSessionTableAvailable: boolean | null = null;
 
@@ -889,6 +890,72 @@ function normalizeCallSessionState(value: unknown): string {
     return normalized;
   }
   return 'proposed';
+}
+
+function normalizeCallMediaType(value: unknown, fallback: 'audio' | 'video' = 'audio'): 'audio' | 'video' {
+  const normalized = normalizeText(value).toLowerCase();
+  if (CHAT_CALL_MEDIA_TYPES.has(normalized)) {
+    return normalized as 'audio' | 'video';
+  }
+  return fallback;
+}
+
+function normalizeClientConnectionId(value: unknown): string {
+  return normalizeText(value).replace(/[^a-zA-Z0-9._:-]/g, '').slice(0, 120);
+}
+
+function parseCallSessionMeta(value: unknown): Record<string, any> {
+  if (value && typeof value === 'object' && !Array.isArray(value)) {
+    return value as Record<string, any>;
+  }
+  const raw = normalizeText(value);
+  if (!raw) return {};
+  try {
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      return parsed as Record<string, any>;
+    }
+  } catch {
+    // ignore malformed payloads
+  }
+  return {};
+}
+
+function mapCallSessionRowToPayload(
+  row: any,
+  extras?: {
+    won?: boolean;
+    reason?: string | null;
+    resource?: string | null;
+    routingMode?: string;
+  }
+) {
+  const mediaType = normalizeCallMediaType(row?.media_type, 'audio');
+  const meta = parseCallSessionMeta(row?.meta_json);
+  const requestedMediaType = normalizeCallMediaType(
+    meta?.requestedMediaType || meta?.mediaType || row?.media_type,
+    mediaType
+  );
+  return {
+    callId: normalizeText(row?.call_id),
+    ...(typeof extras?.won === 'boolean' ? { won: extras.won } : {}),
+    state: normalizeCallSessionState(row?.state),
+    claimedByUserId: normalizeText(row?.claimed_by_user_id) || null,
+    claimedByResource: normalizeText(row?.claimed_by_resource) || null,
+    callerUserId: normalizeText(row?.caller_user_id) || null,
+    calleeUserId: normalizeText(row?.callee_user_id) || null,
+    expiresAt: normalizePresenceExpiresAt(row?.expires_at),
+    endedAt: normalizePresenceExpiresAt(row?.ended_at),
+    updatedAt: normalizePresenceExpiresAt(row?.updated_at),
+    routingMode: normalizeText(extras?.routingMode) || 'parallel_first_accept',
+    reason: normalizeText(extras?.reason) || null,
+    resource: normalizeText(extras?.resource) || null,
+    mediaType,
+    requestedMediaType,
+    videoState: mediaType === 'video' ? 'enabled' : 'disabled',
+    clientConnectionId: normalizeClientConnectionId(row?.client_connection_id) || null,
+    endedReason: normalizeText(row?.ended_reason || meta?.endedReason) || null,
+  };
 }
 
 function computeCallExpiresAt(): string {
@@ -1796,6 +1863,9 @@ router.get('/bootstrap', async (req: Request, res: Response) => {
         firstCatchRouting: true,
         presenceHybrid: true,
       },
+      connection: {
+        wsBoshFallback: true,
+      },
       xmpp: {
         domain: config.xmpp.domain,
         mucService,
@@ -1833,6 +1903,12 @@ router.get('/bootstrap', async (req: Request, res: Response) => {
         enabled: callPolicy.enabled,
         routingMode: 'parallel_first_accept',
         policyReason: callPolicy.reason,
+        media: {
+          audio: true,
+          video: true,
+          upgradeSupported: true,
+          directOnly: true,
+        },
       },
       assistant: {
         enabled: chatbotSettings.enabled === true,
@@ -2034,32 +2110,45 @@ router.post('/calls/:callId/claim', async (req: Request, res: Response) => {
     const resource = normalizeHeartbeatResource(req.body?.resource);
     const appKind = normalizeHeartbeatAppKind(req.body?.appKind);
     const transport = normalizeHeartbeatTransport(req.body?.transport);
+    const mediaType = normalizeCallMediaType(req.body?.mediaType, 'audio');
+    const clientConnectionId = normalizeClientConnectionId(req.body?.clientConnectionId);
     const expiresAt = computeCallExpiresAt();
 
     const existing = await db.get<any>(
-      `SELECT call_id, caller_user_id, callee_user_id, claimed_by_user_id, claimed_by_resource, state, expires_at, updated_at
+      `SELECT call_id, caller_user_id, callee_user_id, claimed_by_user_id, claimed_by_resource, media_type, client_connection_id,
+              state, expires_at, ended_at, ended_reason, updated_at, meta_json
        FROM admin_chat_call_sessions
        WHERE call_id = ?
        LIMIT 1`,
       [callId]
     );
+    const nextMeta = {
+      ...parseCallSessionMeta(existing?.meta_json),
+      requestedMediaType: mediaType,
+      mediaType,
+      lastClaim: {
+        at: new Date().toISOString(),
+        appKind,
+        transport,
+        resource,
+        clientConnectionId: clientConnectionId || null,
+      },
+    };
     if (!existing?.call_id) {
       await db.run(
         `INSERT INTO admin_chat_call_sessions (
-          call_id, caller_user_id, callee_user_id, state, expires_at, meta_json, created_at, updated_at
-        ) VALUES (?, ?, ?, 'ringing', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+          call_id, caller_user_id, callee_user_id, media_type, client_connection_id, state, expires_at, meta_json, created_at, updated_at
+        ) VALUES (?, ?, ?, ?, ?, 'ringing', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
         ON CONFLICT(call_id)
         DO NOTHING`,
         [
           callId,
           callerUserId,
           currentUserId,
+          mediaType,
+          clientConnectionId || null,
           expiresAt,
-          JSON.stringify({
-            createdVia: 'claim',
-            appKind,
-            transport,
-          }),
+          JSON.stringify(nextMeta),
         ]
       );
     }
@@ -2070,17 +2159,33 @@ router.post('/calls/:callId/claim', async (req: Request, res: Response) => {
            callee_user_id = COALESCE(callee_user_id, ?),
            claimed_by_user_id = ?,
            claimed_by_resource = ?,
+           media_type = ?,
+           client_connection_id = COALESCE(?, client_connection_id),
            state = 'claimed',
+           meta_json = ?,
            expires_at = ?,
            updated_at = CURRENT_TIMESTAMP
        WHERE call_id = ?
          AND state NOT IN ('ended', 'failed', 'cancelled', 'timeout', 'rejected')
          AND (claimed_by_resource IS NULL OR claimed_by_resource = ?)
          AND (claimed_by_user_id IS NULL OR claimed_by_user_id = ?)`,
-      [callerUserId, currentUserId, currentUserId, resource, expiresAt, callId, resource, currentUserId]
+      [
+        callerUserId,
+        currentUserId,
+        currentUserId,
+        resource,
+        mediaType,
+        clientConnectionId || null,
+        JSON.stringify(nextMeta),
+        expiresAt,
+        callId,
+        resource,
+        currentUserId,
+      ]
     );
     const row = await db.get<any>(
-      `SELECT call_id, caller_user_id, callee_user_id, claimed_by_user_id, claimed_by_resource, state, expires_at, updated_at
+      `SELECT call_id, caller_user_id, callee_user_id, claimed_by_user_id, claimed_by_resource, media_type, client_connection_id,
+              state, expires_at, ended_at, ended_reason, updated_at, meta_json
        FROM admin_chat_call_sessions
        WHERE call_id = ?
        LIMIT 1`,
@@ -2097,6 +2202,8 @@ router.post('/calls/:callId/claim', async (req: Request, res: Response) => {
         reason: 'chat.call.claimed',
         callId,
         chatUserId: currentUserId,
+        mediaType,
+        claimedByResource: resource,
       });
       await touchPresenceHeartbeat({
         adminUserId: currentUserId,
@@ -2106,19 +2213,12 @@ router.post('/calls/:callId/claim', async (req: Request, res: Response) => {
       });
     }
 
-    return res.json({
-      callId,
-      won,
-      state: normalizeCallSessionState(row?.state),
-      claimedByUserId: normalizeText(row?.claimed_by_user_id) || null,
-      claimedByResource: normalizeText(row?.claimed_by_resource) || null,
-      callerUserId: normalizeText(row?.caller_user_id) || null,
-      calleeUserId: normalizeText(row?.callee_user_id) || null,
-      expiresAt: normalizePresenceExpiresAt(row?.expires_at),
-      updatedAt: normalizePresenceExpiresAt(row?.updated_at),
-      routingMode: 'parallel_first_accept',
-      reason: won ? 'accepted' : 'already_claimed',
-    });
+    return res.json(
+      mapCallSessionRowToPayload(row, {
+        won,
+        reason: won ? 'accepted' : 'already_claimed',
+      })
+    );
   } catch (error: any) {
     return res.status(500).json({
       message: 'Call-Claim fehlgeschlagen.',
@@ -2138,10 +2238,113 @@ router.post('/calls/:callId/release', async (req: Request, res: Response) => {
     if (!callId) return res.status(400).json({ message: 'callId fehlt.' });
     const state = normalizeCallSessionState(req.body?.state || req.body?.reason || 'ended');
     const resource = normalizeHeartbeatResource(req.body?.resource);
+    const endedReason = truncateText(req.body?.endedReason || req.body?.reason || state, 120);
 
     const db = getDatabase();
     const existing = await db.get<any>(
-      `SELECT call_id, caller_user_id, callee_user_id, claimed_by_user_id, claimed_by_resource, state
+      `SELECT call_id, caller_user_id, callee_user_id, claimed_by_user_id, claimed_by_resource, media_type, client_connection_id,
+              state, ended_reason, meta_json
+       FROM admin_chat_call_sessions
+       WHERE call_id = ?
+       LIMIT 1`,
+      [callId]
+    );
+    if (!existing?.call_id) {
+      // Idempotent release: frontend cleanup may legitimately arrive after TTL cleanup/race conditions.
+      return res.json({
+        callId,
+        state,
+        claimedByUserId: null,
+        claimedByResource: null,
+        callerUserId: null,
+        calleeUserId: null,
+        expiresAt: null,
+        endedAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        routingMode: 'parallel_first_accept',
+        reason: 'not_found',
+        resource,
+        mediaType: normalizeCallMediaType(req.body?.mediaTypeFinal || req.body?.mediaType, 'audio'),
+        requestedMediaType: normalizeCallMediaType(req.body?.mediaTypeFinal || req.body?.mediaType, 'audio'),
+        videoState: normalizeCallMediaType(req.body?.mediaTypeFinal || req.body?.mediaType, 'audio') === 'video' ? 'enabled' : 'disabled',
+        clientConnectionId: null,
+        endedReason: endedReason || 'not_found',
+      });
+    }
+
+    const allowed =
+      normalizeText(existing?.claimed_by_user_id) === currentUserId ||
+      normalizeText(existing?.caller_user_id) === currentUserId ||
+      normalizeText(existing?.callee_user_id) === currentUserId;
+    if (!allowed) {
+      return res.status(403).json({ message: 'Keine Berechtigung zum Freigeben dieser Call-Session.' });
+    }
+
+    const mediaTypeFinal = normalizeCallMediaType(req.body?.mediaTypeFinal || req.body?.mediaType, normalizeCallMediaType(existing?.media_type, 'audio'));
+    const meta = {
+      ...parseCallSessionMeta(existing?.meta_json),
+      endedReason: endedReason || null,
+      mediaTypeFinal,
+      releasedAt: new Date().toISOString(),
+      releasedBy: currentUserId,
+    };
+
+    await db.run(
+      `UPDATE admin_chat_call_sessions
+       SET state = ?,
+           media_type = ?,
+           ended_reason = COALESCE(?, ended_reason),
+           meta_json = ?,
+           ended_at = COALESCE(ended_at, CURRENT_TIMESTAMP),
+           expires_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE call_id = ?`,
+      [state, mediaTypeFinal, endedReason || null, JSON.stringify(meta), callId]
+    );
+    publishChatCallUpdate({
+      reason: 'chat.call.released',
+      callId,
+      chatUserId: currentUserId,
+      mediaType: mediaTypeFinal,
+      claimedByResource: resource,
+    });
+
+    const row = await db.get<any>(
+      `SELECT call_id, caller_user_id, callee_user_id, claimed_by_user_id, claimed_by_resource, media_type, client_connection_id,
+              state, expires_at, updated_at, ended_at, ended_reason, meta_json
+       FROM admin_chat_call_sessions
+       WHERE call_id = ?
+       LIMIT 1`,
+      [callId]
+    );
+    return res.json(
+      mapCallSessionRowToPayload(row, {
+        resource,
+        reason: endedReason,
+      })
+    );
+  } catch (error: any) {
+    return res.status(500).json({
+      message: 'Call-Release fehlgeschlagen.',
+      error: error?.message || String(error),
+    });
+  }
+});
+
+router.post('/calls/:callId/media', async (req: Request, res: Response) => {
+  try {
+    if (!(await hasCallSessionTable())) {
+      return res.status(503).json({ message: 'Call-Session-Speicher ist nicht verfügbar.', reason: 'call_session_table_missing' });
+    }
+    const currentUserId = normalizeText(req.userId);
+    if (!currentUserId) return res.status(401).json({ message: 'Nicht authentifiziert.' });
+    const callId = normalizeText(req.params?.callId);
+    if (!callId) return res.status(400).json({ message: 'callId fehlt.' });
+
+    const db = getDatabase();
+    const existing = await db.get<any>(
+      `SELECT call_id, caller_user_id, callee_user_id, claimed_by_user_id, claimed_by_resource, media_type, client_connection_id,
+              state, ended_reason, meta_json, expires_at, ended_at, updated_at
        FROM admin_chat_call_sessions
        WHERE call_id = ?
        LIMIT 1`,
@@ -2156,47 +2359,68 @@ router.post('/calls/:callId/release', async (req: Request, res: Response) => {
       normalizeText(existing?.caller_user_id) === currentUserId ||
       normalizeText(existing?.callee_user_id) === currentUserId;
     if (!allowed) {
-      return res.status(403).json({ message: 'Keine Berechtigung zum Freigeben dieser Call-Session.' });
+      return res.status(403).json({ message: 'Keine Berechtigung für dieses Media-Update.' });
     }
+
+    const mediaType = normalizeCallMediaType(req.body?.mediaType, normalizeCallMediaType(existing?.media_type, 'audio'));
+    const requestedMediaType = normalizeCallMediaType(req.body?.requestedMediaType, mediaType);
+    const upgradeState = truncateText(req.body?.upgradeState, 80);
+    const clientConnectionId = normalizeClientConnectionId(req.body?.clientConnectionId);
+    const resource = normalizeHeartbeatResource(req.body?.resource || existing?.claimed_by_resource);
+    const appKind = normalizeHeartbeatAppKind(req.body?.appKind);
+    const transport = normalizeHeartbeatTransport(req.body?.transport);
+
+    const meta = {
+      ...parseCallSessionMeta(existing?.meta_json),
+      requestedMediaType,
+      mediaType,
+      lastMediaUpdate: {
+        at: new Date().toISOString(),
+        by: currentUserId,
+        upgradeState: upgradeState || null,
+        appKind,
+        transport,
+        resource,
+        clientConnectionId: clientConnectionId || null,
+      },
+    };
 
     await db.run(
       `UPDATE admin_chat_call_sessions
-       SET state = ?,
-           ended_at = COALESCE(ended_at, CURRENT_TIMESTAMP),
-           expires_at = CURRENT_TIMESTAMP,
+       SET media_type = ?,
+           client_connection_id = COALESCE(?, client_connection_id),
+           meta_json = ?,
            updated_at = CURRENT_TIMESTAMP
        WHERE call_id = ?`,
-      [state, callId]
+      [mediaType, clientConnectionId || null, JSON.stringify(meta), callId]
     );
-    publishChatCallUpdate({
-      reason: 'chat.call.released',
-      callId,
-      chatUserId: currentUserId,
-    });
 
     const row = await db.get<any>(
-      `SELECT call_id, caller_user_id, callee_user_id, claimed_by_user_id, claimed_by_resource, state, expires_at, updated_at, ended_at
+      `SELECT call_id, caller_user_id, callee_user_id, claimed_by_user_id, claimed_by_resource, media_type, client_connection_id,
+              state, ended_reason, meta_json, expires_at, ended_at, updated_at
        FROM admin_chat_call_sessions
        WHERE call_id = ?
        LIMIT 1`,
       [callId]
     );
-    return res.json({
+
+    publishChatCallUpdate({
+      reason: 'chat.call.media.updated',
       callId,
-      state: normalizeCallSessionState(row?.state),
-      claimedByUserId: normalizeText(row?.claimed_by_user_id) || null,
-      claimedByResource: normalizeText(row?.claimed_by_resource) || null,
-      callerUserId: normalizeText(row?.caller_user_id) || null,
-      calleeUserId: normalizeText(row?.callee_user_id) || null,
-      expiresAt: normalizePresenceExpiresAt(row?.expires_at),
-      endedAt: normalizePresenceExpiresAt(row?.ended_at),
-      updatedAt: normalizePresenceExpiresAt(row?.updated_at),
-      routingMode: 'parallel_first_accept',
-      resource,
+      chatUserId: currentUserId,
+      mediaType,
+      upgradeState: upgradeState || undefined,
+      claimedByResource: normalizeText(row?.claimed_by_resource) || resource,
     });
+
+    return res.json(
+      mapCallSessionRowToPayload(row, {
+        reason: upgradeState || 'media_updated',
+      })
+    );
   } catch (error: any) {
     return res.status(500).json({
-      message: 'Call-Release fehlgeschlagen.',
+      message: 'Call-Media-Update fehlgeschlagen.',
       error: error?.message || String(error),
     });
   }
@@ -2214,7 +2438,8 @@ router.get('/calls/:callId/state', async (req: Request, res: Response) => {
     await cleanupExpiredCallSessions();
     const db = getDatabase();
     const row = await db.get<any>(
-      `SELECT call_id, caller_user_id, callee_user_id, claimed_by_user_id, claimed_by_resource, state, expires_at, updated_at, ended_at
+      `SELECT call_id, caller_user_id, callee_user_id, claimed_by_user_id, claimed_by_resource, media_type, client_connection_id,
+              state, expires_at, updated_at, ended_at, ended_reason, meta_json
        FROM admin_chat_call_sessions
        WHERE call_id = ?
        LIMIT 1`,
@@ -2223,18 +2448,7 @@ router.get('/calls/:callId/state', async (req: Request, res: Response) => {
     if (!row?.call_id) {
       return res.status(404).json({ message: 'Call-Session nicht gefunden.' });
     }
-    return res.json({
-      callId,
-      state: normalizeCallSessionState(row?.state),
-      claimedByUserId: normalizeText(row?.claimed_by_user_id) || null,
-      claimedByResource: normalizeText(row?.claimed_by_resource) || null,
-      callerUserId: normalizeText(row?.caller_user_id) || null,
-      calleeUserId: normalizeText(row?.callee_user_id) || null,
-      expiresAt: normalizePresenceExpiresAt(row?.expires_at),
-      endedAt: normalizePresenceExpiresAt(row?.ended_at),
-      updatedAt: normalizePresenceExpiresAt(row?.updated_at),
-      routingMode: 'parallel_first_accept',
-    });
+    return res.json(mapCallSessionRowToPayload(row));
   } catch (error: any) {
     return res.status(500).json({
       message: 'Call-State konnte nicht geladen werden.',

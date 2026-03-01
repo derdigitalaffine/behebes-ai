@@ -64,6 +64,8 @@ import PhoneInTalkIcon from '@mui/icons-material/PhoneInTalk';
 import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 import BugReportIcon from '@mui/icons-material/BugReport';
 import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import VideocamIcon from '@mui/icons-material/Videocam';
+import VideocamOffIcon from '@mui/icons-material/VideocamOff';
 
 interface AdminChatOverlayProps {
   token: string;
@@ -139,6 +141,9 @@ interface ChatBootstrap {
     firstCatchRouting?: boolean;
     presenceHybrid?: boolean;
   };
+  connection?: {
+    wsBoshFallback?: boolean;
+  };
   xmpp: {
     domain: string;
     mucService: string;
@@ -162,6 +167,12 @@ interface ChatBootstrap {
     enabled?: boolean;
     routingMode?: 'parallel_first_accept' | string;
     policyReason?: string;
+    media?: {
+      audio?: boolean;
+      video?: boolean;
+      upgradeSupported?: boolean;
+      directOnly?: boolean;
+    };
   };
   me: {
     id: string;
@@ -234,9 +245,12 @@ interface ChatMessage {
 
 type TabMode = 'direct' | 'group';
 type ConnectionState = 'offline' | 'connecting' | 'online' | 'reconnecting' | 'error';
+type ChatConnectionHealthState = 'online' | 'degraded' | 'reconnecting' | 'fallback_bosh' | 'offline';
 type ChatDisplayMode = 'drawer' | 'floating';
 type PresenceState = 'online' | 'away' | 'dnd' | 'offline';
 type ChatSelfStatusKey = 'online' | 'away' | 'offline' | 'dnd' | 'custom';
+type CallMediaType = 'audio' | 'video';
+type CallVideoState = 'off' | 'requesting' | 'on' | 'failed';
 
 interface ChatSelfPresenceSettings {
   status: ChatSelfStatusKey;
@@ -279,6 +293,11 @@ interface ChatCallSession {
   startedByMe: boolean;
   startedAt: number;
   state: CallUiState;
+  mediaType: CallMediaType;
+  requestedMediaType: CallMediaType;
+  videoState: CallVideoState;
+  clientConnectionId: string;
+  upgradeAllowed: boolean;
 }
 
 interface PendingIncomingCall {
@@ -288,6 +307,7 @@ interface PendingIncomingCall {
   fromLabel: string;
   fromAdminUserId?: string;
   fromResource?: string;
+  mediaType?: CallMediaType;
   createdAt: number;
 }
 
@@ -327,6 +347,7 @@ const XMPP_NS_CHAT_STATES = 'http://jabber.org/protocol/chatstates';
 const XMPP_NS_FORWARD = 'urn:xmpp:forward:0';
 const XMPP_NS_DELAY = 'urn:xmpp:delay';
 const XMPP_NS_MAM = 'urn:xmpp:mam:2';
+const XMPP_NS_CARBONS = 'urn:xmpp:carbons:2';
 const XMPP_NS_DATAFORM = 'jabber:x:data';
 const XMPP_NS_RSM = 'http://jabber.org/protocol/rsm';
 const XMPP_NS_PING = 'urn:xmpp:ping';
@@ -384,6 +405,35 @@ function resolveXmppServiceUrl(value: unknown): string {
     return `${wsProtocol}//${window.location.host}${raw}`;
   }
   return `${wsProtocol}//${window.location.host}/${raw.replace(/^\/+/, '')}`;
+}
+
+function resolveXmppBoshFallbackUrl(websocketUrl: string): string {
+  const wsUrl = normalizeText(websocketUrl);
+  if (!wsUrl) return '';
+  const securePage = window.location.protocol === 'https:';
+  const httpProtocol = securePage ? 'https:' : 'http:';
+
+  try {
+    const parsed = new URL(wsUrl);
+    parsed.protocol = httpProtocol;
+    if (parsed.pathname.includes('/xmpp-websocket')) {
+      parsed.pathname = parsed.pathname.replace('/xmpp-websocket', '/http-bind');
+    } else if (!parsed.pathname.includes('/http-bind')) {
+      parsed.pathname = '/http-bind';
+    }
+    return parsed.toString();
+  } catch {
+    if (wsUrl.startsWith('/')) {
+      const path = wsUrl.includes('/xmpp-websocket') ? wsUrl.replace('/xmpp-websocket', '/http-bind') : '/http-bind';
+      return `${httpProtocol}//${window.location.host}${path}`;
+    }
+    return `${httpProtocol}//${window.location.host}/http-bind`;
+  }
+}
+
+function detectVideoInSdp(sdp: unknown): boolean {
+  const normalized = String(sdp || '');
+  return /\bm=video\b/i.test(normalized);
 }
 
 function compareLocaleText(a: string, b: string): number {
@@ -584,20 +634,20 @@ function renderHighlightedText(text: string, query: string): React.ReactNode {
   );
 }
 
-const STATUS_COLORS: Record<ConnectionState, 'default' | 'warning' | 'success' | 'error'> = {
+const STATUS_COLORS: Record<ChatConnectionHealthState, 'default' | 'warning' | 'success' | 'error'> = {
   offline: 'default',
-  connecting: 'warning',
   online: 'success',
+  degraded: 'warning',
   reconnecting: 'warning',
-  error: 'error',
+  fallback_bosh: 'warning',
 };
 
-const STATUS_LABELS: Record<ConnectionState, string> = {
+const STATUS_LABELS: Record<ChatConnectionHealthState, string> = {
   offline: 'Offline',
-  connecting: 'Verbinde…',
   online: 'Online',
+  degraded: 'Eingeschränkt',
   reconnecting: 'Verbinde erneut…',
-  error: 'Verbindung fehlgeschlagen',
+  fallback_bosh: 'Fallback (BOSH)',
 };
 
 const actionButtonSx = {
@@ -633,6 +683,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
   const [bootstrap, setBootstrap] = useState<ChatBootstrap | null>(null);
   const [loadingBootstrap, setLoadingBootstrap] = useState(false);
   const [connectionState, setConnectionState] = useState<ConnectionState>('offline');
+  const [connectionHealthState, setConnectionHealthState] = useState<ChatConnectionHealthState>('offline');
   const [activeConversationId, setActiveConversationId] = useState<string>('');
   const [messagesByConversation, setMessagesByConversation] = useState<Record<string, ChatMessage[]>>({});
   const [loadingMessages, setLoadingMessages] = useState(false);
@@ -723,6 +774,10 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
   const localStreamRef = useRef<MediaStream | null>(null);
   const pendingRemoteCandidatesRef = useRef<RTCIceCandidateInit[]>([]);
   const remoteAudioRef = useRef<HTMLAudioElement | null>(null);
+  const remoteVideoRef = useRef<HTMLVideoElement | null>(null);
+  const localVideoRef = useRef<HTMLVideoElement | null>(null);
+  const connectionStateRef = useRef<ConnectionState>('offline');
+  const activeTransportRef = useRef<'websocket' | 'bosh'>('websocket');
   const callSessionRef = useRef<ChatCallSession | null>(null);
   const incomingCallRef = useRef<PendingIncomingCall | null>(null);
   const callHistoryLoggedRef = useRef<Set<string>>(new Set());
@@ -841,6 +896,23 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
   useEffect(() => {
     incomingCallRef.current = incomingCall;
   }, [incomingCall]);
+
+  useEffect(() => {
+    connectionStateRef.current = connectionState;
+    if (connectionState === 'online') {
+      setConnectionHealthState(activeTransportRef.current === 'bosh' ? 'fallback_bosh' : 'online');
+      return;
+    }
+    if (connectionState === 'reconnecting' || connectionState === 'connecting') {
+      setConnectionHealthState('reconnecting');
+      return;
+    }
+    if (connectionState === 'error') {
+      setConnectionHealthState('degraded');
+      return;
+    }
+    setConnectionHealthState('offline');
+  }, [connectionState]);
 
   useEffect(() => {
     const callId = normalizeText(callSession?.callId);
@@ -1209,7 +1281,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
 
   const sendXmppIqRequest = useCallback(async (iqStanza: any, timeoutMs = XMPP_PING_TIMEOUT_MS) => {
     const xmpp = xmppRef.current;
-    if (!xmpp || connectionState !== 'online') {
+    if (!xmpp || connectionStateRef.current !== 'online') {
       throw new Error('XMPP ist nicht verbunden.');
     }
     const requestId = normalizeText(iqStanza?.attrs?.id) || `iq_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
@@ -1230,16 +1302,26 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
         timer,
       });
 
-      xmpp.send(iqStanza).catch((error: any) => {
+      try {
+        const sendResult = xmpp.send(iqStanza);
+        Promise.resolve(sendResult).catch((error: any) => {
+          const pending = pendingIqRequestsRef.current.get(requestId);
+          if (pending) {
+            window.clearTimeout(pending.timer);
+            pendingIqRequestsRef.current.delete(requestId);
+          }
+          reject(error instanceof Error ? error : new Error(String(error)));
+        });
+      } catch (error: any) {
         const pending = pendingIqRequestsRef.current.get(requestId);
         if (pending) {
           window.clearTimeout(pending.timer);
           pendingIqRequestsRef.current.delete(requestId);
         }
         reject(error instanceof Error ? error : new Error(String(error)));
-      });
+      }
     });
-  }, [connectionState]);
+  }, []);
 
   const requestBrowserNotificationPermission = useCallback(async () => {
     if (typeof Notification === 'undefined') {
@@ -1404,6 +1486,26 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
     }
   }, [bootstrap?.xmpp?.domain, connectionState, sendXmppIqRequest]);
 
+  const enableXmppCarbons = useCallback(async () => {
+    if (connectionStateRef.current !== 'online') return;
+    try {
+      await sendXmppIqRequest(
+        xml(
+          'iq',
+          {
+            type: 'set',
+            id: `carbons_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+          },
+          xml('enable', { xmlns: XMPP_NS_CARBONS })
+        ),
+        12000
+      );
+      appendCallDebugEntry('event', 'XMPP Carbons aktiviert');
+    } catch {
+      appendCallDebugEntry('status', 'XMPP Carbons konnten nicht aktiviert werden');
+    }
+  }, [appendCallDebugEntry, sendXmppIqRequest]);
+
   const resolveRtcIceServers = useCallback((): RTCIceServer[] => {
     const fromBootstrap = Array.isArray(bootstrap?.xmpp?.rtc?.iceServers) ? bootstrap?.xmpp?.rtc?.iceServers : [];
     const normalized = fromBootstrap
@@ -1545,15 +1647,49 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
     [applyAudioOutputDevice, callSpeakerMuted, selectedAudioOutputId]
   );
 
-  const sendXmppCallMessage = useCallback(
-    async (toJid: string, child: any) => {
+  const sendXmppStanzaSafe = useCallback(
+    async (
+      stanza: any,
+      options?: { strict?: boolean; context?: string }
+    ): Promise<boolean> => {
       const xmpp = xmppRef.current;
-      if (!xmpp || connectionState !== 'online') throw new Error('XMPP ist nicht verbunden.');
-      const target = normalizeText(toJid);
-      if (!target) throw new Error('Ziel-JID fehlt.');
-      await xmpp.send(xml('message', { to: target, type: 'chat' }, child));
+      const context = normalizeText(options?.context) || 'XMPP';
+      if (!xmpp || connectionStateRef.current !== 'online') {
+        const error = new Error('XMPP ist nicht verbunden.');
+        if (options?.strict) throw error;
+        appendCallDebugEntry('status', `${context}: übersprungen (offline)`);
+        return false;
+      }
+      try {
+        await xmpp.send(stanza);
+        return true;
+      } catch (error: any) {
+        const message = normalizeText(error?.message) || 'Unbekannter Sendefehler';
+        appendCallDebugEntry('error', `${context}: ${message}`);
+        if (options?.strict) {
+          throw error;
+        }
+        return false;
+      }
     },
-    [connectionState]
+    [appendCallDebugEntry]
+  );
+
+  const sendXmppCallMessage = useCallback(
+    async (toJid: string, child: any, options?: { strict?: boolean }) => {
+      const target = normalizeText(toJid);
+      if (!target) {
+        if (options?.strict) {
+          throw new Error('Ziel-JID fehlt.');
+        }
+        return false;
+      }
+      return sendXmppStanzaSafe(xml('message', { to: target, type: 'chat' }, child), {
+        strict: options?.strict,
+        context: 'Call-Signalisierung',
+      });
+    },
+    [sendXmppStanzaSafe]
   );
 
   const sendWebRtcSignal = useCallback(
@@ -1582,7 +1718,8 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
             type: signalType,
           },
           ...signalChildren
-        )
+        ),
+        { strict: false }
       );
     },
     [sendXmppCallMessage]
@@ -1619,6 +1756,12 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
     if (remoteAudioRef.current) {
       remoteAudioRef.current.srcObject = null;
     }
+    if (remoteVideoRef.current) {
+      remoteVideoRef.current.srcObject = null;
+    }
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null;
+    }
     remoteTrackReceivedRef.current = false;
     remoteTrackCallIdRef.current = '';
     setCallNeedsAudioUnlock(false);
@@ -1642,6 +1785,60 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
     return stream;
   }, [refreshAudioOutputDevices]);
 
+  const ensureLocalVideoTrack = useCallback(async (): Promise<MediaStreamTrack> => {
+    const baseStream = localStreamRef.current || (await ensureLocalAudioStream());
+    const existingTrack = baseStream.getVideoTracks().find((track) => track.readyState === 'live');
+    if (existingTrack) {
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = baseStream;
+      }
+      return existingTrack;
+    }
+    if (!navigator?.mediaDevices?.getUserMedia) {
+      throw new Error('Kamera wird vom Browser nicht unterstützt.');
+    }
+    const cameraStream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        facingMode: 'user',
+        width: { ideal: 1280 },
+        height: { ideal: 720 },
+      },
+    });
+    const videoTrack = cameraStream.getVideoTracks()[0];
+    if (!videoTrack) {
+      throw new Error('Kein Videotrack verfügbar.');
+    }
+    baseStream.addTrack(videoTrack);
+    for (const strayAudioTrack of cameraStream.getAudioTracks()) {
+      try {
+        strayAudioTrack.stop();
+      } catch {
+        // ignore
+      }
+    }
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = baseStream;
+    }
+    return videoTrack;
+  }, [ensureLocalAudioStream]);
+
+  const removeLocalVideoTracks = useCallback(() => {
+    const stream = localStreamRef.current;
+    if (!stream) return;
+    for (const track of stream.getVideoTracks()) {
+      try {
+        track.stop();
+      } catch {
+        // ignore
+      }
+      stream.removeTrack(track);
+    }
+    if (localVideoRef.current) {
+      localVideoRef.current.srcObject = null;
+    }
+  }, []);
+
   const createPeerConnectionForSession = useCallback(
     (session: ChatCallSession, stream: MediaStream): RTCPeerConnection => {
       const pc = new RTCPeerConnection({
@@ -1656,6 +1853,8 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
         const candidate = event.candidate.toJSON ? event.candidate.toJSON() : event.candidate;
         void sendWebRtcSignal(session.targetJid, session.callId, 'ice', {
           candidate,
+        }).catch(() => {
+          // best effort: candidate delivery may race with connection teardown
         });
       };
 
@@ -1664,12 +1863,21 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
         remoteTrackCallIdRef.current = session.callId;
         remoteTrackReceivedRef.current = true;
         clearRemoteTrackTimeout();
-        appendCallDebugEntry('event', `Remote-Audio empfangen (${event.track?.kind || 'track'})`);
+        appendCallDebugEntry('event', `Remote-Media empfangen (${event.track?.kind || 'track'})`);
         if (remoteAudioRef.current) {
           remoteAudioRef.current.srcObject = remoteStream;
           remoteAudioRef.current.muted = callSpeakerMuted;
           void applyAudioOutputDevice(selectedAudioOutputId);
           void resumeRemoteAudioPlayback({ silenceError: true });
+        }
+        if (event.track?.kind === 'video' && remoteVideoRef.current) {
+          remoteVideoRef.current.srcObject = remoteStream;
+          void remoteVideoRef.current.play().catch(() => undefined);
+          setCallSession((current) =>
+            current && current.callId === session.callId
+              ? { ...current, mediaType: 'video', requestedMediaType: 'video', videoState: 'on' }
+              : current
+          );
         }
         setCallStatusText('Verbunden');
       };
@@ -1726,7 +1934,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
           '/api/admin/chat/presence/heartbeat',
           {
             resource: normalizeText(bootstrap?.xmpp?.resource) || 'ops',
-            transport: connectionState === 'online' ? 'xmpp' : 'hybrid',
+            transport: connectionStateRef.current === 'online' ? 'xmpp' : 'hybrid',
             appKind: 'ops',
           },
           {
@@ -1741,7 +1949,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
         }
       }
     },
-    [bootstrap, connectionState, headers]
+    [bootstrap, headers]
   );
 
   const refreshPresenceSnapshot = useCallback(
@@ -1787,8 +1995,10 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
           {
             callerUserId: pendingCall.fromAdminUserId || null,
             resource: normalizeText(bootstrap?.xmpp?.resource) || 'ops',
-            transport: connectionState === 'online' ? 'xmpp' : 'hybrid',
+            transport: connectionStateRef.current === 'online' ? 'xmpp' : 'hybrid',
             appKind: 'ops',
+            mediaType: pendingCall.mediaType || 'audio',
+            clientConnectionId: chatClientId,
           },
           { headers }
         );
@@ -1803,11 +2013,15 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
         return false;
       }
     },
-    [bootstrap, connectionState, headers]
+    [bootstrap, headers, chatClientId]
   );
 
   const releaseCallClaim = useCallback(
-    async (callId: string, state: 'ended' | 'failed' | 'cancelled' | 'rejected' = 'ended') => {
+    async (
+      callId: string,
+      state: 'ended' | 'failed' | 'cancelled' | 'rejected' = 'ended',
+      options?: { endedReason?: string; mediaTypeFinal?: CallMediaType }
+    ) => {
       const normalizedCallId = normalizeText(callId);
       if (!normalizedCallId || !bootstrap) return;
       try {
@@ -1816,6 +2030,8 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
           {
             state,
             resource: normalizeText(bootstrap?.xmpp?.resource) || 'ops',
+            endedReason: normalizeText(options?.endedReason || state) || undefined,
+            mediaTypeFinal: options?.mediaTypeFinal || callSessionRef.current?.mediaType || 'audio',
           },
           { headers }
         );
@@ -1824,6 +2040,31 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
       }
     },
     [bootstrap, headers]
+  );
+
+  const updateCallMediaState = useCallback(
+    async (callId: string, payload: { mediaType: CallMediaType; requestedMediaType?: CallMediaType; upgradeState: string }) => {
+      const normalizedCallId = normalizeText(callId);
+      if (!normalizedCallId || !bootstrap) return;
+      try {
+        await axios.post(
+          `/api/admin/chat/calls/${encodeURIComponent(normalizedCallId)}/media`,
+          {
+            mediaType: payload.mediaType,
+            requestedMediaType: payload.requestedMediaType || payload.mediaType,
+            upgradeState: payload.upgradeState,
+            resource: normalizeText(bootstrap?.xmpp?.resource) || 'ops',
+            appKind: 'ops',
+            transport: connectionStateRef.current === 'online' ? 'xmpp' : 'hybrid',
+            clientConnectionId: chatClientId,
+          },
+          { headers }
+        );
+      } catch {
+        // keep call interaction resilient even if audit update fails
+      }
+    },
+    [bootstrap, headers, chatClientId]
   );
 
   const handleMessageListScroll = useCallback(() => {
@@ -1877,34 +2118,26 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
         appendCallDebugEntry('event', 'Sprachanrufe sind für diesen Kontext deaktiviert.');
       }
 
-      if (!activeConversationId) {
-        const firstId =
-          (payload.assistant?.enabled ? payload.assistant?.conversationId : '') ||
-          (payload.systemUser?.enabled ? payload.systemUser?.conversationId : '') ||
-          payload.contacts?.find((entry) => entry.id !== payload.me.id)?.id ||
-          payload.groups?.custom?.[0]?.id ||
-          payload.groups?.org?.[0]?.id ||
-          '';
-        if (firstId) {
-          setActiveConversationId(
-            firstId.startsWith('direct:') ||
-            firstId.startsWith('org:') ||
-            firstId.startsWith('custom:') ||
-            firstId.startsWith('assistant:') ||
-            firstId.startsWith('system:')
-              ? firstId
-              : `direct:${firstId}`
-          );
-        }
+      const firstId =
+        (payload.assistant?.enabled ? payload.assistant?.conversationId : '') ||
+        (payload.systemUser?.enabled ? payload.systemUser?.conversationId : '') ||
+        payload.contacts?.find((entry) => entry.id !== payload.me.id)?.id ||
+        payload.groups?.custom?.[0]?.id ||
+        payload.groups?.org?.[0]?.id ||
+        '';
+      const normalizedFirstId =
+        firstId && !firstId.startsWith('direct:') && !firstId.startsWith('org:') && !firstId.startsWith('custom:') && !firstId.startsWith('assistant:') && !firstId.startsWith('system:')
+          ? `direct:${firstId}`
+          : firstId;
+      if (normalizedFirstId) {
+        setActiveConversationId((previous) => previous || normalizedFirstId);
       }
-      void sendPresenceHeartbeat({ silent: true });
-      void refreshPresenceSnapshot({ silent: true });
     } catch (error: any) {
       setErrorMessage(error?.response?.data?.message || 'Chat-Bootstrap konnte nicht geladen werden.');
     } finally {
       setLoadingBootstrap(false);
     }
-  }, [appendCallDebugEntry, headers, activeConversationId, sendPresenceHeartbeat, refreshPresenceSnapshot, chatClientId]);
+  }, [appendCallDebugEntry, headers, chatClientId]);
 
   const ensureRoomJoined = useCallback(
     async (roomJid: string) => {
@@ -2183,13 +2416,23 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
     if (xmppRef.current) return;
 
     setConnectionState(reconnectAttemptsRef.current > 0 ? 'reconnecting' : 'connecting');
+    setConnectionHealthState(reconnectAttemptsRef.current > 0 ? 'reconnecting' : 'degraded');
+    connectionStateRef.current = reconnectAttemptsRef.current > 0 ? 'reconnecting' : 'connecting';
+
+    const useBoshFallback =
+      bootstrap?.connection?.wsBoshFallback === true &&
+      reconnectAttemptsRef.current >= 3;
+    const serviceUrl = useBoshFallback
+      ? resolveXmppBoshFallbackUrl(bootstrap.xmpp.websocketUrl)
+      : bootstrap.xmpp.websocketUrl;
+    activeTransportRef.current = useBoshFallback ? 'bosh' : 'websocket';
 
     const xmpp = createXmppClient({
-      service: bootstrap.xmpp.websocketUrl,
+      service: serviceUrl,
       domain: bootstrap.xmpp.domain,
       username: bootstrap.xmpp.username,
       password: bootstrap.xmpp.password,
-      resource: bootstrap.xmpp.resource || 'admin',
+      resource: bootstrap.xmpp.resource || 'ops',
     });
 
     xmppRef.current = xmpp;
@@ -2200,6 +2443,8 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
       }
       setErrorMessage('XMPP-Verbindung fehlgeschlagen. Automatischer Reconnect läuft…');
       setConnectionState('error');
+      setConnectionHealthState('degraded');
+      connectionStateRef.current = 'error';
     });
 
     xmpp.on('offline', () => {
@@ -2210,13 +2455,18 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
         setErrorMessage('XMPP ist offline. Es wird automatisch neu verbunden.');
       }
       setConnectionState(open ? 'error' : 'offline');
+      setConnectionHealthState(open ? 'degraded' : 'offline');
+      connectionStateRef.current = open ? 'error' : 'offline';
     });
 
     xmpp.on('online', async () => {
       reconnectAttemptsRef.current = 0;
       setErrorMessage('');
       setConnectionState('online');
+      setConnectionHealthState(activeTransportRef.current === 'bosh' ? 'fallback_bosh' : 'online');
+      connectionStateRef.current = 'online';
       await applySelfPresenceToXmpp();
+      await enableXmppCarbons();
     });
 
     xmpp.on('stanza', (stanza: any) => {
@@ -2324,6 +2574,11 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
         if (proposedCall) {
           const callId = normalizeText(proposedCall.attrs?.id);
           if (!callId) return;
+          const proposedMediaType =
+            normalizeText(proposedCall.getChild?.('description', 'urn:xmpp:jingle:apps:rtp:1')?.attrs?.media).toLowerCase() ===
+            'video'
+              ? 'video'
+              : 'audio';
           if (!callsEnabled) {
             void sendXmppCallMessage(contact.jid, xml('reject', { xmlns: XMPP_NS_JMI, id: callId }));
             return;
@@ -2340,9 +2595,14 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
             fromLabel: contact.displayName || contact.username || 'Kontakt',
             fromAdminUserId: contact.id,
             fromResource,
+            mediaType: proposedMediaType,
             createdAt: Date.now(),
           });
-          setCallStatusText(`Eingehender Anruf von ${contact.displayName || contact.username || 'Kontakt'}`);
+          setCallStatusText(
+            proposedMediaType === 'video'
+              ? `Eingehender Videoanruf von ${contact.displayName || contact.username || 'Kontakt'}`
+              : `Eingehender Anruf von ${contact.displayName || contact.username || 'Kontakt'}`
+          );
           showBrowserNotification({
             title: `Anruf eingehend`,
             body: `${contact.displayName || contact.username || 'Kontakt'} möchte mit dir sprechen`,
@@ -2358,7 +2618,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
             cleanupCallMedia();
             setCallStatusText('Anruf abgelehnt');
             setCallSession({ ...session, state: 'failed' });
-            void releaseCallClaim(callId, 'failed');
+            void releaseCallClaim(callId, 'failed', { mediaTypeFinal: session.mediaType, endedReason: 'peer_rejected' });
           }
           return;
         }
@@ -2370,7 +2630,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
             cleanupCallMedia();
             setCallStatusText('Anruf beendet');
             setCallSession({ ...session, state: 'ended' });
-            void releaseCallClaim(callId, 'ended');
+            void releaseCallClaim(callId, 'ended', { mediaTypeFinal: session.mediaType, endedReason: 'peer_finished' });
           }
           if (incomingCallRef.current && incomingCallRef.current.callId === callId) {
             setIncomingCall(null);
@@ -2392,6 +2652,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
               const pc = peerConnectionRef.current || createPeerConnectionForSession(session, stream);
               const offer = await pc.createOffer({
                 offerToReceiveAudio: true,
+                offerToReceiveVideo: session.requestedMediaType === 'video',
               });
               await pc.setLocalDescription(offer);
               await sendWebRtcSignal(session.targetJid, session.callId, 'offer', { sdp: offer.sdp || '' });
@@ -2401,7 +2662,10 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
               setCallSession((current) =>
                 current && current.callId === session.callId ? { ...current, state: 'failed' } : current
               );
-              void releaseCallClaim(session.callId, 'failed');
+              void releaseCallClaim(session.callId, 'failed', {
+                mediaTypeFinal: session.mediaType,
+                endedReason: 'offer_failed',
+              });
               const errorMessage = normalizeText(error?.message);
               if (errorMessage) setErrorMessage(errorMessage);
             }
@@ -2431,6 +2695,11 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
                   startedByMe: false,
                   startedAt: Date.now(),
                   state: 'connecting',
+                  mediaType: 'audio',
+                  requestedMediaType: 'audio',
+                  videoState: 'off',
+                  clientConnectionId: chatClientId,
+                  upgradeAllowed: bootstrap?.calls?.media?.upgradeSupported !== false,
                 };
                 setIncomingCall(null);
                 setCallSession(freshSession);
@@ -2441,6 +2710,18 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
 
               if (signalType === 'offer' && normalizeText(sdp)) {
                 await pc.setRemoteDescription({ type: 'offer', sdp });
+                if (detectVideoInSdp(sdp)) {
+                  void updateCallMediaState(callId, {
+                    mediaType: 'video',
+                    requestedMediaType: 'video',
+                    upgradeState: 'remote_offer_video',
+                  });
+                  setCallSession((current) =>
+                    current && current.callId === session.callId
+                      ? { ...current, requestedMediaType: 'video', mediaType: 'video', videoState: 'requesting' }
+                      : current
+                  );
+                }
                 const queued = [...pendingRemoteCandidatesRef.current];
                 pendingRemoteCandidatesRef.current = [];
                 for (const candidate of queued) {
@@ -2450,7 +2731,15 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
                 await pc.setLocalDescription(answer);
                 await sendWebRtcSignal(session.targetJid, session.callId, 'answer', { sdp: answer.sdp || '' });
                 setCallSession((current) =>
-                  current && current.callId === session.callId ? { ...current, state: 'active' } : current
+                  current && current.callId === session.callId
+                    ? {
+                        ...current,
+                        state: 'active',
+                        mediaType: detectVideoInSdp(sdp) ? 'video' : current.mediaType,
+                        requestedMediaType: detectVideoInSdp(sdp) ? 'video' : current.requestedMediaType,
+                        videoState: detectVideoInSdp(sdp) ? 'on' : current.videoState,
+                      }
+                    : current
                 );
                 setCallStatusText('Verbunden');
                 return;
@@ -2458,13 +2747,29 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
 
               if (signalType === 'answer' && normalizeText(sdp)) {
                 await pc.setRemoteDescription({ type: 'answer', sdp });
+                const answerHasVideo = detectVideoInSdp(sdp);
+                if (answerHasVideo) {
+                  void updateCallMediaState(callId, {
+                    mediaType: 'video',
+                    requestedMediaType: 'video',
+                    upgradeState: 'answer_contains_video',
+                  });
+                }
                 const queued = [...pendingRemoteCandidatesRef.current];
                 pendingRemoteCandidatesRef.current = [];
                 for (const candidate of queued) {
                   await pc.addIceCandidate(candidate);
                 }
                 setCallSession((current) =>
-                  current && current.callId === session.callId ? { ...current, state: 'active' } : current
+                  current && current.callId === session.callId
+                    ? {
+                        ...current,
+                        state: 'active',
+                        mediaType: answerHasVideo ? 'video' : current.mediaType,
+                        requestedMediaType: answerHasVideo ? 'video' : current.requestedMediaType,
+                        videoState: answerHasVideo ? 'on' : current.videoState,
+                      }
+                    : current
                 );
                 setCallStatusText('Verbunden');
                 return;
@@ -2484,7 +2789,10 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
                 current && current.callId === callId ? { ...current, state: 'failed' } : current
               );
               setCallStatusText('Anrufverbindung fehlgeschlagen');
-              void releaseCallClaim(callId, 'failed');
+              void releaseCallClaim(callId, 'failed', {
+                mediaTypeFinal: callSessionRef.current?.mediaType || 'audio',
+                endedReason: 'signal_processing_failed',
+              });
               const errorMessage = normalizeText(error?.message);
               if (errorMessage) {
                 setErrorMessage(errorMessage);
@@ -2548,30 +2856,24 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
 
         const wantsReceipt = !!stanza.getChild?.('request', XMPP_NS_RECEIPTS);
         if (wantsReceipt && normalizeText(stanzaId)) {
-          void xmpp
-            .send(
-              xml(
-                'message',
-                { to: bareFrom, type: 'chat' },
-                xml('received', { xmlns: XMPP_NS_RECEIPTS, id: stanzaId })
-              )
-            )
-            .catch(() => {
-              // best-effort receipts
-            });
+          void sendXmppStanzaSafe(
+            xml(
+              'message',
+              { to: bareFrom, type: 'chat' },
+              xml('received', { xmlns: XMPP_NS_RECEIPTS, id: stanzaId })
+            ),
+            { strict: false, context: 'XMPP-Receipt' }
+          );
         }
         if (normalizeText(stanzaId)) {
-          void xmpp
-            .send(
-              xml(
-                'message',
-                { to: bareFrom, type: 'chat' },
-                xml('received', { xmlns: XMPP_NS_CHAT_MARKERS, id: stanzaId })
-              )
-            )
-            .catch(() => {
-              // best-effort marker
-            });
+          void sendXmppStanzaSafe(
+            xml(
+              'message',
+              { to: bareFrom, type: 'chat' },
+              xml('received', { xmlns: XMPP_NS_CHAT_MARKERS, id: stanzaId })
+            ),
+            { strict: false, context: 'XMPP-Marker' }
+          );
         }
 
         const createdAt = getStanzaTimestamp(stanza);
@@ -2616,6 +2918,8 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
       }
       setErrorMessage('XMPP konnte nicht gestartet werden. Reconnect wird erneut versucht.');
       setConnectionState('error');
+      setConnectionHealthState('degraded');
+      connectionStateRef.current = 'error';
     }
   }, [
     activeConversationId,
@@ -2626,13 +2930,17 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
     callsEnabled,
     cleanupCallMedia,
     createPeerConnectionForSession,
+    enableXmppCarbons,
     ensureLocalAudioStream,
     groupConversations,
+    chatClientId,
     markConversationRead,
     open,
     releaseCallClaim,
+    sendXmppStanzaSafe,
     sendWebRtcSignal,
     sendXmppCallMessage,
+    updateCallMediaState,
     showBrowserNotification,
   ]);
 
@@ -2656,13 +2964,18 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
     pendingIqRequestsRef.current.clear();
     const activeCall = callSessionRef.current;
     if (activeCall?.callId) {
-      void releaseCallClaim(activeCall.callId, 'cancelled');
+      void releaseCallClaim(activeCall.callId, 'cancelled', {
+        mediaTypeFinal: activeCall.mediaType,
+        endedReason: 'xmpp_disconnect',
+      });
     }
     cleanupCallMedia();
     setIncomingCall(null);
     setCallSession(null);
     setCallStatusText('');
     setConnectionState('offline');
+    setConnectionHealthState('offline');
+    connectionStateRef.current = 'offline';
   }, [cleanupCallMedia, clearPingTimer, clearReconnectTimer, releaseCallClaim]);
 
   const loadMessages = useCallback(
@@ -2714,7 +3027,8 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
 
       const statusText =
         normalizeText(statusTextOverride) || (session.state === 'failed' ? 'Anruf nicht verbunden' : 'Anruf beendet');
-      const directionText = session.startedByMe ? 'Ausgehender Anruf' : 'Eingehender Anruf';
+      const modeText = session.mediaType === 'video' ? 'Videoanruf' : 'Anruf';
+      const directionText = session.startedByMe ? `Ausgehender ${modeText}` : `Eingehender ${modeText}`;
       const durationLabel = formatCallDuration(Date.now() - Number(session.startedAt || Date.now()));
       const body = `📞 ${directionText} · ${statusText}\nDauer: ${durationLabel}`;
 
@@ -2758,7 +3072,9 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
     clearReconnectTimer();
     const attempt = Math.min(8, reconnectAttemptsRef.current + 1);
     reconnectAttemptsRef.current = attempt;
-    const delayMs = attempt <= 1 ? 0 : Math.min(20000, 600 * Math.pow(2, attempt - 2));
+    const baseDelayMs = attempt <= 1 ? 0 : Math.min(20000, 600 * Math.pow(2, attempt - 2));
+    const jitterMs = baseDelayMs <= 0 ? 0 : Math.floor(baseDelayMs * Math.random() * 0.35);
+    const delayMs = baseDelayMs + jitterMs;
 
     reconnectTimerRef.current = window.setTimeout(() => {
       reconnectTimerRef.current = null;
@@ -2788,7 +3104,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [bootstrap, sendPresenceHeartbeat, connectionState]);
+  }, [bootstrap, sendPresenceHeartbeat]);
 
   useEffect(() => {
     if (!bootstrap) return;
@@ -2904,6 +3220,10 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
     if (!callSession || callSpeakerMuted) return;
     const resume = () => {
       void resumeRemoteAudioPlayback({ silenceError: true });
+      const remoteVideo = remoteVideoRef.current;
+      if (remoteVideo && remoteVideo.srcObject) {
+        void remoteVideo.play().catch(() => undefined);
+      }
     };
     const onVisibilityChange = () => {
       if (document.visibilityState === 'visible') resume();
@@ -2948,7 +3268,10 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
       setCallSession((current) =>
         current && current.callId === callId ? { ...current, state: 'failed' } : current
       );
-      void releaseCallClaim(callId, 'failed');
+      void releaseCallClaim(callId, 'failed', {
+        mediaTypeFinal: callSessionRef.current?.mediaType || 'audio',
+        endedReason: 'remote_track_timeout',
+      });
     }, CALL_REMOTE_TRACK_TIMEOUT_MS);
     return () => {
       clearRemoteTrackTimeout();
@@ -2974,7 +3297,10 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
       setIncomingCall(null);
       setCallStatusText('Anruf beendet');
       if (active?.callId) {
-        void releaseCallClaim(active.callId, reason === 'reject' ? 'rejected' : 'ended');
+        void releaseCallClaim(active.callId, reason === 'reject' ? 'rejected' : 'ended', {
+          mediaTypeFinal: active.mediaType,
+          endedReason: reason === 'reject' ? 'rejected_by_local_user' : 'ended_by_local_user',
+        });
       }
     },
     [appendCallDebugEntry, cleanupCallMedia, sendXmppCallMessage, releaseCallClaim]
@@ -3595,6 +3921,95 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
     [applyAudioOutputDevice, callSpeakerMuted, resumeRemoteAudioPlayback]
   );
 
+  const canUseVideoCalls = useMemo(
+    () => bootstrap?.calls?.media?.video !== false && bootstrap?.calls?.media?.upgradeSupported !== false,
+    [bootstrap?.calls?.media?.upgradeSupported, bootstrap?.calls?.media?.video]
+  );
+
+  const upgradeCallToVideo = useCallback(async () => {
+    const session = callSessionRef.current;
+    if (!session) return;
+    if (!canUseVideoCalls || !session.upgradeAllowed) {
+      setErrorMessage('Videoanrufe sind in diesem Kontext deaktiviert.');
+      return;
+    }
+    try {
+      setCallStatusText('Video wird aktiviert…');
+      setCallSession((current) =>
+        current && current.callId === session.callId
+          ? { ...current, requestedMediaType: 'video', mediaType: 'video', videoState: 'requesting' }
+          : current
+      );
+      const stream = await ensureLocalAudioStream();
+      const videoTrack = await ensureLocalVideoTrack();
+      const pc = peerConnectionRef.current || createPeerConnectionForSession(session, stream);
+      const videoSender = pc.getSenders().find((sender) => sender.track?.kind === 'video');
+      if (videoSender) {
+        await videoSender.replaceTrack(videoTrack);
+      } else {
+        pc.addTrack(videoTrack, stream);
+      }
+      const offer = await pc.createOffer({
+        offerToReceiveAudio: true,
+        offerToReceiveVideo: true,
+      });
+      await pc.setLocalDescription(offer);
+      await sendWebRtcSignal(session.targetJid, session.callId, 'offer', { sdp: offer.sdp || '' });
+      await updateCallMediaState(session.callId, {
+        mediaType: 'video',
+        requestedMediaType: 'video',
+        upgradeState: 'audio_to_video',
+      });
+    } catch (error: any) {
+      removeLocalVideoTracks();
+      setCallSession((current) =>
+        current && current.callId === session.callId
+          ? { ...current, requestedMediaType: 'audio', mediaType: 'audio', videoState: 'failed' }
+          : current
+      );
+      setCallStatusText('Video konnte nicht aktiviert werden');
+      const message = normalizeText(error?.message) || 'Video konnte nicht aktiviert werden.';
+      setErrorMessage(message);
+    }
+  }, [canUseVideoCalls, createPeerConnectionForSession, ensureLocalAudioStream, ensureLocalVideoTrack, removeLocalVideoTracks, sendWebRtcSignal, updateCallMediaState]);
+
+  const downgradeCallToAudio = useCallback(async () => {
+    const session = callSessionRef.current;
+    if (!session) return;
+    try {
+      removeLocalVideoTracks();
+      const pc = peerConnectionRef.current;
+      if (pc) {
+        const videoSenders = pc.getSenders().filter((sender) => sender.track?.kind === 'video');
+        for (const sender of videoSenders) {
+          await sender.replaceTrack(null);
+        }
+        const offer = await pc.createOffer({
+          offerToReceiveAudio: true,
+          offerToReceiveVideo: false,
+        });
+        await pc.setLocalDescription(offer);
+        await sendWebRtcSignal(session.targetJid, session.callId, 'offer', { sdp: offer.sdp || '' });
+      }
+      setCallSession((current) =>
+        current && current.callId === session.callId
+          ? { ...current, requestedMediaType: 'audio', mediaType: 'audio', videoState: 'off' }
+          : current
+      );
+      setCallStatusText('Audioanruf aktiv');
+      await updateCallMediaState(session.callId, {
+        mediaType: 'audio',
+        requestedMediaType: 'audio',
+        upgradeState: 'video_to_audio',
+      });
+    } catch (error: any) {
+      const message = normalizeText(error?.message);
+      if (message) {
+        setErrorMessage(message);
+      }
+    }
+  }, [removeLocalVideoTracks, sendWebRtcSignal, updateCallMediaState]);
+
   const startVoiceCall = useCallback(async () => {
     if (!activeConversation || activeConversation.type !== 'direct') return;
     if (!callsEnabled) {
@@ -3617,6 +4032,11 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
       startedByMe: true,
       startedAt: Date.now(),
       state: 'outgoing',
+      mediaType: 'audio',
+      requestedMediaType: 'audio',
+      videoState: 'off',
+      clientConnectionId: chatClientId,
+      upgradeAllowed: bootstrap?.calls?.media?.upgradeSupported !== false,
     };
     appendCallDebugEntry('event', `Ausgehender Call gestartet (${session.callId.slice(-6)})`);
     setCallMuted(false);
@@ -3633,14 +4053,15 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
           'propose',
           { xmlns: XMPP_NS_JMI, id: callId },
           xml('description', { xmlns: 'urn:xmpp:jingle:apps:rtp:1', media: 'audio' })
-        )
+        ),
+        { strict: true }
       );
     } catch (error: any) {
       setCallSession({ ...session, state: 'failed' });
       setCallStatusText('Anruf konnte nicht gestartet werden');
       setErrorMessage(normalizeText(error?.message) || 'Anruf konnte nicht gestartet werden.');
     }
-  }, [activeConversation, appendCallDebugEntry, callsEnabled, connectionState, refreshAudioOutputDevices, sendXmppCallMessage]);
+  }, [activeConversation, appendCallDebugEntry, bootstrap?.calls?.media?.upgradeSupported, callsEnabled, connectionState, refreshAudioOutputDevices, sendXmppCallMessage, chatClientId]);
 
   const acceptIncomingVoiceCall = useCallback(async () => {
     const pendingCall = incomingCallRef.current;
@@ -3668,6 +4089,11 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
         startedByMe: false,
         startedAt: Date.now(),
         state: 'connecting',
+        mediaType: pendingCall.mediaType || 'audio',
+        requestedMediaType: pendingCall.mediaType || 'audio',
+        videoState: pendingCall.mediaType === 'video' ? 'requesting' : 'off',
+        clientConnectionId: chatClientId,
+        upgradeAllowed: bootstrap?.calls?.media?.upgradeSupported !== false,
       };
       appendCallDebugEntry('event', `Eingehender Call angenommen (${session.callId.slice(-6)})`);
       setCallMuted(false);
@@ -3680,6 +4106,8 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
       await sendXmppCallMessage(
         direct.jid,
         xml('accept', { xmlns: XMPP_NS_JMI, id: pendingCall.callId })
+        ,
+        { strict: true }
       );
     } catch (error: any) {
       setCallStatusText('Anruf konnte nicht angenommen werden');
@@ -3695,7 +4123,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
       cleanupCallMedia();
       setCallSession(null);
       setIncomingCall(null);
-      void releaseCallClaim(pendingCall.callId, 'failed');
+      void releaseCallClaim(pendingCall.callId, 'failed', { mediaTypeFinal: 'audio', endedReason: 'accept_failed' });
     }
   }, [
     appendCallDebugEntry,
@@ -3705,6 +4133,8 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
     ensureLocalAudioStream,
     sendXmppCallMessage,
     callsEnabled,
+    bootstrap?.calls?.media?.upgradeSupported,
+    chatClientId,
     releaseCallClaim,
   ]);
 
@@ -3723,7 +4153,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
     setIncomingCall(null);
     setCallStatusText('Anruf abgelehnt');
     appendCallDebugEntry('event', `Eingehender Call abgelehnt (${pendingCall.callId.slice(-6)})`);
-    void releaseCallClaim(pendingCall.callId, 'rejected');
+    void releaseCallClaim(pendingCall.callId, 'rejected', { mediaTypeFinal: 'audio', endedReason: 'rejected_by_local_user' });
   }, [appendCallDebugEntry, directConversations, sendXmppCallMessage, releaseCallClaim]);
 
   const toggleBrowserNotifications = async () => {
@@ -4032,7 +4462,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
         >
           <Stack direction="row" spacing={1.4} alignItems="center">
             <Typography variant="h6" sx={{ fontWeight: 700 }}>Teamchat</Typography>
-            <Chip size="small" color={STATUS_COLORS[connectionState]} label={STATUS_LABELS[connectionState]} />
+            <Chip size="small" color={STATUS_COLORS[connectionHealthState]} label={STATUS_LABELS[connectionHealthState]} />
             {xmppLatencyMs !== null ? (
               <Chip
                 size="small"
@@ -4947,10 +5377,63 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
             boxShadow: '0 12px 28px rgba(15, 23, 42, 0.28)',
           }}
         >
+          {callSession && (callSession.mediaType === 'video' || callSession.videoState === 'requesting' || callSession.videoState === 'on') ? (
+            <Box
+              sx={{
+                mb: 1,
+                p: 0.7,
+                borderRadius: 1.6,
+                border: '1px solid #bfdbfe',
+                bgcolor: '#dbeafe',
+              }}
+            >
+              <Box
+                sx={{
+                  position: 'relative',
+                  borderRadius: 1.4,
+                  overflow: 'hidden',
+                  minHeight: 124,
+                  bgcolor: '#0f172a',
+                }}
+              >
+                <video
+                  ref={remoteVideoRef}
+                  autoPlay
+                  playsInline
+                  muted={false}
+                  style={{
+                    width: '100%',
+                    height: 180,
+                    objectFit: 'cover',
+                    display: 'block',
+                    background: '#0f172a',
+                  }}
+                />
+                <video
+                  ref={localVideoRef}
+                  autoPlay
+                  muted
+                  playsInline
+                  style={{
+                    position: 'absolute',
+                    right: 8,
+                    bottom: 8,
+                    width: 92,
+                    height: 62,
+                    objectFit: 'cover',
+                    borderRadius: 8,
+                    border: '1px solid rgba(255,255,255,0.42)',
+                    background: '#1e293b',
+                  }}
+                />
+              </Box>
+            </Box>
+          ) : null}
+
           <Stack direction="row" spacing={0.8} alignItems="center">
             <Stack sx={{ minWidth: 0, flex: 1 }} spacing={0.15}>
               <Typography variant="caption" sx={{ color: '#1d4ed8', fontWeight: 700 }}>
-                Aktiver Sprachanruf
+                {callSession?.mediaType === 'video' ? 'Aktiver Videoanruf' : 'Aktiver Sprachanruf'}
               </Typography>
               <Typography variant="body2" sx={{ fontWeight: 700 }} noWrap>
                 {normalizeText(activeCallConversation?.label) || 'Direktchat'}
@@ -4978,6 +5461,35 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
                 {callSpeakerMuted ? <VolumeOffIcon /> : <VolumeUpIcon />}
               </IconButton>
             </Tooltip>
+            {canUseVideoCalls ? (
+              <Tooltip
+                title={
+                  callSession?.mediaType === 'video' || callSession?.videoState === 'requesting' || callSession?.videoState === 'on'
+                    ? 'Auf Audio zurückschalten'
+                    : 'Video einschalten'
+                }
+              >
+                <IconButton
+                  size="small"
+                  onClick={() => {
+                    if (callSession?.mediaType === 'video' || callSession?.videoState === 'requesting' || callSession?.videoState === 'on') {
+                      void downgradeCallToAudio();
+                    } else {
+                      void upgradeCallToVideo();
+                    }
+                  }}
+                  sx={{
+                    ...actionButtonSx,
+                    bgcolor:
+                      callSession?.mediaType === 'video' || callSession?.videoState === 'requesting' || callSession?.videoState === 'on'
+                        ? '#dbeafe'
+                        : '#ffffff',
+                  }}
+                >
+                  {callSession?.mediaType === 'video' || callSession?.videoState === 'requesting' || callSession?.videoState === 'on' ? <VideocamOffIcon /> : <VideocamIcon />}
+                </IconButton>
+              </Tooltip>
+            ) : null}
             {callNeedsAudioUnlock && !callSpeakerMuted ? (
               <Tooltip title="Audio jetzt aktivieren">
                 <IconButton
@@ -5064,7 +5576,9 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({
       />
 
       <Dialog open={Boolean(incomingCall)} onClose={() => void rejectIncomingVoiceCall()} maxWidth="xs" fullWidth>
-        <DialogTitle>Eingehender Sprachanruf</DialogTitle>
+        <DialogTitle>
+          {incomingCall?.mediaType === 'video' ? 'Eingehender Videoanruf' : 'Eingehender Sprachanruf'}
+        </DialogTitle>
         <DialogContent>
           <Stack spacing={1.2} sx={{ mt: 0.6 }}>
             <Typography variant="body2" sx={{ color: '#334155' }}>

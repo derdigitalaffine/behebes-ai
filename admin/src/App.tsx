@@ -882,10 +882,53 @@ const App: React.FC = () => {
   const [auth, setAuth] = useState<AuthState>(() => loadAuthState());
   const [healthStatus, setHealthStatus] = useState<'loading' | 'ok' | 'error'>('loading');
   const [healthTimestamp, setHealthTimestamp] = useState<string>('');
+  const authInvalidationRef = useRef(false);
 
   useEffect(() => {
     persistAuthState(auth, auth.remember ?? false);
   }, [auth]);
+
+  useEffect(() => {
+    if (auth.isAuthenticated) return;
+    authInvalidationRef.current = false;
+  }, [auth.isAuthenticated, auth.token]);
+
+  useEffect(() => {
+    const interceptorId = axios.interceptors.response.use(
+      (response) => response,
+      (error) => {
+        const status = Number(error?.response?.status || 0);
+        const requestUrl = String(error?.config?.url || '');
+        const isAuthRequest =
+          requestUrl.includes('/api/auth/admin/login') ||
+          requestUrl.includes('/api/auth/admin/login/totp') ||
+          requestUrl.includes('/api/auth/admin/passkeys/');
+
+        if (
+          (status === 401 || status === 403) &&
+          auth.isAuthenticated &&
+          !authInvalidationRef.current &&
+          !isAuthRequest
+        ) {
+          authInvalidationRef.current = true;
+          clearAuthState();
+          setAuth({
+            isAuthenticated: false,
+            token: null,
+            role: null,
+            userId: null,
+            username: null,
+            remember: false,
+          });
+        }
+
+        return Promise.reject(error);
+      }
+    );
+    return () => {
+      axios.interceptors.response.eject(interceptorId);
+    };
+  }, [auth.isAuthenticated]);
 
   useEffect(() => {
     const selector = '.message-banner, .error-message, .success-message, .alert.error, .alert.success';

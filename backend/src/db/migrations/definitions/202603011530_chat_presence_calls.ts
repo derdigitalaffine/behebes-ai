@@ -24,9 +24,12 @@ export const migration202603011530ChatPresenceCalls: MigrationDefinition = {
         callee_user_id VARCHAR(80),
         claimed_by_user_id VARCHAR(80),
         claimed_by_resource VARCHAR(80),
+        media_type VARCHAR(16) NOT NULL DEFAULT 'audio',
+        client_connection_id VARCHAR(120),
         state VARCHAR(32) NOT NULL DEFAULT 'proposed',
         started_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
         ended_at DATETIME,
+        ended_reason VARCHAR(120),
         expires_at DATETIME,
         meta_json TEXT,
         created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -65,6 +68,17 @@ export const migration202603011530ChatPresenceCalls: MigrationDefinition = {
       indexName: 'idx_chat_call_sessions_claimed_user',
       columns: ['claimed_by_user_id', 'updated_at'],
     });
+    await migrationCreateIndexIfNotExists({
+      db,
+      tableName: 'admin_chat_call_sessions',
+      indexName: 'idx_chat_call_sessions_call_state',
+      columns: ['call_id', 'state'],
+    });
+    await migrationCreateIndexIfNotExists({
+      db,
+      tableName: 'admin_chat_call_sessions',
+      indexName: 'idx_chat_call_sessions_claimed_resource_state',
+      columns: ['claimed_by_user_id', 'claimed_by_resource', 'state'],
+    });
   },
 };
-

@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import axios from 'axios';
 import {
   AppBar,
   Avatar,
@@ -268,6 +269,7 @@ function AppRoot() {
   const [tenantOptions, setTenantOptions] = useState<TenantOption[]>([]);
   const [messageBadgeCount, setMessageBadgeCount] = useState(0);
   const [installAvailable, setInstallAvailable] = useState<boolean>(() => isInstallPromptAvailable());
+  const authInvalidationRef = React.useRef(false);
 
   const updateAppBadge = useCallback(async (count: number) => {
     const nav = navigator as Navigator & {
@@ -327,6 +329,45 @@ function AppRoot() {
   useEffect(() => {
     persistAuthState(auth);
   }, [auth]);
+
+  useEffect(() => {
+    if (auth.isAuthenticated) return;
+    authInvalidationRef.current = false;
+  }, [auth.isAuthenticated, auth.token]);
+
+  useEffect(() => {
+    const handleAuthFailure = (error: any) => {
+      const status = Number(error?.response?.status || 0);
+      const requestUrl = String(error?.config?.url || '');
+      const isAuthRequest =
+        requestUrl.includes('/auth/admin/login') ||
+        requestUrl.includes('/auth/admin/login/totp') ||
+        requestUrl.includes('/auth/admin/passkeys/');
+
+      if (
+        (status === 401 || status === 403) &&
+        auth.isAuthenticated &&
+        !authInvalidationRef.current &&
+        !isAuthRequest
+      ) {
+        authInvalidationRef.current = true;
+        clearAuthState();
+        setAuth(defaultAuthState());
+        setLoadingAccess(false);
+        setMessageBadgeCount(0);
+        void updateAppBadge(0);
+      }
+      return Promise.reject(error);
+    };
+
+    const apiInterceptorId = api.interceptors.response.use((response) => response, handleAuthFailure);
+    const axiosInterceptorId = axios.interceptors.response.use((response) => response, handleAuthFailure);
+
+    return () => {
+      api.interceptors.response.eject(apiInterceptorId);
+      axios.interceptors.response.eject(axiosInterceptorId);
+    };
+  }, [auth.isAuthenticated, updateAppBadge]);
 
   useEffect(() => {
     if (!auth.token) {

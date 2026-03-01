@@ -85,7 +85,16 @@ export function subscribeAdminRealtime(options: SubscribeOptions): () => void {
         signal: controller.signal,
       });
 
-      if (!response.ok || !response.body) {
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          stopped = true;
+          onError?.('Sitzung abgelaufen. Bitte erneut anmelden.');
+          return;
+        }
+        throw new Error(`Realtime-Stream fehlgeschlagen (${response.status})`);
+      }
+
+      if (!response.body) {
         throw new Error(`Realtime-Stream fehlgeschlagen (${response.status})`);
       }
 
