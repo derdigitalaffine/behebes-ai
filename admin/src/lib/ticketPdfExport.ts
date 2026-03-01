@@ -28,6 +28,27 @@ export interface TicketPdfDataRequest {
   answers?: Record<string, unknown> | null;
 }
 
+export interface TicketPdfInternalTask {
+  id: string;
+  ticketId?: string | null;
+  workflowExecutionId?: string | null;
+  stepId?: string | null;
+  title?: string | null;
+  description?: string | null;
+  status?: string | null;
+  mode?: string | null;
+  assigneeUserId?: string | null;
+  assigneeOrgUnitId?: string | null;
+  dueAt?: string | null;
+  createdAt?: string | null;
+  completedAt?: string | null;
+  completedBy?: string | null;
+  cycleIndex?: number | null;
+  maxCycles?: number | null;
+  formSchema?: Record<string, unknown> | null;
+  response?: Record<string, unknown> | null;
+}
+
 export interface TicketPdfComment {
   id: string;
   executionId?: string | null;
@@ -149,6 +170,7 @@ export interface TicketPdfTicket {
   emailMessages?: TicketPdfEmailMessage[];
   comments?: TicketPdfComment[];
   dataRequests?: TicketPdfDataRequest[];
+  internalTasks?: TicketPdfInternalTask[];
 }
 
 export interface TicketPdfWorkflowTask {
@@ -687,9 +709,29 @@ function summarizeWeather(raw: Record<string, unknown> | null | undefined): stri
 }
 
 function buildQuestionJournalEntries(requests: TicketPdfDataRequest[]): JournalEntry[] {
+  const formatAnswerValue = (value: unknown, optionMap?: Map<string, string>): string => {
+    if (typeof value === 'boolean') return value ? 'Ja' : 'Nein';
+    if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '–';
+    if (typeof value === 'string') {
+      const trimmed = value.trim();
+      if (!trimmed) return '–';
+      if (optionMap && optionMap.has(trimmed)) return optionMap.get(trimmed) || trimmed;
+      if (trimmed === 'true') return 'Ja';
+      if (trimmed === 'false') return 'Nein';
+      return trimmed;
+    }
+    if (Array.isArray(value)) {
+      if (value.length === 0) return '–';
+      return value.map((entry) => formatAnswerValue(entry, optionMap)).join(', ');
+    }
+    if (value && typeof value === 'object') return toCompactJson(value, 650);
+    return valueOrDash(value);
+  };
+
   return requests.map((request, index) => {
     const fields = Array.isArray(request.fields) ? request.fields : [];
     const answers = request.answers && typeof request.answers === 'object' ? request.answers : {};
+    const fieldsByKey = new Map(fields.map((field) => [safeString(field.key), field]));
 
     const questionLines =
       fields.length > 0
@@ -702,8 +744,19 @@ function buildQuestionJournalEntries(requests: TicketPdfDataRequest[]): JournalE
     const answerEntries = Object.entries(answers as Record<string, unknown>);
     const answerLines =
       answerEntries.length > 0
-        ? answerEntries.map(([key, value]) => `- ${key}: ${toMultilineText(value)}`)
-        : ['- Keine Antwortdaten'];
+        ? answerEntries.map(([key, value]) => {
+            const field = fieldsByKey.get(safeString(key));
+            const optionMap = new Map(
+              (Array.isArray(field?.options) ? field?.options : [])
+                .map((option) => [safeString(option.value), safeString(option.label || option.value)])
+                .filter((entry) => entry[0])
+            );
+            const label = safeString(field?.label || key) || key;
+            const type = safeString(field?.type);
+            const requiredInfo = field?.required ? ' · Pflicht' : '';
+            return `- ${label}${type ? ` [${type}]` : ''}${requiredInfo}: ${formatAnswerValue(value, optionMap)}`;
+          })
+        : ['- Keine Bürgerantworten'];
 
     const meta = [
       `Status: ${valueOrDash(request.status)}`,
@@ -717,9 +770,63 @@ function buildQuestionJournalEntries(requests: TicketPdfDataRequest[]): JournalE
       .join(' · ');
 
     return {
-      title: `Datennachforderung ${index + 1} (${request.id.slice(0, 8)})`,
+      title: `Bürgerformular ${index + 1} (${request.id.slice(0, 8)})`,
       meta,
       body: `Fragen:\n${questionLines.join('\n')}\n\nAntworten:\n${answerLines.join('\n')}`,
+    };
+  });
+}
+
+function buildInternalTaskEntries(tasks: TicketPdfInternalTask[]): JournalEntry[] {
+  const sorted = [...tasks].sort((a, b) => {
+    const aTime = Date.parse(String(a.completedAt || a.createdAt || ''));
+    const bTime = Date.parse(String(b.completedAt || b.createdAt || ''));
+    const aSafe = Number.isFinite(aTime) ? aTime : 0;
+    const bSafe = Number.isFinite(bTime) ? bTime : 0;
+    return bSafe - aSafe;
+  });
+
+  return sorted.map((task, index) => {
+    const responsePayload =
+      task.response && typeof task.response === 'object' && !Array.isArray(task.response)
+        ? (task.response as Record<string, unknown>)
+        : {};
+    const responseEntries = Object.entries(responsePayload);
+    const formFields =
+      task.formSchema && typeof task.formSchema === 'object' && Array.isArray((task.formSchema as any).fields)
+        ? ((task.formSchema as any).fields as Array<Record<string, unknown>>)
+        : [];
+    const fieldByKey = new Map(formFields.map((field) => [safeString(field?.key), field]));
+
+    const responseLines =
+      responseEntries.length > 0
+        ? responseEntries.map(([key, value]) => {
+            const field = fieldByKey.get(safeString(key));
+            const label = safeString(field?.label) || key;
+            return `- ${label}: ${toMultilineText(value)}`;
+          })
+        : ['- Keine Formularantwort gespeichert'];
+
+    return {
+      title: `Aufgabe ${index + 1}: ${valueOrDash(task.title || task.id)}`,
+      meta: [
+        `Status: ${valueOrDash(task.status)}`,
+        `Modus: ${valueOrDash(task.mode)}`,
+        `Workflow: ${valueOrDash(task.workflowExecutionId)}`,
+        `Schritt: ${valueOrDash(task.stepId)}`,
+        `Fällig: ${formatDateTime(task.dueAt)}`,
+        `Erstellt: ${formatDateTime(task.createdAt)}`,
+        `Abgeschlossen: ${formatDateTime(task.completedAt)}`,
+        task.cycleIndex && task.maxCycles ? `Zyklus: ${task.cycleIndex}/${task.maxCycles}` : '',
+      ]
+        .filter(Boolean)
+        .join(' · '),
+      body: [
+        safeString(task.description) ? `Beschreibung:\n${safeString(task.description)}` : '',
+        `Antworten:\n${responseLines.join('\n')}`,
+      ]
+        .filter(Boolean)
+        .join('\n\n'),
     };
   });
 }
@@ -978,9 +1085,17 @@ function renderTicketBundle(
   const dataRequests = Array.isArray(ticket.dataRequests) ? ticket.dataRequests : [];
   drawJournalSection(
     ctx,
-    'Fragenjournal (Datennachforderung)',
+    'Bürgerantworten (Formulare)',
     buildQuestionJournalEntries(dataRequests),
-    'Keine Datennachforderung gespeichert.'
+    'Keine Bürgerformular-Antworten gespeichert.'
+  );
+
+  const internalTasks = Array.isArray(ticket.internalTasks) ? ticket.internalTasks : [];
+  drawJournalSection(
+    ctx,
+    'Aufgabenjournal (Interne Bearbeitung)',
+    buildInternalTaskEntries(internalTasks),
+    'Keine internen Aufgaben für dieses Ticket gespeichert.'
   );
 
   const emailMessages = Array.isArray(ticket.emailMessages) ? ticket.emailMessages : [];

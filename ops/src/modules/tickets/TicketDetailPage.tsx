@@ -129,6 +129,33 @@ function buildInternalTaskResponsePayload(task: any, formValues: Record<string, 
   return { ok: true, payload };
 }
 
+function hasInternalTaskResponseValue(value: unknown): boolean {
+  if (value === null || value === undefined) return false;
+  if (typeof value === 'string') return value.trim().length > 0;
+  if (typeof value === 'number') return Number.isFinite(value);
+  if (typeof value === 'boolean') return true;
+  if (Array.isArray(value)) return value.length > 0;
+  if (typeof value === 'object') return Object.keys(value as Record<string, unknown>).length > 0;
+  return String(value).trim().length > 0;
+}
+
+function formatInternalTaskResponseValue(value: unknown, field?: InternalTaskFormField): string {
+  if (field?.type === 'select' && typeof value === 'string' && Array.isArray(field.options)) {
+    const selected = field.options.find((option) => option.value === value);
+    if (selected?.label) return selected.label;
+  }
+  if (typeof value === 'boolean') return value ? 'Ja' : 'Nein';
+  if (typeof value === 'number') return Number.isFinite(value) ? String(value) : '–';
+  if (typeof value === 'string') return value.trim() || '–';
+  if (Array.isArray(value)) {
+    return value.length > 0
+      ? value.map((entry) => formatInternalTaskResponseValue(entry, field)).join(', ')
+      : '–';
+  }
+  if (value && typeof value === 'object') return JSON.stringify(value);
+  return '–';
+}
+
 export default function TicketDetailPage({ token, scope }: TicketDetailPageProps) {
   const { ticketId = '' } = useParams();
   const headers = useMemo(() => buildAuthHeaders(token, scope), [scope, token]);
@@ -195,10 +222,9 @@ export default function TicketDetailPage({ token, scope }: TicketDetailPageProps
     queryFn: async () => {
       const response = await api.get('/admin/internal-tasks', {
         headers,
-        params: { limit: 300, offset: 0 },
+        params: { limit: 300, offset: 0, ticketId },
       });
-      const items = Array.isArray(response.data?.items) ? response.data.items : [];
-      return items.filter((entry: any) => String(entry?.ticketId || entry?.ticket_id || '') === ticketId);
+      return Array.isArray(response.data?.items) ? response.data.items : [];
     },
     enabled: !!ticketId,
     staleTime: 15_000,
@@ -616,10 +642,19 @@ export default function TicketDetailPage({ token, scope }: TicketDetailPageProps
                 const canStart = status === 'pending';
                 const canComplete = status === 'in_progress';
                 const canReject = (status === 'pending' || status === 'in_progress') && task?.allowReject !== false;
+                const isTerminal = status === 'completed' || status === 'rejected' || status === 'cancelled';
+                const isFormEditable = status === 'in_progress';
                 const taskIdValue = String(task?.id || '').trim();
                 const formFields = normalizeInternalTaskFormFields(task?.formSchema);
                 const formValues = internalTaskFormValues[taskIdValue] || {};
                 const noteValue = internalTaskNotes[taskIdValue] || '';
+                const responsePayload =
+                  task?.response && typeof task.response === 'object' && !Array.isArray(task.response)
+                    ? (task.response as Record<string, unknown>)
+                    : {};
+                const responseEntries = Object.entries(responsePayload).filter(([, value]) =>
+                  hasInternalTaskResponseValue(value)
+                );
                 return (
                   <Card key={taskIdValue || `task-${index}`} variant="outlined" sx={{ borderRadius: 2 }}>
                     <CardContent>
@@ -633,11 +668,51 @@ export default function TicketDetailPage({ token, scope }: TicketDetailPageProps
                         {task?.description ? (
                           <Typography variant="body2">{String(task.description)}</Typography>
                         ) : null}
-                        {formFields.length > 0 ? (
+                        {isTerminal && responseEntries.length > 0 ? (
+                          <Stack spacing={0.8} sx={{ pt: 0.6 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              Formularergebnis
+                            </Typography>
+                            <Stack spacing={0.6}>
+                              {responseEntries.map(([key, value]) => {
+                                const field = formFields.find((candidate) => candidate.key === key);
+                                const label = field?.label || key;
+                                return (
+                                  <Box
+                                    key={`${taskIdValue}-response-${key}`}
+                                    sx={{
+                                      display: 'grid',
+                                      gridTemplateColumns: 'minmax(120px, 35%) 1fr',
+                                      gap: 1,
+                                      p: 1,
+                                      borderRadius: 1.5,
+                                      border: '1px solid',
+                                      borderColor: 'divider',
+                                      bgcolor: 'background.default',
+                                    }}
+                                  >
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontWeight: 700 }}>
+                                      {label}
+                                    </Typography>
+                                    <Typography variant="body2">
+                                      {formatInternalTaskResponseValue(value, field)}
+                                    </Typography>
+                                  </Box>
+                                );
+                              })}
+                            </Stack>
+                          </Stack>
+                        ) : null}
+                        {formFields.length > 0 && !isTerminal ? (
                           <Stack spacing={1} sx={{ pt: 0.6 }}>
                             <Typography variant="caption" color="text.secondary">
                               Aufgabenformular
                             </Typography>
+                            {!isFormEditable ? (
+                              <Typography variant="caption" color="text.secondary">
+                                Formular wird nach dem Start der Aufgabe freigeschaltet.
+                              </Typography>
+                            ) : null}
                             {formFields.map((field) => {
                               const value = formValues[field.key];
                               if (field.type === 'boolean') {
@@ -647,6 +722,7 @@ export default function TicketDetailPage({ token, scope }: TicketDetailPageProps
                                     control={
                                       <Checkbox
                                         checked={value === true}
+                                        disabled={!isFormEditable || busy}
                                         onChange={(event) =>
                                           setInternalTaskFormValues((prev) => ({
                                             ...prev,
@@ -670,6 +746,7 @@ export default function TicketDetailPage({ token, scope }: TicketDetailPageProps
                                     size="small"
                                     select
                                     value={String(value ?? '')}
+                                    disabled={!isFormEditable || busy}
                                     onChange={(event) =>
                                       setInternalTaskFormValues((prev) => ({
                                         ...prev,
@@ -701,6 +778,7 @@ export default function TicketDetailPage({ token, scope }: TicketDetailPageProps
                                   value={String(value ?? '')}
                                   multiline={multiline}
                                   minRows={multiline ? 2 : undefined}
+                                  disabled={!isFormEditable || busy}
                                   onChange={(event) =>
                                     setInternalTaskFormValues((prev) => ({
                                       ...prev,
@@ -717,50 +795,58 @@ export default function TicketDetailPage({ token, scope }: TicketDetailPageProps
                             })}
                           </Stack>
                         ) : null}
-                        <TextField
-                          size="small"
-                          label="Notiz (optional)"
-                          value={noteValue}
-                          onChange={(event) =>
-                            setInternalTaskNotes((prev) => ({
-                              ...prev,
-                              [taskIdValue]: event.target.value,
-                            }))
-                          }
-                        />
-                        <Stack direction="row" spacing={0.8} flexWrap="wrap">
-                          <Button
-                            size="small"
-                            variant="contained"
-                            onClick={() => void handleInternalTaskAction(task, 'start')}
-                            disabled={busy || !canStart || !taskIdValue}
-                          >
-                            Start
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="contained"
-                            color="success"
-                            onClick={() => void handleInternalTaskAction(task, 'complete')}
-                            disabled={busy || !canComplete || !taskIdValue}
-                          >
-                            Abschließen
-                          </Button>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            color="warning"
-                            onClick={() => void handleInternalTaskAction(task, 'reject')}
-                            disabled={busy || !canReject || !taskIdValue}
-                          >
-                            Zurückweisen
-                          </Button>
-                        </Stack>
-                        {!canReject && task?.allowReject === false ? (
+                        {!isTerminal ? (
+                          <>
+                            <TextField
+                              size="small"
+                              label="Notiz (optional)"
+                              value={noteValue}
+                              onChange={(event) =>
+                                setInternalTaskNotes((prev) => ({
+                                  ...prev,
+                                  [taskIdValue]: event.target.value,
+                                }))
+                              }
+                            />
+                            <Stack direction="row" spacing={0.8} flexWrap="wrap">
+                              <Button
+                                size="small"
+                                variant="contained"
+                                onClick={() => void handleInternalTaskAction(task, 'start')}
+                                disabled={busy || !canStart || !taskIdValue}
+                              >
+                                Start
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="contained"
+                                color="success"
+                                onClick={() => void handleInternalTaskAction(task, 'complete')}
+                                disabled={busy || !canComplete || !taskIdValue}
+                              >
+                                Abschließen
+                              </Button>
+                              <Button
+                                size="small"
+                                variant="outlined"
+                                color="warning"
+                                onClick={() => void handleInternalTaskAction(task, 'reject')}
+                                disabled={busy || !canReject || !taskIdValue}
+                              >
+                                Zurückweisen
+                              </Button>
+                            </Stack>
+                            {!canReject && task?.allowReject === false ? (
+                              <Typography variant="caption" color="text.secondary">
+                                Ablehnung ist für diese Aufgabe deaktiviert.
+                              </Typography>
+                            ) : null}
+                          </>
+                        ) : (
                           <Typography variant="caption" color="text.secondary">
-                            Ablehnung ist für diese Aufgabe deaktiviert.
+                            Abgeschlossen am {task?.completedAt || task?.completed_at || 'unbekannt'}
                           </Typography>
-                        ) : null}
+                        )}
                       </Stack>
                     </CardContent>
                   </Card>

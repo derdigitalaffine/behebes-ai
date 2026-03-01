@@ -5165,12 +5165,13 @@ const WorkflowSettings: React.FC = () => {
       const isEnd = step.type === 'END';
       const isJoin = step.type === 'JOIN';
       const isIf = step.type === 'IF';
+      const isSplit = step.type === 'SPLIT';
       return {
         id: step.localId,
         index,
         title: step.title || STEP_TYPE_LABELS[step.type],
         type: step.type,
-        shape: isEnd ? 'circle' : isJoin || isIf ? 'diamond' : 'rect',
+        shape: isEnd ? 'circle' : isJoin || isIf || isSplit ? 'diamond' : 'rect',
         radius: isEnd ? endRadius : undefined,
         meta: summarizeGraphNodeMeta(step),
         isAuto: !!step.auto,
@@ -11131,7 +11132,7 @@ const WorkflowSettings: React.FC = () => {
                                             points={`${node.x},${node.y - workflowGraph.joinSize / 2} ${node.x + workflowGraph.joinSize / 2},${node.y} ${node.x},${node.y + workflowGraph.joinSize / 2} ${node.x - workflowGraph.joinSize / 2},${node.y}`}
                                           />
                                           <text x={node.x} y={node.y - 4} textAnchor="middle" className="workflow-graph-node-title centered">
-                                            Join
+                                            {node.type === 'IF' ? 'IF' : node.type === 'SPLIT' ? 'Split' : 'Join'}
                                           </text>
                                           {node.meta && (
                                             <text x={node.x} y={node.y + 12} textAnchor="middle" className="workflow-graph-node-meta centered">
@@ -11227,8 +11228,8 @@ const WorkflowSettings: React.FC = () => {
                           </div>
                           <div className="workflow-graph-legend">
                             <span><strong>Kreis:</strong> Start/Ende</span>
-                            <span><strong>Raute:</strong> Join</span>
-                            <span><strong>Violett:</strong> Split</span>
+                            <span><strong>Raute:</strong> Join / Split / IF</span>
+                            <span><strong>Violett:</strong> Split-Kanten</span>
                             <span><strong>Blau:</strong> IF TRUE</span>
                             <span><strong>Orange:</strong> IF FALSE</span>
                             <span><strong>REST:</strong> API-Aufrufknoten</span>

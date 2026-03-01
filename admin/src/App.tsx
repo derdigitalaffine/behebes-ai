@@ -65,6 +65,8 @@ const SETTINGS_ITEMS: NavItem[] = [
   { id: 'settings-general-maintenance', label: 'Allgemein · Daten & Wartung', icon: 'fa-database', to: '/admin-settings/general-maintenance' },
   { id: 'settings-systeminfos', label: 'Systeminfos', icon: 'fa-server', to: '/admin-settings/systeminfos' },
   { id: 'settings-imports', label: 'Importe', icon: 'fa-file-import', to: '/admin-settings/imports' },
+  { id: 'settings-services', label: 'Leistungen', icon: 'fa-list-check', to: '/admin-settings/services' },
+  { id: 'settings-keywording', label: 'Schlagwort-Assistent', icon: 'fa-wand-magic-sparkles', to: '/admin-settings/keywording' },
   { id: 'settings-tenants', label: 'Mandanten', icon: 'fa-building', to: '/admin-settings/tenants' },
   { id: 'settings-organization', label: 'Organisationsstruktur', icon: 'fa-sitemap', to: '/admin-settings/organization' },
   { id: 'settings-weather-api', label: 'Wetter API', icon: 'fa-cloud-sun-rain', to: '/admin-settings/weather-api' },
@@ -74,6 +76,7 @@ const SETTINGS_ITEMS: NavItem[] = [
   { id: 'settings-templates', label: 'E-Mail-Templates', icon: 'fa-file-lines', to: '/admin-settings/templates' },
   { id: 'settings-platform-blog', label: 'Plattform-Blog', icon: 'fa-newspaper', to: '/admin-settings/platform-blog' },
   { id: 'settings-ai-situation', label: 'KI-Lagebild', icon: 'fa-chart-line', to: '/admin-settings/ai-situation' },
+  { id: 'settings-ai-memory', label: 'KI-Gedächtnis', icon: 'fa-brain', to: '/admin-settings/ai-memory' },
   { id: 'settings-ai-pseudonyms', label: 'KI-Pseudonymisierung', icon: 'fa-user-secret', to: '/admin-settings/ai-pseudonyms' },
   { id: 'settings-ai-help', label: 'KI-Hilfe', icon: 'fa-life-ring', to: '/admin-settings/ai-help' },
   { id: 'settings-redmine', label: 'Redmine', icon: 'fa-diagram-project', to: '/admin-settings/redmine' },
@@ -163,6 +166,8 @@ const NAV_ITEM_CAPABILITY_REQUIREMENTS: Record<string, string[]> = {
   'settings-general-maintenance': ['maintenance.manage'],
   'settings-systeminfos': ['settings.system.manage'],
   'settings-imports': ['users.manage', 'settings.organization.global.manage', 'settings.organization.tenant.manage'],
+  'settings-services': ['settings.organization.global.manage', 'settings.organization.tenant.manage', 'settings.categories.manage', 'tickets.read', 'workflows.read'],
+  'settings-keywording': ['users.manage', 'settings.organization.global.manage', 'settings.organization.tenant.manage', 'settings.categories.manage'],
   'settings-tenants': ['settings.organization.global.manage'],
   'settings-organization': ['settings.organization.global.manage', 'settings.organization.tenant.manage'],
   'settings-weather-api': ['settings.weather.manage'],
@@ -172,11 +177,14 @@ const NAV_ITEM_CAPABILITY_REQUIREMENTS: Record<string, string[]> = {
   'settings-templates': ['settings.templates.manage'],
   'settings-platform-blog': ['settings.platform_blog.manage'],
   'settings-ai-situation': ['settings.ai_situation.read', 'settings.ai_situation.manage'],
+  'settings-ai-memory': ['settings.ai.global.manage'],
   'settings-ai-pseudonyms': ['settings.ai_pseudonyms.manage'],
   'settings-ai-help': ['settings.ai.global.manage', 'settings.ai_situation.read', 'settings.ai_situation.manage'],
   'settings-redmine': ['settings.redmine.manage'],
   'settings-workflow': ['settings.workflows.manage'],
 };
+
+const NAV_ITEM_PLATFORM_ONLY = new Set<string>(['settings-ai-memory']);
 
 const isItemActive = (pathname: string, item: NavItem): boolean => {
   if (item.end) return pathname === item.to;
@@ -205,8 +213,15 @@ const filterNavigationByRole = (groups: NavGroup[], isAdmin: boolean): NavGroup[
       }),
     }));
 
-const filterNavigationByCapabilities = (groups: NavGroup[], capabilities: Set<string>): NavGroup[] => {
+const filterNavigationByCapabilities = (
+  groups: NavGroup[],
+  capabilities: Set<string>,
+  effectiveRole: AdminAccessContextPayload['effectiveRole']
+): NavGroup[] => {
   const hasAccess = (item: NavItem): boolean => {
+    if (NAV_ITEM_PLATFORM_ONLY.has(item.id) && effectiveRole !== 'PLATFORM_ADMIN') {
+      return false;
+    }
     const required = NAV_ITEM_CAPABILITY_REQUIREMENTS[item.id];
     if (!required || required.length === 0) return true;
     return required.some((capability) => capabilities.has(capability));
@@ -362,8 +377,8 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ auth, healthStatus, healthTim
   const capabilitySet = useMemo(() => new Set(capabilities), [capabilities]);
   const roleNavigation = useMemo(() => {
     const roleFiltered = filterNavigationByRole(NAVIGATION_TREE, admin);
-    return filterNavigationByCapabilities(roleFiltered, capabilitySet);
-  }, [admin, capabilitySet]);
+    return filterNavigationByCapabilities(roleFiltered, capabilitySet, effectiveRole || null);
+  }, [admin, capabilitySet, effectiveRole]);
   const navigation = useMemo(() => filterNavigationByQuery(roleNavigation, navSearch), [roleNavigation, navSearch]);
   const searchActive = navSearch.trim().length > 0;
   const activeAreaLabel = useMemo(

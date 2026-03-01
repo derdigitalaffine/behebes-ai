@@ -8,6 +8,7 @@ import EmailTemplates from './EmailTemplates';
 import WorkflowSettings from './WorkflowSettings';
 import AIHelp from './AIHelp';
 import AISituationReport from './AISituationReport';
+import AIMemorySettings from './AIMemorySettings';
 import Knowledge from './Knowledge';
 import WeatherApiSettings from './WeatherApiSettings';
 import SystemInfos from './SystemInfos';
@@ -15,6 +16,8 @@ import MunicipalContactsSettings from './MunicipalContactsSettings';
 import OrganizationSettings from './OrganizationSettings';
 import PlatformBlog from './PlatformBlog';
 import Imports from './Imports';
+import KeywordingAssistant from './KeywordingAssistant';
+import ServicesCatalog from './ServicesCatalog';
 import { useAdminScopeContext } from '../lib/adminScopeContext';
 import './AdminSettings.css';
 
@@ -28,6 +31,8 @@ type SettingsSection =
   | 'general-maintenance'
   | 'systeminfos'
   | 'imports'
+  | 'services'
+  | 'keywording'
   | 'tenants'
   | 'organization'
   | 'weather-api'
@@ -38,6 +43,7 @@ type SettingsSection =
   | 'redmine'
   | 'workflow'
   | 'ai-situation'
+  | 'ai-memory'
   | 'ai-pseudonyms'
   | 'ai-help'
   | 'platform-blog';
@@ -97,8 +103,18 @@ const SECTION_LABELS: Record<SettingsSection, { title: string; subtitle: string;
   },
   imports: {
     title: 'Importe',
-    subtitle: 'CSV-Import für Benutzer und Organisationsstruktur mit Vorschau und Konfliktprüfung',
+    subtitle: 'CSV-Import für Benutzer, Organisationsstruktur und Leistungen mit Vorschau und Konfliktprüfung',
     icon: 'fa-file-import',
+  },
+  services: {
+    title: 'Leistungen',
+    subtitle: 'Leistungskatalog mandantenbezogen anzeigen, bearbeiten und deaktivieren',
+    icon: 'fa-list-check',
+  },
+  keywording: {
+    title: 'Schlagwort-Assistent',
+    subtitle: 'Leistungsbasierte KI-Verschlagwortung mit Review, Konfidenzfilter und Übernahme',
+    icon: 'fa-wand-magic-sparkles',
   },
   tenants: {
     title: 'Mandanten',
@@ -139,6 +155,11 @@ const SECTION_LABELS: Record<SettingsSection, { title: string; subtitle: string;
     title: 'KI-Lagebild',
     subtitle: 'Analyseablauf, Berichte, Historie und automatische Berichts-Mail',
     icon: 'fa-chart-line',
+  },
+  'ai-memory': {
+    title: 'KI-Gedächtnis',
+    subtitle: 'Memory-Einträge und Kontextregeln für Lagebild-Prompts',
+    icon: 'fa-brain',
   },
   'ai-pseudonyms': {
     title: 'KI-Pseudonymisierung',
@@ -193,6 +214,8 @@ const SECTION_COMPONENTS: Record<SettingsSection, React.FC> = {
   'general-maintenance': GeneralMaintenanceSettings,
   systeminfos: SystemInfos,
   imports: Imports,
+  services: ServicesCatalog,
+  keywording: KeywordingAssistant,
   tenants: TenantSettings,
   organization: OrganizationStructureSettings,
   'weather-api': WeatherApiSettings,
@@ -201,6 +224,7 @@ const SECTION_COMPONENTS: Record<SettingsSection, React.FC> = {
   email: EmailSettings,
   templates: EmailTemplates,
   'ai-situation': AISituationOverviewSettings,
+  'ai-memory': AIMemorySettings,
   'ai-pseudonyms': AIPseudonymSettings,
   'ai-help': AIHelp,
   'platform-blog': PlatformBlog,
@@ -218,6 +242,8 @@ const SECTION_CAPABILITY_REQUIREMENTS: Partial<Record<SettingsSection, string[]>
   'general-maintenance': ['maintenance.manage'],
   systeminfos: ['settings.system.manage'],
   imports: ['users.manage', 'settings.organization.global.manage', 'settings.organization.tenant.manage'],
+  services: ['settings.organization.global.manage', 'settings.organization.tenant.manage', 'settings.categories.manage', 'tickets.read', 'workflows.read'],
+  keywording: ['users.manage', 'settings.organization.global.manage', 'settings.organization.tenant.manage', 'settings.categories.manage'],
   tenants: ['settings.organization.global.manage'],
   organization: ['settings.organization.global.manage', 'settings.organization.tenant.manage'],
   'weather-api': ['settings.weather.manage'],
@@ -228,20 +254,24 @@ const SECTION_CAPABILITY_REQUIREMENTS: Partial<Record<SettingsSection, string[]>
   redmine: ['settings.redmine.manage'],
   workflow: ['settings.workflows.manage'],
   'ai-situation': ['settings.ai_situation.read', 'settings.ai_situation.manage'],
+  'ai-memory': ['settings.ai.global.manage'],
   'ai-pseudonyms': ['settings.ai_pseudonyms.manage'],
   'ai-help': ['settings.ai.global.manage', 'settings.ai_situation.read', 'settings.ai_situation.manage'],
   'platform-blog': ['settings.platform_blog.manage'],
 };
 
 const AdminSettings: React.FC = () => {
-  const { capabilities } = useAdminScopeContext();
+  const { capabilities, effectiveRole } = useAdminScopeContext();
   const { section } = useParams<{ section?: string }>();
   const activeSection = resolveSection(section);
   const requiredCapabilities = SECTION_CAPABILITY_REQUIREMENTS[activeSection] || [];
   const capabilitySet = new Set((capabilities || []).map((entry) => String(entry || '').trim()));
+  const platformOnlySections = new Set<SettingsSection>(['ai-memory']);
+  const platformSectionBlocked = platformOnlySections.has(activeSection) && effectiveRole !== 'PLATFORM_ADMIN';
   const hasAccess =
-    requiredCapabilities.length === 0 ||
-    requiredCapabilities.some((capability) => capabilitySet.has(capability));
+    !platformSectionBlocked &&
+    (requiredCapabilities.length === 0 ||
+      requiredCapabilities.some((capability) => capabilitySet.has(capability)));
 
   if (!hasAccess) {
     return (

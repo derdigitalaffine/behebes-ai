@@ -224,6 +224,30 @@ const PROMPT_META: Record<string, PromptMeta> = {
     nodePath: ['Admin', 'Assistenten'],
     keywords: ['category', 'assistant'],
   },
+  serviceKeywordSeedExtractionPrompt: {
+    label: 'Leistungs-Keywording: Seed Extraction',
+    description: 'Extrahiert aus Leistungen belastbare Schlagwort-Seeds als Ausgangsbasis.',
+    nodePath: ['Keywording / Leistungen', 'Pipeline', 'Stage 1 Seed Extraction'],
+    keywords: ['leistungen', 'keywording', 'seed'],
+  },
+  serviceKeywordConsolidationPrompt: {
+    label: 'Leistungs-Keywording: Konsolidierung',
+    description: 'Konsolidiert Synonyme und Duplikate zu kanonischen Schlagworten.',
+    nodePath: ['Keywording / Leistungen', 'Pipeline', 'Stage 2 Konsolidierung'],
+    keywords: ['leistungen', 'keywording', 'normalisierung'],
+  },
+  serviceKeywordTargetAssignmentPrompt: {
+    label: 'Leistungs-Keywording: Zielzuordnung',
+    description: 'Ordnet Schlagworte Organisationseinheiten und Mitarbeitenden zu.',
+    nodePath: ['Keywording / Leistungen', 'Pipeline', 'Stage 3 Zielzuordnung'],
+    keywords: ['leistungen', 'zuordnung', 'orga', 'mitarbeiter'],
+  },
+  serviceKeywordQualityGuardPrompt: {
+    label: 'Leistungs-Keywording: Qualitäts-Guard',
+    description: 'Prüft Schlagwortqualität und filtert ungeeignete Vorschläge.',
+    nodePath: ['Keywording / Leistungen', 'Pipeline', 'Stage 4 Quality Guard'],
+    keywords: ['leistungen', 'quality', 'guard'],
+  },
 };
 
 const PROMPT_ORDER: string[] = [
@@ -257,6 +281,10 @@ const PROMPT_ORDER: string[] = [
   'uiTranslationPrompt',
   'adminAiHelpPrompt',
   'categoryAssistantPrompt',
+  'serviceKeywordSeedExtractionPrompt',
+  'serviceKeywordConsolidationPrompt',
+  'serviceKeywordTargetAssignmentPrompt',
+  'serviceKeywordQualityGuardPrompt',
 ];
 
 const normalizeSearch = (value: string): string =>

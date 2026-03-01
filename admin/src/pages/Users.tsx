@@ -3,6 +3,12 @@ import axios from 'axios';
 import { useTableSelection } from '../lib/tableSelection';
 import { useAdminScopeContext } from '../lib/adminScopeContext';
 import KeywordChipsInput from '../components/KeywordChipsInput';
+import {
+  SmartTable,
+  SmartTableRowActionButton,
+  SmartTableRowActions,
+  type SmartTableColumnDef,
+} from '../modules/smart-table';
 
 interface UsersProps {
   token: string;
@@ -193,7 +199,7 @@ const parseProfileDataText = (raw: string): { ok: boolean; value: Record<string,
 };
 
 const Users: React.FC<UsersProps> = ({ token }) => {
-  const { isGlobalAdmin: isPlatformAdmin } = useAdminScopeContext();
+  const { isGlobalAdmin: isPlatformAdmin, selection: scopeSelection } = useAdminScopeContext();
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [tenants, setTenants] = useState<TenantOption[]>([]);
   const [orgUnitsByTenant, setOrgUnitsByTenant] = useState<Record<string, OrgUnitOption[]>>({});
@@ -798,9 +804,164 @@ const Users: React.FC<UsersProps> = ({ token }) => {
     );
   };
 
+  const userColumns = useMemo<SmartTableColumnDef<AdminUser>[]>(() => {
+    return [
+      {
+        field: 'username',
+        headerName: 'Benutzername',
+        minWidth: 180,
+        flex: 0.8,
+      },
+      {
+        field: 'nameFunction',
+        headerName: 'Name / Funktion',
+        minWidth: 260,
+        flex: 1.2,
+        sortable: false,
+        valueGetter: (_value, row) => {
+          const fullName = [row.firstName, row.lastName].filter(Boolean).join(' ').trim() || '–';
+          const secondary = row.jobTitle || row.workPhone || row.externalPersonId || 'Keine Zusatzdaten';
+          return `${fullName} · ${secondary}`;
+        },
+        renderCell: (params) => {
+          const user = params.row;
+          const fullName = [user.firstName, user.lastName].filter(Boolean).join(' ').trim() || '–';
+          const secondary = user.jobTitle || user.workPhone || user.externalPersonId || 'Keine Zusatzdaten';
+          return (
+            <div className="flex flex-col">
+              <span>{fullName}</span>
+              <span className="text-xs text-slate-500">{secondary}</span>
+            </div>
+          );
+        },
+      },
+      {
+        field: 'email',
+        headerName: 'E-Mail',
+        minWidth: 220,
+        flex: 1,
+        valueGetter: (_value, row) => row.email || '–',
+      },
+      {
+        field: 'roleLabel',
+        headerName: 'Rolle',
+        minWidth: 170,
+        flex: 0.7,
+        valueGetter: (_value, row) => {
+          if (row.isGlobalAdmin) return 'Plattform-Admin';
+          return roleLabels[row.role] || row.role;
+        },
+      },
+      {
+        field: 'active',
+        headerName: 'Status',
+        minWidth: 120,
+        flex: 0.55,
+        valueGetter: (_value, row) => (row.active ? 'Aktiv' : 'Inaktiv'),
+        renderCell: (params) => {
+          const user = params.row;
+          return (
+            <span className={`badge ${user.active ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
+              {user.active ? 'Aktiv' : 'Inaktiv'}
+            </span>
+          );
+        },
+      },
+      {
+        field: 'assignmentKeywords',
+        headerName: 'Schlagworte',
+        minWidth: 220,
+        flex: 1.1,
+        sortable: false,
+        valueGetter: (_value, row) => (Array.isArray(row.assignmentKeywords) ? row.assignmentKeywords.join(', ') : ''),
+        renderCell: (params) => renderAssignmentKeywordChips(params.row),
+      },
+      {
+        field: 'tenantScopes',
+        headerName: 'Mandanten',
+        minWidth: 260,
+        flex: 1.15,
+        sortable: false,
+        valueGetter: (_value, row) =>
+          row.isGlobalAdmin
+            ? 'Global Admin'
+            : (row.tenantScopes || [])
+                .map((scope) => `${getTenantLabel(scope.tenantId)}${scope.isTenantAdmin ? ' · Mandanten-Admin' : ''}`)
+                .join(', '),
+        renderCell: (params) => renderTenantScopeChips(params.row),
+      },
+      {
+        field: 'orgScopes',
+        headerName: 'Organisation',
+        minWidth: 280,
+        flex: 1.2,
+        sortable: false,
+        valueGetter: (_value, row) =>
+          (row.orgScopes || [])
+            .map((scope) => `${getOrgUnitLabel(scope.tenantId, scope.orgUnitId)} ${scope.canWrite ? '(W)' : '(R)'}`)
+            .join(', '),
+        renderCell: (params) => renderOrgScopeChips(params.row),
+      },
+      {
+        field: 'actions',
+        headerName: 'Aktionen',
+        minWidth: 175,
+        flex: 0.8,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        renderCell: (params) => {
+          const user = params.row;
+          const rowBusy = saving || invitingUserId === user.id;
+          const hasEmail = !!String(user.email || '').trim();
+          return (
+            <SmartTableRowActions>
+              <SmartTableRowActionButton
+                label="Benutzer bearbeiten"
+                icon={<i className="fa-solid fa-user-pen" aria-hidden="true" />}
+                onClick={() => handleEditUser(user)}
+                disabled={saving}
+              />
+              <SmartTableRowActionButton
+                label="Einladung senden"
+                icon={<i className="fa-solid fa-envelope" aria-hidden="true" />}
+                onClick={() => {
+                  void handleInviteUser(user, true);
+                }}
+                disabled={rowBusy || !hasEmail}
+                loading={invitingUserId === user.id}
+              />
+              <SmartTableRowActionButton
+                label="TFA deaktivieren"
+                icon={<i className="fa-solid fa-shield-halved" aria-hidden="true" />}
+                tone="warning"
+                onClick={() => {
+                  void handleDisableUserTfa(user);
+                }}
+                disabled={saving}
+              />
+            </SmartTableRowActions>
+          );
+        },
+      },
+    ];
+  }, [getOrgUnitLabel, getTenantLabel, invitingUserId, saving]);
+
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-semibold">Benutzerverwaltung</h2>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <h2 className="text-2xl font-semibold">Benutzerverwaltung</h2>
+        <button
+          type="button"
+          className="btn btn-secondary"
+          onClick={() => {
+            const tenantQuery = scopeSelection?.tenantId ? `&tenantId=${encodeURIComponent(scopeSelection.tenantId)}` : '';
+            window.location.assign(`/admin-settings/keywording?targetType=user${tenantQuery}`);
+          }}
+        >
+          <i className="fa-solid fa-wand-magic-sparkles" /> KI-Schlagworte aus Leistungen
+        </button>
+      </div>
 
       {message && (
         <div
@@ -1378,95 +1539,20 @@ const Users: React.FC<UsersProps> = ({ token }) => {
           </div>
         )}
 
-        {loading ? (
-          <div className="text-center text-slate-500">Lade Benutzer...</div>
-        ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="text-left text-slate-500">
-                  <th className="py-2 table-select-col">
-                    <input
-                      type="checkbox"
-                      className="table-select-checkbox"
-                      checked={selection.areAllSelected(filteredUsers)}
-                      onChange={() => selection.toggleAll(filteredUsers)}
-                      aria-label="Alle Benutzer auswählen"
-                    />
-                  </th>
-                  <th className="py-2">Benutzername</th>
-                  <th className="py-2">Name / Funktion</th>
-                  <th className="py-2">Email</th>
-                  <th className="py-2">Rolle</th>
-                  <th className="py-2">Status</th>
-                  <th className="py-2">Schlagworte</th>
-                  <th className="py-2">Mandanten</th>
-                  <th className="py-2">Organisation</th>
-                  <th className="py-2">Aktion</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="border-t border-slate-200">
-                    <td className="py-2 table-select-cell">
-                      <input
-                        type="checkbox"
-                        className="table-select-checkbox"
-                        checked={selection.isSelected(user.id)}
-                        onChange={() => selection.toggleRow(user.id)}
-                        aria-label={`Benutzer ${user.username} auswählen`}
-                      />
-                    </td>
-                    <td className="py-2 font-semibold text-slate-800">{user.username}</td>
-                    <td className="py-2 text-slate-600">
-                      <div className="flex flex-col">
-                        <span>{[user.firstName, user.lastName].filter(Boolean).join(' ') || '–'}</span>
-                        <span className="text-xs text-slate-500">
-                          {user.jobTitle || user.workPhone || user.externalPersonId || 'Keine Zusatzdaten'}
-                        </span>
-                      </div>
-                    </td>
-                    <td className="py-2 text-slate-600">{user.email || '–'}</td>
-                    <td className="py-2 text-slate-600">{roleLabels[user.role] || user.role}</td>
-                    <td className="py-2">
-                      <span className={`badge ${user.active ? 'bg-green-100 text-green-700' : 'bg-slate-200 text-slate-600'}`}>
-                        {user.active ? 'Aktiv' : 'Inaktiv'}
-                      </span>
-                    </td>
-                    <td className="py-2 text-slate-600">{renderAssignmentKeywordChips(user)}</td>
-                    <td className="py-2 text-slate-600">{renderTenantScopeChips(user)}</td>
-                    <td className="py-2 text-slate-600">{renderOrgScopeChips(user)}</td>
-                    <td className="py-2">
-                      <div className="flex flex-wrap gap-2">
-                        <button className="btn btn-secondary" onClick={() => handleEditUser(user)}>
-                          Bearbeiten
-                        </button>
-                        <button
-                          className="btn btn-secondary"
-                          onClick={() => void handleInviteUser(user, true)}
-                          disabled={saving || invitingUserId === user.id || !String(user.email || '').trim()}
-                          title={!String(user.email || '').trim() ? 'Keine E-Mail-Adresse hinterlegt.' : undefined}
-                        >
-                          <i className="fa-solid fa-envelope" /> Invite
-                        </button>
-                        <button className="btn btn-secondary" onClick={() => void handleDisableUserTfa(user)} disabled={saving}>
-                          <i className="fa-solid fa-shield-halved" /> TFA aus
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-                {filteredUsers.length === 0 && (
-                  <tr>
-                    <td colSpan={10} className="py-4 text-center text-slate-500">
-                      Keine Benutzer gefunden.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+        <SmartTable<AdminUser>
+          tableId="users-overview"
+          userId={token}
+          title="Benutzerliste"
+          rows={filteredUsers}
+          columns={userColumns}
+          loading={loading}
+          checkboxSelection
+          selectionModel={selection.selectedIds}
+          onSelectionModelChange={(ids) => selection.setSelectedIds(ids)}
+          onRefresh={loadUsers}
+          defaultPageSize={25}
+          pageSizeOptions={[10, 25, 50, 100]}
+        />
       </div>
     </div>
   );
