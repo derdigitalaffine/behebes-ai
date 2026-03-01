@@ -3,119 +3,126 @@
 ## Purpose | Zweck
 
 **EN**  
-This document defines the professional Git operating model for behebes.AI: branch discipline, commit quality, release tagging, and safe update rollout.
+This document defines the operational Git baseline for behebes.AI: controlled releases, clean history, and strict branch protection for production reliability.
 
 **DE**  
-Dieses Dokument definiert das professionelle Git-Betriebsmodell fuer behebes.AI: Branch-Disziplin, Commit-Qualitaet, Release-Tagging und sicheren Update-Rollout.
+Dieses Dokument definiert die operative Git-Basis fuer behebes.AI: kontrollierte Releases, saubere Historie und strikte Branch-Protection fuer einen verlaesslichen Produktivbetrieb.
 
-## 1) Repository Strategy | Repository-Strategie
+## 1) Repository Model | Repository-Modell
 
-- Default branch: `main`
-- Protected production history: no destructive rewrites on published branches
-- Annotated SemVer tags for releases: `vMAJOR.MINOR.PATCH`
+1. Default branch: `main`
+2. Release identity: annotated SemVer tags (`vMAJOR.MINOR.PATCH`)
+3. Release source: only from clean, validated commits on `main`
+4. No history rewrites on published states
 
-## 2) Branching Model | Branching-Modell
+## 2) Branching Standard | Branching-Standard
 
-**EN**
-- `main`: release-ready state only
-- short-lived feature/fix branches for substantial changes
-- merge back via reviewed commits
+Use short-lived branches for implementation work:
 
-**DE**
-- `main`: nur releasefaehiger Zustand
-- kurzlebige Feature-/Fix-Branches fuer groessere Aenderungen
-- Rueckfuehrung per geprueften Commits
-
-Recommended branch naming:
 - `feature/<topic>`
 - `fix/<topic>`
 - `chore/<topic>`
 - `release/<version>`
 
-## 3) Commit Quality Standard | Commit-Qualitaetsstandard
+`main` stays stable and releasable.
 
-Use clear, action-oriented commit subjects.
-
-Examples:
-- `feat(admin): add update status build metadata`
-- `fix(frontend): stabilize tenant redirect handling`
-- `chore(repo): remove local-only artifacts from tracking`
+## 3) Commit Quality | Commit-Qualitaet
 
 Rules:
-- one logical change per commit
-- include migration/schema changes with matching app changes
-- avoid mixed commits across unrelated concerns
 
-## 4) Release Process | Release-Prozess
+1. One logical concern per commit.
+2. Include migrations with matching code changes.
+3. Avoid unrelated mixed commits.
+4. Prefer explicit, scope-based messages:
+   - `feat(admin): ...`
+   - `fix(backend): ...`
+   - `chore(docs): ...`
 
-1. Ensure `main` is clean and build-green.
-2. Run release checks:
-   - backend, frontend, admin, ops builds
-3. Execute update preflight in admin (`/api/admin/system/update/preflight`).
-4. Create release commit if needed.
-5. Create annotated tag:
+## 4) Release Protocol | Release-Protokoll
 
-```bash
-git tag -a vX.Y.Z -m "Release vX.Y.Z"
-```
+1. Ensure clean status:
+   - `git status --short --branch`
+2. Validate builds:
+   - `npm --prefix backend run build`
+   - `npm --prefix admin run build`
+   - `npm --prefix frontend run build`
+   - `npm --prefix ops run build`
+3. Run update preflight in admin:
+   - `POST /api/admin/system/update/preflight`
+4. Create annotated tag:
+   - `git tag -a vX.Y.Z -m "Release vX.Y.Z"`
+5. Publish:
+   - `git push origin main --follow-tags`
+6. Create GitHub release notes for the tag.
 
-6. Push branch and tags:
+## 5) Strict `main` Protection Baseline | Strikter `main`-Schutz
 
-```bash
-git push origin main
-git push origin --tags
-```
+Target profile:
 
-## 5) Required Validation Gates | Verbindliche Validierungstore
+1. Pull requests required before merge.
+2. At least 1 approval required.
+3. Stale reviews dismissed on new commits.
+4. Conversation resolution required.
+5. Linear history enforced.
+6. Force pushes blocked.
+7. Branch deletion blocked.
+8. Applies to admins too (no bypass).
 
-Before every release:
-- build checks pass
-- migration consistency is intact
-- backup freshness gate is green
-- update runbook is available and reviewed
+## 6) GitHub CLI Governance Commands | GitHub-CLI-Governance-Befehle
 
-Reference:
-- `docs/versioning-and-updates.md`
-
-## 6) Migration and Schema Safety | Migrations- und Schema-Sicherheit
-
-- schema changes must be versioned in `backend/src/db/migrations/definitions`
-- `schema_migrations` is the source of truth for execution state
-- avoid ad-hoc production SQL changes outside migration flow
-
-## 7) Incident and Rollback Policy | Incident- und Rollback-Policy
-
-**EN**
-- if health checks fail post-deploy: rollback to last stable tag
-- if migrations fail: stop rollout, fix root cause, redeploy deterministically
-
-**DE**
-- bei fehlschlagenden Health-Checks nach Deployment: Rollback auf letzten stabilen Tag
-- bei Migrationsfehlern: Rollout stoppen, Ursache beheben, reproduzierbar neu deployen
-
-## 8) Ownership and Approval | Verantwortlichkeit und Freigabe
-
-Project ownership:
-- Dominik Troester (Digitalbeauftragter, Verbandsgemeinde Otterbach-Otterberg)
-
-Operational principle:
-- high-trust ownership, high-discipline release process
-- every release must remain auditable and reproducible
-
-## 9) Minimal Command Reference | Kompakte Befehlsreferenz
+Check repository and branch settings:
 
 ```bash
-# current state
-git status --short --branch
-
-# sync and inspect
-git fetch --all --tags
-git log --oneline --decorate -n 20
-
-# release tag
-git tag -a vX.Y.Z -m "Release vX.Y.Z"
-
-# publish
-git push origin main
-git push origin --tags
+gh repo view --json nameWithOwner,visibility,defaultBranchRef
+gh api repos/:owner/:repo/branches/main/protection
 ```
+
+Set visibility to public:
+
+```bash
+gh repo edit --visibility public --accept-visibility-change-consequences
+```
+
+Apply strict branch protection for `main`:
+
+```bash
+gh api \
+  --method PUT \
+  -H "Accept: application/vnd.github+json" \
+  repos/:owner/:repo/branches/main/protection \
+  -f required_status_checks.strict=true \
+  -f enforce_admins=true \
+  -f required_pull_request_reviews.dismiss_stale_reviews=true \
+  -f required_pull_request_reviews.require_code_owner_reviews=false \
+  -F required_pull_request_reviews.required_approving_review_count=1 \
+  -f required_conversation_resolution=true \
+  -f restrictions=
+```
+
+Enable linear history, disable force-push and deletion:
+
+```bash
+gh api --method PUT repos/:owner/:repo/branches/main/protection/required_linear_history -f enabled=true
+gh api --method PUT repos/:owner/:repo/branches/main/protection/allow_force_pushes -f enabled=false
+gh api --method PUT repos/:owner/:repo/branches/main/protection/allow_deletions -f enabled=false
+```
+
+## 7) Public Repository Hygiene | Public-Repository-Hygiene
+
+Before/after switching to public:
+
+1. Ensure local-only files are ignored (`.env`, notes, ad-hoc scripts).
+2. Verify no secrets in tracked history.
+3. Keep release tags and release notes in sync with deployed states.
+4. Re-run build and smoke checks after tagging.
+
+## 8) Operational Ownership | Operative Verantwortung
+
+Project owner:
+
+- Dominik Troester  
+  Digitalbeauftragter, Verbandsgemeinde Otterbach-Otterberg
+
+Operating principle:
+
+- High ownership, high release discipline, full auditability.

@@ -142,6 +142,24 @@ npm --prefix ops run build
 - Git governance and release workflow: `docs/git-governance.md`
 - RLP import/responsibility/internal-task package: `docs/rlp-imports-responsibility-internal-tasks.md`
 
+## Release and Governance Baseline | Release- und Governance-Basis
+
+**EN**
+- Mainline is `main` with SemVer tags (`vMAJOR.MINOR.PATCH`).
+- Releases are created from clean, build-green states only.
+- Branch protection is mandatory for production integrity.
+- Update execution remains guided and manual via runbook, never arbitrary server-side shell execution from UI/API.
+
+**DE**
+- Hauptlinie ist `main` mit SemVer-Tags (`vMAJOR.MINOR.PATCH`).
+- Releases werden nur aus sauberen, build-gruenen Staenden erzeugt.
+- Branch-Protection ist fuer Produktionsintegritaet verpflichtend.
+- Updates bleiben gefuehrt und manuell per Runbook, keine beliebige serverseitige Shell-Ausfuehrung aus UI/API.
+
+Recommended references:
+- `docs/git-governance.md`
+- `docs/versioning-and-updates.md`
+
 ## Operations and Updates | Betrieb und Updates
 
 - Update and release process: [`docs/versioning-and-updates.md`](docs/versioning-and-updates.md)
@@ -172,6 +190,15 @@ Digitalbeauftragter, Verbandsgemeinde Otterbach-Otterberg
 **Project Character / Projektcharakter**  
 EN: Public-sector software initiative with single-owner execution and continuous operational evolution.  
 DE: Verwaltungsnahes Softwareprojekt mit Ein-Personen-Verantwortung und kontinuierlicher Weiterentwicklung im Betrieb.
+
+## Public Repository Readiness | Public-Repository-Readiness
+
+Before switching repository visibility from private to public:
+
+1. Verify that secrets are not tracked (`.env*`, private keys, local notes, ad-hoc scripts).
+2. Confirm branch protection is active on `main`.
+3. Ensure release tag and release notes are created for the published state.
+4. Validate build and core runtime checks once more on the tagged commit.
 
 ## License
 

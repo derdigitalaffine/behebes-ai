@@ -116,3 +116,13 @@ Docker Compose reicht diese als Build-Args an alle Images durch. Frontends nutze
 4. Runbook ist generierbar und enthält zur Laufzeit passende Runtime-Kommandos.
 5. Historie zeigt neue Preflight-/Status-Checks mit Zeitstempel und Ergebnis.
 6. Nach Deployment: Health + kritische Kernflows (Login, Tickets, Messenger, Call-Aufbau) manuell verifizieren.
+
+## GitHub-Governance-Verknuepfung
+
+Ergaenzend zur technischen Updatefaehigkeit gilt fuer oeffentliche Repositories:
+
+1. `main` bleibt strikt geschuetzt (PR-Pflicht, Approval, kein Force-Push).
+2. Jede produktive Auslieferung bekommt einen annotierten SemVer-Tag und GitHub-Release-Notizen.
+3. Sichtbarkeitswechsel (private/public) nur mit erneutem Secret- und Ignore-Check.
+
+Referenz: `docs/git-governance.md`

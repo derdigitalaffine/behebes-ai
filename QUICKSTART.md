@@ -133,3 +133,32 @@ podman-compose -f docker-compose.yml down -v
 - Release and update process: `docs/versioning-and-updates.md`
 - Git governance and release workflow: `docs/git-governance.md`
 - Main platform overview: `README.md`
+
+## 11) Release-Ready Validation | Release-Validierung
+
+Run before creating a release tag:
+
+```bash
+npm --prefix backend run build
+npm --prefix admin run build
+npm --prefix frontend run build
+npm --prefix ops run build
+```
+
+Recommended runtime checks:
+
+```bash
+curl -fsS http://localhost:${PROXY_PORT:-8384}/api/health
+curl -fsS http://localhost:${PROXY_PORT:-8384}/api/docs >/dev/null
+```
+
+Then continue with:
+- `docs/versioning-and-updates.md` (update preflight + runbook)
+- `docs/git-governance.md` (tagging + protected main workflow)
+
+## 12) Public Deployment Hygiene | Public-Deployment-Hygiene
+
+- Do not publish `.env.local` or environment-specific secrets.
+- Keep local-only notes/scripts ignored via `.gitignore`.
+- Use tagged releases for every public deployment state.
+- Keep `main` protected (PR reviews, linear history, no force-push).
