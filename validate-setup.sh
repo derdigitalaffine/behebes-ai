@@ -111,8 +111,8 @@ echo ""
 echo "📚 Checking Documentation..."
 [ -f "README.md" ] && check "README.md exists" || echo -e "${YELLOW}⚠${NC} README.md not found"
 [ -f "QUICKSTART.md" ] && check "QUICKSTART.md exists" || echo -e "${YELLOW}⚠${NC} QUICKSTART.md not found"
-[ -f "DEVELOPMENT.md" ] && check "DEVELOPMENT.md exists" || echo -e "${YELLOW}⚠${NC} DEVELOPMENT.md not found"
-[ -f "ROADMAP.md" ] && check "ROADMAP.md exists" || echo -e "${YELLOW}⚠${NC} ROADMAP.md not found"
+[ -f "docs/versioning-and-updates.md" ] && check "docs/versioning-and-updates.md exists" || echo -e "${YELLOW}⚠${NC} docs/versioning-and-updates.md not found"
+[ -f "docs/git-governance.md" ] && check "docs/git-governance.md exists" || echo -e "${YELLOW}⚠${NC} docs/git-governance.md not found"
 
 # Summary
 echo ""
