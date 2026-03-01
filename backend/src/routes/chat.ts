@@ -19,6 +19,7 @@ import { isNotificationEnabledForUser, listAdminNotifications } from '../service
 import { sendAdminPushToUsers } from '../services/admin-push.js';
 import { listAiQueue, testAIProvider } from '../services/ai.js';
 import { loadLlmChatbotSettings, loadLlmTaskRouting, resolveLlmRuntimeSelection } from '../services/llm-hub.js';
+import { publishChatCallUpdate, publishChatPresenceUpdate } from '../services/realtime.js';
 import {
   buildCustomGroupRoomJid,
   buildDirectConversationId,
@@ -88,6 +89,24 @@ interface ChatPresenceSettingsPayload {
   emoji: string;
   expiresAt: string | null;
   updatedAt: string | null;
+  source?: 'xmpp' | 'fallback';
+  lastSeenAt?: string | null;
+}
+
+interface ChatPresenceSnapshotEntry {
+  userId: string;
+  status: PresenceStatusKey | 'offline';
+  label: string;
+  color: string;
+  emoji: string;
+  source: 'xmpp' | 'fallback';
+  lastSeenAt: string | null;
+  resources: Array<{
+    resource: string;
+    transport: string;
+    appKind: string;
+    lastSeenAt: string | null;
+  }>;
 }
 
 interface ChatDirectoryOrgUnit {
@@ -196,6 +215,9 @@ const SYSTEM_CONVERSATION_ID = 'system:self';
 const SYSTEM_CHAT_USER_ID = 'system:bot';
 const SYSTEM_CHAT_NAME = 'behebes System';
 const SYSTEM_CHAT_SUBTITLE = 'Systemmeldungen und Ticket-Updates';
+const CHAT_PRESENCE_HEARTBEAT_TTL_MS = 90 * 1000;
+const CHAT_CALL_SESSION_EXPIRE_MS = 2 * 60 * 1000;
+const CHAT_CALL_TERMINAL_STATES = new Set(['ended', 'failed', 'cancelled', 'timeout', 'rejected']);
 
 function normalizeChatbotRole(value: unknown): 'user' | 'assistant' {
   return String(value || '').trim().toLowerCase() === 'assistant' ? 'assistant' : 'user';
@@ -598,6 +620,273 @@ async function saveChatPresenceSettings(
   );
 
   return loadChatPresenceSettings(userId);
+}
+
+function normalizeHeartbeatResource(value: unknown): string {
+  const normalized = normalizeText(value).replace(/[^a-zA-Z0-9._:-]/g, '').slice(0, 64);
+  return normalized || 'web';
+}
+
+function normalizeHeartbeatTransport(value: unknown): string {
+  const normalized = normalizeText(value).toLowerCase();
+  if (normalized === 'sse') return 'sse';
+  if (normalized === 'poll') return 'poll';
+  if (normalized === 'hybrid') return 'hybrid';
+  return 'xmpp';
+}
+
+function normalizeHeartbeatAppKind(value: unknown): string {
+  const normalized = normalizeText(value).toLowerCase();
+  if (normalized === 'ops') return 'ops';
+  if (normalized === 'admin') return 'admin';
+  return 'admin';
+}
+
+function buildXmppResource(appKind: string, clientIdRaw: unknown): string {
+  const kind = normalizeHeartbeatAppKind(appKind);
+  const clientId = normalizeText(clientIdRaw).replace(/[^a-zA-Z0-9._-]/g, '').slice(0, 40);
+  if (clientId) {
+    return `${kind}-${clientId}`;
+  }
+  return `${kind}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+async function touchPresenceHeartbeat(input: {
+  adminUserId: string;
+  resource: string;
+  transport?: string;
+  appKind?: string;
+}): Promise<void> {
+  const adminUserId = normalizeText(input.adminUserId);
+  if (!adminUserId) return;
+  const resource = normalizeHeartbeatResource(input.resource);
+  const transport = normalizeHeartbeatTransport(input.transport);
+  const appKind = normalizeHeartbeatAppKind(input.appKind);
+  const db = getDatabase();
+  await db.run(
+    `INSERT INTO admin_chat_presence_heartbeats (
+      admin_user_id, resource, transport, app_kind, last_seen_at
+    ) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+    ON CONFLICT(admin_user_id, resource, app_kind)
+    DO UPDATE SET
+      transport = excluded.transport,
+      last_seen_at = CURRENT_TIMESTAMP`,
+    [adminUserId, resource, transport, appKind]
+  );
+}
+
+async function loadLatestPresenceHeartbeat(adminUserId: string): Promise<{ lastSeenAt: string | null; source: 'xmpp' | 'fallback' }> {
+  const userId = normalizeText(adminUserId);
+  if (!userId) {
+    return { lastSeenAt: null, source: 'fallback' };
+  }
+  const db = getDatabase();
+  const row = await db.get<any>(
+    `SELECT last_seen_at
+     FROM admin_chat_presence_heartbeats
+     WHERE admin_user_id = ?
+     ORDER BY datetime(last_seen_at) DESC
+     LIMIT 1`,
+    [userId]
+  );
+  const lastSeenAt = normalizePresenceExpiresAt(row?.last_seen_at);
+  return {
+    lastSeenAt,
+    source: lastSeenAt ? 'xmpp' : 'fallback',
+  };
+}
+
+function isPresenceAlive(lastSeenAt: string | null): boolean {
+  if (!lastSeenAt) return false;
+  const lastMs = new Date(lastSeenAt).getTime();
+  if (!Number.isFinite(lastMs)) return false;
+  return Date.now() - lastMs <= CHAT_PRESENCE_HEARTBEAT_TTL_MS;
+}
+
+async function listPresenceSnapshot(contactIds: string[]): Promise<Record<string, ChatPresenceSnapshotEntry>> {
+  const scopedContactIds = uniqueStrings(contactIds);
+  if (scopedContactIds.length === 0) return {};
+
+  const db = getDatabase();
+  const rows = await db.all<any>(
+    `SELECT h.admin_user_id, h.resource, h.transport, h.app_kind, h.last_seen_at,
+            s.status_key, s.custom_label, s.custom_color, s.custom_emoji, s.expires_at, s.updated_at
+     FROM admin_chat_presence_heartbeats h
+     LEFT JOIN admin_chat_presence_settings s ON s.admin_user_id = h.admin_user_id
+     WHERE h.admin_user_id IN (${scopedContactIds.map(() => '?').join(', ')})
+     ORDER BY datetime(h.last_seen_at) DESC`,
+    scopedContactIds
+  );
+
+  const byUser = new Map<string, ChatPresenceSnapshotEntry>();
+  const settingsOnlyRows = await db.all<any>(
+    `SELECT admin_user_id, status_key, custom_label, custom_color, custom_emoji, expires_at, updated_at
+     FROM admin_chat_presence_settings
+     WHERE admin_user_id IN (${scopedContactIds.map(() => '?').join(', ')})`,
+    scopedContactIds
+  );
+  const settingsByUser = new Map<string, any>();
+  for (const row of settingsOnlyRows || []) {
+    const userId = normalizeText(row?.admin_user_id);
+    if (!userId) continue;
+    settingsByUser.set(userId, row);
+  }
+
+  for (const row of rows || []) {
+    const userId = normalizeText(row?.admin_user_id);
+    if (!userId) continue;
+    const heartbeatSeenAt = normalizePresenceExpiresAt(row?.last_seen_at);
+    const settingsRow = {
+      status_key: row?.status_key,
+      custom_label: row?.custom_label,
+      custom_color: row?.custom_color,
+      custom_emoji: row?.custom_emoji,
+      expires_at: row?.expires_at,
+      updated_at: row?.updated_at,
+    };
+    const mapped = mapPresenceRowToPayload(settingsRow);
+    const alive = isPresenceAlive(heartbeatSeenAt);
+    const resolvedStatus = alive ? mapped.status : 'offline';
+    const resolvedColor =
+      resolvedStatus === 'offline' ? CHAT_PRESENCE_DEFAULT_COLORS.offline : mapped.color || CHAT_PRESENCE_DEFAULT_COLORS.online;
+    const existing = byUser.get(userId);
+    if (!existing) {
+      byUser.set(userId, {
+        userId,
+        status: resolvedStatus,
+        label: mapped.label,
+        color: resolvedColor,
+        emoji: mapped.emoji,
+        source: alive ? 'xmpp' : 'fallback',
+        lastSeenAt: heartbeatSeenAt,
+        resources: [
+          {
+            resource: normalizeHeartbeatResource(row?.resource),
+            transport: normalizeHeartbeatTransport(row?.transport),
+            appKind: normalizeHeartbeatAppKind(row?.app_kind),
+            lastSeenAt: heartbeatSeenAt,
+          },
+        ],
+      });
+      continue;
+    }
+    existing.resources.push({
+      resource: normalizeHeartbeatResource(row?.resource),
+      transport: normalizeHeartbeatTransport(row?.transport),
+      appKind: normalizeHeartbeatAppKind(row?.app_kind),
+      lastSeenAt: heartbeatSeenAt,
+    });
+    if (!existing.lastSeenAt && heartbeatSeenAt) {
+      existing.lastSeenAt = heartbeatSeenAt;
+    }
+  }
+
+  for (const userId of scopedContactIds) {
+    if (byUser.has(userId)) continue;
+    const settingsRow = settingsByUser.get(userId) || {};
+    const mapped = mapPresenceRowToPayload(settingsRow);
+    byUser.set(userId, {
+      userId,
+      status: 'offline',
+      label: mapped.label,
+      color: CHAT_PRESENCE_DEFAULT_COLORS.offline,
+      emoji: mapped.emoji,
+      source: 'fallback',
+      lastSeenAt: null,
+      resources: [],
+    });
+  }
+
+  return Object.fromEntries(Array.from(byUser.entries()));
+}
+
+function normalizeCallSessionState(value: unknown): string {
+  const normalized = normalizeText(value).toLowerCase();
+  if (!normalized) return 'proposed';
+  if (CHAT_CALL_TERMINAL_STATES.has(normalized)) return normalized;
+  if (normalized === 'ringing' || normalized === 'claimed' || normalized === 'connecting' || normalized === 'active') {
+    return normalized;
+  }
+  return 'proposed';
+}
+
+function computeCallExpiresAt(): string {
+  return toSqlDateTime(new Date(Date.now() + CHAT_CALL_SESSION_EXPIRE_MS));
+}
+
+async function cleanupExpiredCallSessions(): Promise<void> {
+  const db = getDatabase();
+  await db.run(
+    `UPDATE admin_chat_call_sessions
+     SET state = 'timeout',
+         ended_at = COALESCE(ended_at, CURRENT_TIMESTAMP),
+         updated_at = CURRENT_TIMESTAMP
+     WHERE state NOT IN ('ended', 'failed', 'cancelled', 'timeout', 'rejected')
+       AND expires_at IS NOT NULL
+       AND datetime(expires_at) <= datetime(CURRENT_TIMESTAMP)`
+  );
+  await db.run(
+    `DELETE FROM admin_chat_presence_heartbeats
+     WHERE datetime(last_seen_at) <= datetime(CURRENT_TIMESTAMP, '-2 day')`
+  );
+}
+
+async function loadChatCallPolicy(input: {
+  access: Awaited<ReturnType<typeof loadAdminAccessContext>>;
+  adminUserId: string;
+}): Promise<{ enabled: boolean; reason: string }> {
+  const config = loadConfig();
+  if (!config.xmpp.callsEnabled) {
+    return { enabled: false, reason: 'global_env_disabled' };
+  }
+  const db = getDatabase();
+  const rows = await db.all<any>(
+    `SELECT \`key\`, \`value\`
+     FROM system_settings
+     WHERE \`key\` IN (
+       'chat.calls.enabled.global',
+       'chat.calls.disabledTenantIds',
+       'chat.calls.disabledUserIds'
+     )`
+  );
+  const values = new Map<string, string>();
+  for (const row of rows || []) {
+    values.set(normalizeText(row?.key), String(row?.value || ''));
+  }
+
+  const globalSetting = normalizeText(values.get('chat.calls.enabled.global'));
+  if (globalSetting && ['false', '0', 'off', 'no'].includes(globalSetting.toLowerCase())) {
+    return { enabled: false, reason: 'system_global_disabled' };
+  }
+
+  const disabledUserIds = (() => {
+    try {
+      const parsed = JSON.parse(values.get('chat.calls.disabledUserIds') || '[]');
+      return Array.isArray(parsed) ? parsed.map((entry) => normalizeText(entry)).filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  })();
+  const userId = normalizeText(input.adminUserId);
+  if (disabledUserIds.includes(userId)) {
+    return { enabled: false, reason: 'user_disabled' };
+  }
+
+  const disabledTenantIds = (() => {
+    try {
+      const parsed = JSON.parse(values.get('chat.calls.disabledTenantIds') || '[]');
+      return Array.isArray(parsed) ? parsed.map((entry) => normalizeText(entry)).filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  })();
+  const hasAllowedTenant =
+    input.access.tenantIds.length === 0 ||
+    input.access.tenantIds.some((tenantId) => !disabledTenantIds.includes(normalizeText(tenantId)));
+  if (!hasAllowedTenant) {
+    return { enabled: false, reason: 'tenant_disabled' };
+  }
+  return { enabled: true, reason: 'enabled' };
 }
 
 function formatDisplayName(input: { username?: unknown; firstName?: unknown; lastName?: unknown }): string {
@@ -1174,11 +1463,14 @@ async function sendChatPushNotifications(input: {
 router.get('/bootstrap', async (req: Request, res: Response) => {
   try {
     const config = loadConfig();
+    await cleanupExpiredCallSessions();
     const userId = normalizeText(req.userId);
     if (!userId) {
       return res.status(401).json({ message: 'Nicht authentifiziert.' });
     }
     const db = getDatabase();
+    const appKind = normalizeHeartbeatAppKind(req.query?.appKind || req.headers['x-chat-app-kind']);
+    const xmppResource = buildXmppResource(appKind, req.query?.clientId || req.headers['x-chat-client-id']);
     const me = await db.get<any>(
       `SELECT id, username, email, first_name, last_name, role
        FROM admin_users
@@ -1383,10 +1675,17 @@ router.get('/bootstrap', async (req: Request, res: Response) => {
     }));
 
     const presence = await loadChatPresenceSettings(userId);
+    const latestPresence = await loadLatestPresenceHeartbeat(userId);
     const chatbotSettings = await loadLlmChatbotSettings();
+    const callPolicy = await loadChatCallPolicy({ access, adminUserId: userId });
 
     return res.json({
       enabled: config.xmpp.enabled,
+      features: {
+        multiClientSync: true,
+        firstCatchRouting: true,
+        presenceHybrid: true,
+      },
       xmpp: {
         domain: config.xmpp.domain,
         mucService,
@@ -1394,7 +1693,7 @@ router.get('/bootstrap', async (req: Request, res: Response) => {
         jid: meCredentials.jid,
         username: meCredentials.username,
         password: meCredentials.password,
-        resource: 'admin',
+        resource: xmppResource,
         rtc: {
           iceServers: rtcIceServers,
           bestEffortOnly,
@@ -1414,7 +1713,16 @@ router.get('/bootstrap', async (req: Request, res: Response) => {
       },
       settings: {
         emailNotificationsDefault: config.xmpp.emailNotificationsDefault,
-        presence,
+        presence: {
+          ...presence,
+          source: latestPresence.source,
+          lastSeenAt: latestPresence.lastSeenAt,
+        },
+      },
+      calls: {
+        enabled: callPolicy.enabled,
+        routingMode: 'parallel_first_accept',
+        policyReason: callPolicy.reason,
       },
       assistant: {
         enabled: chatbotSettings.enabled === true,
@@ -1452,7 +1760,14 @@ router.get('/presence/self', async (req: Request, res: Response) => {
     const userId = normalizeText(req.userId);
     if (!userId) return res.status(401).json({ message: 'Nicht authentifiziert.' });
     const presence = await loadChatPresenceSettings(userId);
-    return res.json({ presence });
+    const latest = await loadLatestPresenceHeartbeat(userId);
+    return res.json({
+      presence: {
+        ...presence,
+        source: latest.source,
+        lastSeenAt: latest.lastSeenAt,
+      },
+    });
   } catch (error: any) {
     return res.status(500).json({
       message: 'Präsenzstatus konnte nicht geladen werden.',
@@ -1493,14 +1808,317 @@ router.patch('/presence/self', async (req: Request, res: Response) => {
       emoji: req.body?.emoji,
       expiresAt,
     });
+    publishChatPresenceUpdate({
+      reason: 'chat.presence.self.updated',
+      chatUserId: userId,
+    });
+    const latest = await loadLatestPresenceHeartbeat(userId);
 
     return res.json({
       message: 'Präsenzstatus gespeichert.',
-      presence,
+      presence: {
+        ...presence,
+        source: latest.source,
+        lastSeenAt: latest.lastSeenAt,
+      },
     });
   } catch (error: any) {
     return res.status(500).json({
       message: 'Präsenzstatus konnte nicht gespeichert werden.',
+      error: error?.message || String(error),
+    });
+  }
+});
+
+router.post('/presence/heartbeat', async (req: Request, res: Response) => {
+  try {
+    const userId = normalizeText(req.userId);
+    if (!userId) return res.status(401).json({ message: 'Nicht authentifiziert.' });
+    const resource = normalizeHeartbeatResource(req.body?.resource);
+    const transport = normalizeHeartbeatTransport(req.body?.transport);
+    const appKind = normalizeHeartbeatAppKind(req.body?.appKind);
+    await touchPresenceHeartbeat({
+      adminUserId: userId,
+      resource,
+      transport,
+      appKind,
+    });
+    publishChatPresenceUpdate({
+      reason: 'chat.presence.heartbeat',
+      chatUserId: userId,
+    });
+    const latest = await loadLatestPresenceHeartbeat(userId);
+    return res.json({
+      ok: true,
+      resource,
+      transport,
+      appKind,
+      source: latest.source,
+      lastSeenAt: latest.lastSeenAt,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: 'Presence-Heartbeat konnte nicht gespeichert werden.',
+      error: error?.message || String(error),
+    });
+  }
+});
+
+router.get('/presence/snapshot', async (req: Request, res: Response) => {
+  try {
+    const currentUserId = normalizeText(req.userId);
+    if (!currentUserId) return res.status(401).json({ message: 'Nicht authentifiziert.' });
+    const db = getDatabase();
+    const explicitIds = uniqueStrings(
+      String(req.query?.contactIds || '')
+        .split(',')
+        .map((entry) => normalizeText(entry))
+        .filter(Boolean)
+    );
+    let contactIds = explicitIds;
+    if (contactIds.length === 0) {
+      const activeUsers = await db.all<any>(
+        `SELECT id
+         FROM admin_users
+         WHERE COALESCE(active, 1) = 1
+         ORDER BY username ASC`
+      );
+      contactIds = uniqueStrings((activeUsers || []).map((row: any) => normalizeText(row?.id))).filter(
+        (entry) => entry !== currentUserId
+      );
+    }
+    const snapshot = await listPresenceSnapshot(contactIds);
+    return res.json({
+      items: Object.values(snapshot),
+      byUserId: snapshot,
+      generatedAt: new Date().toISOString(),
+      ttlMs: CHAT_PRESENCE_HEARTBEAT_TTL_MS,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: 'Presence-Snapshot konnte nicht geladen werden.',
+      error: error?.message || String(error),
+    });
+  }
+});
+
+router.post('/calls/:callId/claim', async (req: Request, res: Response) => {
+  try {
+    const currentUserId = normalizeText(req.userId);
+    if (!currentUserId) return res.status(401).json({ message: 'Nicht authentifiziert.' });
+    const callId = normalizeText(req.params?.callId);
+    if (!callId) return res.status(400).json({ message: 'callId fehlt.' });
+
+    const { access } = await resolveCurrentAccess(req);
+    const callPolicy = await loadChatCallPolicy({ access, adminUserId: currentUserId });
+    if (!callPolicy.enabled) {
+      return res.status(403).json({ message: 'Sprachanrufe sind für diesen Kontext deaktiviert.', reason: callPolicy.reason });
+    }
+
+    await cleanupExpiredCallSessions();
+    const db = getDatabase();
+    const callerUserId = normalizeText(req.body?.callerUserId) || null;
+    const resource = normalizeHeartbeatResource(req.body?.resource);
+    const appKind = normalizeHeartbeatAppKind(req.body?.appKind);
+    const transport = normalizeHeartbeatTransport(req.body?.transport);
+    const expiresAt = computeCallExpiresAt();
+
+    const existing = await db.get<any>(
+      `SELECT call_id, caller_user_id, callee_user_id, claimed_by_user_id, claimed_by_resource, state, expires_at, updated_at
+       FROM admin_chat_call_sessions
+       WHERE call_id = ?
+       LIMIT 1`,
+      [callId]
+    );
+    if (!existing?.call_id) {
+      await db.run(
+        `INSERT INTO admin_chat_call_sessions (
+          call_id, caller_user_id, callee_user_id, state, expires_at, meta_json, created_at, updated_at
+        ) VALUES (?, ?, ?, 'ringing', ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+        ON CONFLICT(call_id)
+        DO NOTHING`,
+        [
+          callId,
+          callerUserId,
+          currentUserId,
+          expiresAt,
+          JSON.stringify({
+            createdVia: 'claim',
+            appKind,
+            transport,
+          }),
+        ]
+      );
+    }
+
+    const updated = await db.run(
+      `UPDATE admin_chat_call_sessions
+       SET caller_user_id = COALESCE(caller_user_id, ?),
+           callee_user_id = COALESCE(callee_user_id, ?),
+           claimed_by_user_id = ?,
+           claimed_by_resource = ?,
+           state = 'claimed',
+           expires_at = ?,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE call_id = ?
+         AND state NOT IN ('ended', 'failed', 'cancelled', 'timeout', 'rejected')
+         AND (claimed_by_resource IS NULL OR claimed_by_resource = ?)
+         AND (claimed_by_user_id IS NULL OR claimed_by_user_id = ?)`,
+      [callerUserId, currentUserId, currentUserId, resource, expiresAt, callId, resource, currentUserId]
+    );
+    const row = await db.get<any>(
+      `SELECT call_id, caller_user_id, callee_user_id, claimed_by_user_id, claimed_by_resource, state, expires_at, updated_at
+       FROM admin_chat_call_sessions
+       WHERE call_id = ?
+       LIMIT 1`,
+      [callId]
+    );
+    const won =
+      Number(updated?.changes || 0) > 0 ||
+      (normalizeText(row?.claimed_by_user_id) === currentUserId &&
+        normalizeText(row?.claimed_by_resource) === resource &&
+        normalizeCallSessionState(row?.state) === 'claimed');
+
+    if (won) {
+      publishChatCallUpdate({
+        reason: 'chat.call.claimed',
+        callId,
+        chatUserId: currentUserId,
+      });
+      await touchPresenceHeartbeat({
+        adminUserId: currentUserId,
+        resource,
+        appKind,
+        transport,
+      });
+    }
+
+    return res.json({
+      callId,
+      won,
+      state: normalizeCallSessionState(row?.state),
+      claimedByUserId: normalizeText(row?.claimed_by_user_id) || null,
+      claimedByResource: normalizeText(row?.claimed_by_resource) || null,
+      callerUserId: normalizeText(row?.caller_user_id) || null,
+      calleeUserId: normalizeText(row?.callee_user_id) || null,
+      expiresAt: normalizePresenceExpiresAt(row?.expires_at),
+      updatedAt: normalizePresenceExpiresAt(row?.updated_at),
+      routingMode: 'parallel_first_accept',
+      reason: won ? 'accepted' : 'already_claimed',
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: 'Call-Claim fehlgeschlagen.',
+      error: error?.message || String(error),
+    });
+  }
+});
+
+router.post('/calls/:callId/release', async (req: Request, res: Response) => {
+  try {
+    const currentUserId = normalizeText(req.userId);
+    if (!currentUserId) return res.status(401).json({ message: 'Nicht authentifiziert.' });
+    const callId = normalizeText(req.params?.callId);
+    if (!callId) return res.status(400).json({ message: 'callId fehlt.' });
+    const state = normalizeCallSessionState(req.body?.state || req.body?.reason || 'ended');
+    const resource = normalizeHeartbeatResource(req.body?.resource);
+
+    const db = getDatabase();
+    const existing = await db.get<any>(
+      `SELECT call_id, caller_user_id, callee_user_id, claimed_by_user_id, claimed_by_resource, state
+       FROM admin_chat_call_sessions
+       WHERE call_id = ?
+       LIMIT 1`,
+      [callId]
+    );
+    if (!existing?.call_id) {
+      return res.status(404).json({ message: 'Call-Session nicht gefunden.' });
+    }
+
+    const allowed =
+      normalizeText(existing?.claimed_by_user_id) === currentUserId ||
+      normalizeText(existing?.caller_user_id) === currentUserId ||
+      normalizeText(existing?.callee_user_id) === currentUserId;
+    if (!allowed) {
+      return res.status(403).json({ message: 'Keine Berechtigung zum Freigeben dieser Call-Session.' });
+    }
+
+    await db.run(
+      `UPDATE admin_chat_call_sessions
+       SET state = ?,
+           ended_at = COALESCE(ended_at, CURRENT_TIMESTAMP),
+           expires_at = CURRENT_TIMESTAMP,
+           updated_at = CURRENT_TIMESTAMP
+       WHERE call_id = ?`,
+      [state, callId]
+    );
+    publishChatCallUpdate({
+      reason: 'chat.call.released',
+      callId,
+      chatUserId: currentUserId,
+    });
+
+    const row = await db.get<any>(
+      `SELECT call_id, caller_user_id, callee_user_id, claimed_by_user_id, claimed_by_resource, state, expires_at, updated_at, ended_at
+       FROM admin_chat_call_sessions
+       WHERE call_id = ?
+       LIMIT 1`,
+      [callId]
+    );
+    return res.json({
+      callId,
+      state: normalizeCallSessionState(row?.state),
+      claimedByUserId: normalizeText(row?.claimed_by_user_id) || null,
+      claimedByResource: normalizeText(row?.claimed_by_resource) || null,
+      callerUserId: normalizeText(row?.caller_user_id) || null,
+      calleeUserId: normalizeText(row?.callee_user_id) || null,
+      expiresAt: normalizePresenceExpiresAt(row?.expires_at),
+      endedAt: normalizePresenceExpiresAt(row?.ended_at),
+      updatedAt: normalizePresenceExpiresAt(row?.updated_at),
+      routingMode: 'parallel_first_accept',
+      resource,
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: 'Call-Release fehlgeschlagen.',
+      error: error?.message || String(error),
+    });
+  }
+});
+
+router.get('/calls/:callId/state', async (req: Request, res: Response) => {
+  try {
+    const currentUserId = normalizeText(req.userId);
+    if (!currentUserId) return res.status(401).json({ message: 'Nicht authentifiziert.' });
+    const callId = normalizeText(req.params?.callId);
+    if (!callId) return res.status(400).json({ message: 'callId fehlt.' });
+    await cleanupExpiredCallSessions();
+    const db = getDatabase();
+    const row = await db.get<any>(
+      `SELECT call_id, caller_user_id, callee_user_id, claimed_by_user_id, claimed_by_resource, state, expires_at, updated_at, ended_at
+       FROM admin_chat_call_sessions
+       WHERE call_id = ?
+       LIMIT 1`,
+      [callId]
+    );
+    if (!row?.call_id) {
+      return res.status(404).json({ message: 'Call-Session nicht gefunden.' });
+    }
+    return res.json({
+      callId,
+      state: normalizeCallSessionState(row?.state),
+      claimedByUserId: normalizeText(row?.claimed_by_user_id) || null,
+      claimedByResource: normalizeText(row?.claimed_by_resource) || null,
+      callerUserId: normalizeText(row?.caller_user_id) || null,
+      calleeUserId: normalizeText(row?.callee_user_id) || null,
+      expiresAt: normalizePresenceExpiresAt(row?.expires_at),
+      endedAt: normalizePresenceExpiresAt(row?.ended_at),
+      updatedAt: normalizePresenceExpiresAt(row?.updated_at),
+      routingMode: 'parallel_first_accept',
+    });
+  } catch (error: any) {
+    return res.status(500).json({
+      message: 'Call-State konnte nicht geladen werden.',
       error: error?.message || String(error),
     });
   }
@@ -2317,6 +2935,7 @@ router.get('/health', (_req: Request, res: Response) => {
   const config = loadConfig();
   return res.json({
     enabled: config.xmpp.enabled,
+    callsEnabled: config.xmpp.callsEnabled,
     domain: config.xmpp.domain,
     mucService: config.xmpp.mucService,
     websocketUrl: config.xmpp.websocketUrl,

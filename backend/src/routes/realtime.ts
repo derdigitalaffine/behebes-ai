@@ -8,7 +8,14 @@ import {
 const router = Router();
 
 function parseTopicSet(rawTopics: unknown): Set<AdminRealtimeTopic> {
-  const allowed = new Set<AdminRealtimeTopic>(['tickets', 'workflows', 'ai_queue', 'email_queue']);
+  const allowed = new Set<AdminRealtimeTopic>([
+    'tickets',
+    'workflows',
+    'ai_queue',
+    'email_queue',
+    'chat_presence',
+    'chat_calls',
+  ]);
   if (typeof rawTopics !== 'string' || !rawTopics.trim()) {
     return allowed;
   }

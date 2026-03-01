@@ -5,6 +5,7 @@ import { migration202602280110AddSystemUpdateHistoryIndexes } from './definition
 import { migration202603010100ImportsResponsibilityInvites } from './definitions/202603010100_imports_responsibility_invites.js';
 import { migration202603010200KeywordingServices } from './definitions/202603010200_keywording_services.js';
 import { migration202603011200AdminUserEmployeeProfileFields } from './definitions/202603011200_admin_user_employee_profile_fields.js';
+import { migration202603011530ChatPresenceCalls } from './definitions/202603011530_chat_presence_calls.js';
 import type { MigrationDefinition, MigrationExecutionResult } from './types.js';
 
 const REGISTERED_MIGRATIONS: MigrationDefinition[] = [
@@ -13,6 +14,7 @@ const REGISTERED_MIGRATIONS: MigrationDefinition[] = [
   migration202603010100ImportsResponsibilityInvites,
   migration202603010200KeywordingServices,
   migration202603011200AdminUserEmployeeProfileFields,
+  migration202603011530ChatPresenceCalls,
 ];
 
 function normalizeMigrationVersion(version: string): string {

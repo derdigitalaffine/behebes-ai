@@ -1,6 +1,12 @@
 import { EventEmitter } from 'events';
 
-export type AdminRealtimeTopic = 'tickets' | 'workflows' | 'ai_queue' | 'email_queue';
+export type AdminRealtimeTopic =
+  | 'tickets'
+  | 'workflows'
+  | 'ai_queue'
+  | 'email_queue'
+  | 'chat_presence'
+  | 'chat_calls';
 
 export interface AdminRealtimeUpdate {
   id: number;
@@ -11,6 +17,8 @@ export interface AdminRealtimeUpdate {
   workflowId?: string;
   aiQueueId?: string;
   emailQueueId?: string;
+  chatUserId?: string;
+  callId?: string;
 }
 
 type TopicPayload = Partial<Omit<AdminRealtimeUpdate, 'id' | 'topic' | 'at'>> & {
@@ -37,6 +45,10 @@ function flushPending() {
       at: now,
       ...(payload.ticketId ? { ticketId: payload.ticketId } : {}),
       ...(payload.workflowId ? { workflowId: payload.workflowId } : {}),
+      ...(payload.aiQueueId ? { aiQueueId: payload.aiQueueId } : {}),
+      ...(payload.emailQueueId ? { emailQueueId: payload.emailQueueId } : {}),
+      ...(payload.chatUserId ? { chatUserId: payload.chatUserId } : {}),
+      ...(payload.callId ? { callId: payload.callId } : {}),
     };
     emitter.emit('update', event);
   }
@@ -70,6 +82,14 @@ export function publishAiQueueUpdate(payload?: TopicPayload) {
 
 export function publishEmailQueueUpdate(payload?: TopicPayload) {
   queueTopicUpdate('email_queue', payload);
+}
+
+export function publishChatPresenceUpdate(payload?: TopicPayload) {
+  queueTopicUpdate('chat_presence', payload);
+}
+
+export function publishChatCallUpdate(payload?: TopicPayload) {
+  queueTopicUpdate('chat_calls', payload);
 }
 
 export function subscribeAdminRealtimeUpdates(

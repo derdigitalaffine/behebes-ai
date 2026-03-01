@@ -85,6 +85,7 @@ export interface Config {
   // XMPP chat integration
   xmpp: {
     enabled: boolean;
+    callsEnabled: boolean;
     domain: string;
     mucService: string;
     websocketUrl: string;
@@ -217,6 +218,7 @@ export function loadConfig(): Config {
 
     xmpp: {
       enabled: process.env.XMPP_ENABLED !== 'false',
+      callsEnabled: process.env.XMPP_CALLS_ENABLED !== 'false',
       domain: process.env.XMPP_DOMAIN || 'localhost',
       mucService: process.env.XMPP_MUC_SERVICE || `conference.${process.env.XMPP_DOMAIN || 'localhost'}`,
       websocketUrl: process.env.XMPP_WEBSOCKET_URL || '/xmpp-websocket',
