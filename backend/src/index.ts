@@ -42,6 +42,8 @@ import organizationRouter from './routes/organization.js';
 import chatRouter from './routes/chat.js';
 import importsRouter from './routes/imports.js';
 import responsibilityRouter from './routes/responsibility.js';
+import servicesRouter from './routes/services.js';
+import keywordingRouter from './routes/keywording.js';
 import { loadGeneralSettings } from './services/settings.js';
 import { openApiSpec } from './openapi.js';
 
@@ -294,6 +296,8 @@ app.use('/api/admin', organizationRouter);
 app.use('/api/admin/chat', chatRouter);
 app.use('/api/admin/imports', importsRouter);
 app.use('/api/admin/responsibility', responsibilityRouter);
+app.use('/api/admin', servicesRouter);
+app.use('/api/admin', keywordingRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/admin/realtime', realtimeRouter);
 app.use('/api/validations', validationsRouter);

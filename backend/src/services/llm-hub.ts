@@ -138,6 +138,10 @@ export const LLM_TASK_CAPABILITIES: Record<string, { requiresVision: boolean }> 
   workflow_confirmation_instruction: { requiresVision: false },
   workflow_internal_task_generation: { requiresVision: false },
   workflow_api_probe_analysis: { requiresVision: false },
+  keyword_seed_extraction: { requiresVision: false },
+  keyword_consolidation: { requiresVision: false },
+  keyword_target_assignment: { requiresVision: false },
+  keyword_quality_guard: { requiresVision: false },
   situation_report: { requiresVision: false },
   situation_report_category_workflow: { requiresVision: false },
   situation_report_free_analysis: { requiresVision: false },
@@ -418,6 +422,10 @@ function inferTaskKeyFromPurpose(purposeInput: unknown): string {
 
   if (purpose.includes('category_assistant')) return 'category_assistant';
   if (purpose.includes('admin_help') || purpose.includes('help')) return 'admin_help';
+  if (purpose.includes('keyword_seed_extraction')) return 'keyword_seed_extraction';
+  if (purpose.includes('keyword_consolidation')) return 'keyword_consolidation';
+  if (purpose.includes('keyword_target_assignment')) return 'keyword_target_assignment';
+  if (purpose.includes('keyword_quality_guard')) return 'keyword_quality_guard';
 
   if (purpose.includes('email_template_generate')) return 'template_generation';
   if (purpose.includes('workflow_redmine_ai')) return 'redmine_ticket';

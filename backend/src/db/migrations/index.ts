@@ -3,12 +3,16 @@ import type { AppDatabase } from '../../db-adapter.js';
 import { migration202602280100CreateSystemUpdatePreflightHistory } from './definitions/202602280100_create_system_update_preflight_history.js';
 import { migration202602280110AddSystemUpdateHistoryIndexes } from './definitions/202602280110_add_system_update_history_indexes.js';
 import { migration202603010100ImportsResponsibilityInvites } from './definitions/202603010100_imports_responsibility_invites.js';
+import { migration202603010200KeywordingServices } from './definitions/202603010200_keywording_services.js';
+import { migration202603011200AdminUserEmployeeProfileFields } from './definitions/202603011200_admin_user_employee_profile_fields.js';
 import type { MigrationDefinition, MigrationExecutionResult } from './types.js';
 
 const REGISTERED_MIGRATIONS: MigrationDefinition[] = [
   migration202602280100CreateSystemUpdatePreflightHistory,
   migration202602280110AddSystemUpdateHistoryIndexes,
   migration202603010100ImportsResponsibilityInvites,
+  migration202603010200KeywordingServices,
+  migration202603011200AdminUserEmployeeProfileFields,
 ];
 
 function normalizeMigrationVersion(version: string): string {

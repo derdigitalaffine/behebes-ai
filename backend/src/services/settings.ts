@@ -275,6 +275,103 @@ REGELN:
 - Keine Erklaerungen ausserhalb JSON.
 `;
 
+export const DEFAULT_SERVICE_KEYWORD_SEED_EXTRACTION_PROMPT = `Du extrahierst belastbare Schlagwort-Seeds aus kommunalen Leistungen.
+
+OUTPUT (nur JSON):
+{
+  "seeds": [
+    {
+      "keyword": "string",
+      "canonicalCandidate": "string",
+      "serviceEvidence": ["serviceId"],
+      "domain": "string",
+      "confidence": 0.0
+    }
+  ]
+}
+
+REGELN:
+- Nur JSON ausgeben, keine Erklaerungen ausserhalb JSON.
+- Nur verwaltungsrelevante Fachbegriffe, keine generischen Woerter (z. B. "Service", "Antrag", "Online").
+- Maximal 25 Seeds pro Antwort.
+- Bevorzuge Nomen/Fachbegriffe mit konkretem Verwaltungsbezug (z. B. Vorgangsarten, Rechtsbereiche, Leistungstypen).
+- Vermeide komplette Saetze, Floskeln, Produktnamen ohne Fachbezug und rein organisatorische Begriffe.
+- confidence strikt 0..1.
+- serviceEvidence nur aus uebergebenen Service-IDs.
+- Keine personenbezogenen Daten oder Freitextfragmente als Schlagwort uebernehmen.
+`;
+
+export const DEFAULT_SERVICE_KEYWORD_CONSOLIDATION_PROMPT = `Du konsolidierst Schlagwortkandidaten fuer eine kommunale Leistungsdatenbasis.
+
+OUTPUT (nur JSON):
+{
+  "items": [
+    {
+      "keyword": "string",
+      "canonicalKeyword": "string",
+      "confidence": 0.0
+    }
+  ]
+}
+
+REGELN:
+- Nur JSON ausgeben.
+- Synonyme und Duplikate auf ein kanonisches Schlagwort mappen.
+- Uebergenerische Begriffe verwerfen oder auf fachlich praezise Begriffe abbilden.
+- canonicalKeyword kurz, singular/plural konsistent und ohne Fuellwoerter.
+- Wenn keyword fachlich unbrauchbar ist, gib einen praeziseren kanonischen Begriff aus derselben Domäne zurueck.
+- confidence strikt 0..1.
+- Keine Erklaerungen ausserhalb JSON.
+`;
+
+export const DEFAULT_SERVICE_KEYWORD_TARGET_ASSIGNMENT_PROMPT = `Du ordnest kanonische Leistungsschlagworte den passenden Zielen zu (Organisationseinheiten und/oder Mitarbeitende).
+
+OUTPUT (nur JSON):
+{
+  "assignments": [
+    {
+      "targetType": "org_unit|user",
+      "targetId": "string",
+      "keyword": "string",
+      "confidence": 0.0,
+      "reasoning": "kurz und konkret"
+    }
+  ]
+}
+
+REGELN:
+- Nur JSON ausgeben.
+- targetId nur aus der uebergebenen Zielliste waehlen.
+- Spezifische Zuständigkeit vor allgemeiner Zuständigkeit.
+- Gib nur Zuordnungen aus, wenn ein plausibler Bezug aus Zielbezeichnung, bestehenden Keywords oder Leistungskontext ableitbar ist.
+- Maximal 8 Keywords je Target.
+- reasoning kurz (max. 20 Woerter), evidenzbasiert, ohne Halluzination.
+- Bei Unsicherheit konservativ bleiben (niedrige confidence).
+- Keine Halluzinationen, keine Erklaerungen ausserhalb JSON.
+`;
+
+export const DEFAULT_SERVICE_KEYWORD_QUALITY_GUARD_PROMPT = `Du bist Qualitaetspruefung fuer Schlagwortvorschlaege.
+
+OUTPUT (nur JSON):
+{
+  "accepted": [
+    { "keyword": "string", "confidence": 0.0, "reason": "string" }
+  ],
+  "rejected": [
+    { "keyword": "string", "reason": "string" }
+  ]
+}
+
+REGELN:
+- Nur JSON ausgeben.
+- Verwerfe generische, zu breite oder datenschutzkritische Begriffe.
+- Behalte nur fachlich belastbare Begriffe mit klarem Verwaltungsbezug.
+- Verwerfe Begriffe, die nur organisatorische Rollen/Container benennen (z. B. "Bearbeitung", "Stelle", "Prozess"), sofern kein Fachbezug.
+- Akzeptiere nur Begriffe, die fuer Routing/Verantwortlichkeit praktisch nutzbar sind.
+- confidence strikt 0..1.
+- Keine Erklaerungen ausserhalb JSON.
+`;
+
 export const DEFAULT_WORKFLOW_DATA_REQUEST_NEED_CHECK_PROMPT = `Du bist Vorpruefungs-Agent fuer KI-basierte Datennachforderung.
 Deine Aufgabe: Entscheide, ob zusaetzliche Angaben fuer eine belastbare Einordnung von Kategorie und Prioritaet noetig sind.
 Arbeite streng evidenzbasiert und nutze nur bereitgestellte Informationen.
@@ -2708,6 +2805,10 @@ export interface SystemPrompts {
   workflowInternalTaskGeneratorPrompt: string;
   adminAiHelpPrompt: string;
   categoryAssistantPrompt: string;
+  serviceKeywordSeedExtractionPrompt: string;
+  serviceKeywordConsolidationPrompt: string;
+  serviceKeywordTargetAssignmentPrompt: string;
+  serviceKeywordQualityGuardPrompt: string;
 }
 
 export async function loadSystemPrompts(): Promise<SettingsWithSources<SystemPrompts>> {
@@ -2742,6 +2843,10 @@ export async function loadSystemPrompts(): Promise<SettingsWithSources<SystemPro
     workflowInternalTaskGeneratorPrompt: DEFAULT_WORKFLOW_INTERNAL_TASK_GENERATOR_PROMPT,
     adminAiHelpPrompt: DEFAULT_ADMIN_AI_HELP_PROMPT,
     categoryAssistantPrompt: DEFAULT_CATEGORY_ASSISTANT_PROMPT,
+    serviceKeywordSeedExtractionPrompt: DEFAULT_SERVICE_KEYWORD_SEED_EXTRACTION_PROMPT,
+    serviceKeywordConsolidationPrompt: DEFAULT_SERVICE_KEYWORD_CONSOLIDATION_PROMPT,
+    serviceKeywordTargetAssignmentPrompt: DEFAULT_SERVICE_KEYWORD_TARGET_ASSIGNMENT_PROMPT,
+    serviceKeywordQualityGuardPrompt: DEFAULT_SERVICE_KEYWORD_QUALITY_GUARD_PROMPT,
   };
 
   const env: Partial<SystemPrompts> = {};
@@ -2823,6 +2928,18 @@ export async function loadSystemPrompts(): Promise<SettingsWithSources<SystemPro
   }
   if (process.env.ADMIN_AI_HELP_PROMPT) env.adminAiHelpPrompt = process.env.ADMIN_AI_HELP_PROMPT;
   if (process.env.CATEGORY_ASSISTANT_PROMPT) env.categoryAssistantPrompt = process.env.CATEGORY_ASSISTANT_PROMPT;
+  if (process.env.SERVICE_KEYWORD_SEED_EXTRACTION_PROMPT) {
+    env.serviceKeywordSeedExtractionPrompt = process.env.SERVICE_KEYWORD_SEED_EXTRACTION_PROMPT;
+  }
+  if (process.env.SERVICE_KEYWORD_CONSOLIDATION_PROMPT) {
+    env.serviceKeywordConsolidationPrompt = process.env.SERVICE_KEYWORD_CONSOLIDATION_PROMPT;
+  }
+  if (process.env.SERVICE_KEYWORD_TARGET_ASSIGNMENT_PROMPT) {
+    env.serviceKeywordTargetAssignmentPrompt = process.env.SERVICE_KEYWORD_TARGET_ASSIGNMENT_PROMPT;
+  }
+  if (process.env.SERVICE_KEYWORD_QUALITY_GUARD_PROMPT) {
+    env.serviceKeywordQualityGuardPrompt = process.env.SERVICE_KEYWORD_QUALITY_GUARD_PROMPT;
+  }
 
   const fileGeneral = await readJsonFile<any>(GENERAL_CONFIG_PATH);
 
@@ -2895,6 +3012,14 @@ export async function loadSystemPrompts(): Promise<SettingsWithSources<SystemPro
   merged.values.adminAiHelpPrompt = ensureAdminAiHelpGuidelines(
     merged.values.adminAiHelpPrompt
   );
+  merged.values.serviceKeywordSeedExtractionPrompt =
+    String(merged.values.serviceKeywordSeedExtractionPrompt || '').trim() || DEFAULT_SERVICE_KEYWORD_SEED_EXTRACTION_PROMPT;
+  merged.values.serviceKeywordConsolidationPrompt =
+    String(merged.values.serviceKeywordConsolidationPrompt || '').trim() || DEFAULT_SERVICE_KEYWORD_CONSOLIDATION_PROMPT;
+  merged.values.serviceKeywordTargetAssignmentPrompt =
+    String(merged.values.serviceKeywordTargetAssignmentPrompt || '').trim() || DEFAULT_SERVICE_KEYWORD_TARGET_ASSIGNMENT_PROMPT;
+  merged.values.serviceKeywordQualityGuardPrompt =
+    String(merged.values.serviceKeywordQualityGuardPrompt || '').trim() || DEFAULT_SERVICE_KEYWORD_QUALITY_GUARD_PROMPT;
 
   return merged;
 }
@@ -2932,6 +3057,10 @@ export async function getSystemPrompt(key: keyof SystemPrompts): Promise<string>
     workflowInternalTaskGeneratorPrompt: DEFAULT_WORKFLOW_INTERNAL_TASK_GENERATOR_PROMPT,
     adminAiHelpPrompt: DEFAULT_ADMIN_AI_HELP_PROMPT,
     categoryAssistantPrompt: DEFAULT_CATEGORY_ASSISTANT_PROMPT,
+    serviceKeywordSeedExtractionPrompt: DEFAULT_SERVICE_KEYWORD_SEED_EXTRACTION_PROMPT,
+    serviceKeywordConsolidationPrompt: DEFAULT_SERVICE_KEYWORD_CONSOLIDATION_PROMPT,
+    serviceKeywordTargetAssignmentPrompt: DEFAULT_SERVICE_KEYWORD_TARGET_ASSIGNMENT_PROMPT,
+    serviceKeywordQualityGuardPrompt: DEFAULT_SERVICE_KEYWORD_QUALITY_GUARD_PROMPT,
   };
   return values[key] || defaults[key];
 }

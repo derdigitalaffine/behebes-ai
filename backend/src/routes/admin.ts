@@ -529,6 +529,15 @@ async function requireGlobalEmailSettingsAccess(req: Request, res: Response): Pr
   return false;
 }
 
+async function requirePlatformAiSettingsAccess(req: Request, res: Response): Promise<boolean> {
+  const { access, capabilities } = await resolveRequestAdminCapabilities(req);
+  if (access.isGlobalAdmin && hasAnyCapability(capabilities, ['settings.ai.global.manage'])) {
+    return true;
+  }
+  res.status(403).json({ message: 'Keine Berechtigung für globale KI-Gedächtnis-Einstellungen.' });
+  return false;
+}
+
 async function requireTenantEmailSettingsAccess(req: Request, res: Response, tenantId: string): Promise<boolean> {
   const normalizedTenantId = normalizeText(tenantId);
   if (!normalizedTenantId) {
@@ -7387,6 +7396,7 @@ router.patch('/config/ai', adminOnly, async (req: Request, res: Response) => {
  */
 router.get('/config/ai/memory', adminOnly, async (_req: Request, res: Response) => {
   try {
+    if (!(await requirePlatformAiSettingsAccess(_req, res))) return;
     const { values, sources } = await loadAiAnalysisMemorySettings();
     await cleanupAnalysisMemory(values.retentionDays);
     const db = getDatabase();
@@ -7412,6 +7422,7 @@ router.get('/config/ai/memory', adminOnly, async (_req: Request, res: Response) 
  */
 router.patch('/config/ai/memory', adminOnly, async (req: Request, res: Response) => {
   try {
+    if (!(await requirePlatformAiSettingsAccess(req, res))) return;
     const incoming = req.body && typeof req.body === 'object' ? (req.body as Record<string, any>) : {};
     const { values: current } = await loadAiAnalysisMemorySettings();
     const next = {
@@ -7450,6 +7461,7 @@ router.patch('/config/ai/memory', adminOnly, async (req: Request, res: Response)
  */
 router.post('/config/ai/memory/entries', adminOnly, async (req: Request, res: Response) => {
   try {
+    if (!(await requirePlatformAiSettingsAccess(req, res))) return;
     const summary = String(req.body?.summary || '').trim();
     if (!summary) {
       return res.status(400).json({ message: 'summary ist erforderlich.' });
@@ -7485,6 +7497,7 @@ router.post('/config/ai/memory/entries', adminOnly, async (req: Request, res: Re
  */
 router.post('/config/ai/memory/compress-history', adminOnly, async (req: Request, res: Response) => {
   try {
+    if (!(await requirePlatformAiSettingsAccess(req, res))) return;
     const scopeKey = String(req.body?.scopeKey || '').trim() || 'situation-report-stable';
     const reportTypeFilter = normalizeOptionalSituationReportTypeFilter(req.body?.reportType);
     const days = sanitizeInteger(req.body?.days, 180, 1, 3650);
@@ -7648,6 +7661,7 @@ ${JSON.stringify(compactReports, null, 2)}
  */
 router.delete('/config/ai/memory/entries/:id', adminOnly, async (req: Request, res: Response) => {
   try {
+    if (!(await requirePlatformAiSettingsAccess(req, res))) return;
     const memoryId = String(req.params?.id || '').trim();
     if (!memoryId) {
       return res.status(400).json({ message: 'id ist erforderlich.' });

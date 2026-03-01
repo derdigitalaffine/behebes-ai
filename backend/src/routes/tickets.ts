@@ -899,23 +899,60 @@ router.get('/feed/atom', async (req: Request, res: Response) => {
 
     let query = `
       SELECT t.id,
+             t.submission_id,
+             t.tenant_id,
+             tn.name AS tenant_name,
              t.category,
              t.status,
              t.priority,
+             t.responsibility_authority,
              t.address,
              t.city,
+             t.primary_assignee_user_id,
+             t.primary_assignee_org_unit_id,
+             au.username AS primary_assignee_user_name,
+             ou.name AS primary_assignee_org_unit_name,
              t.created_at,
              t.updated_at,
              c.name AS citizen_name,
              c.email AS citizen_email,
-             COALESCE(img.image_count, 0) AS image_count
+             COALESCE(img.image_count, 0) AS image_count,
+             COALESCE(comment_stats.comment_count, 0) AS comment_count,
+             COALESCE(request_stats.request_count, 0) AS request_count,
+             COALESCE(request_stats.answered_count, 0) AS answered_request_count,
+             COALESCE(task_stats.internal_task_count, 0) AS internal_task_count,
+             COALESCE(task_stats.internal_task_open_count, 0) AS internal_task_open_count,
+             COALESCE(task_stats.internal_task_done_count, 0) AS internal_task_done_count
       FROM tickets t
       JOIN citizens c ON c.id = t.citizen_id
+      LEFT JOIN tenants tn ON tn.id = t.tenant_id
+      LEFT JOIN admin_users au ON au.id = t.primary_assignee_user_id
+      LEFT JOIN org_units ou ON ou.id = t.primary_assignee_org_unit_id
       LEFT JOIN (
         SELECT submission_id, COUNT(*) AS image_count
         FROM submission_images
         GROUP BY submission_id
       ) img ON img.submission_id = t.submission_id
+      LEFT JOIN (
+        SELECT ticket_id, COUNT(*) AS comment_count
+        FROM ticket_comments
+        GROUP BY ticket_id
+      ) comment_stats ON comment_stats.ticket_id = t.id
+      LEFT JOIN (
+        SELECT ticket_id,
+               COUNT(*) AS request_count,
+               SUM(CASE WHEN answered_at IS NOT NULL THEN 1 ELSE 0 END) AS answered_count
+        FROM workflow_data_requests
+        GROUP BY ticket_id
+      ) request_stats ON request_stats.ticket_id = t.id
+      LEFT JOIN (
+        SELECT ticket_id,
+               COUNT(*) AS internal_task_count,
+               SUM(CASE WHEN status IN ('pending', 'in_progress') THEN 1 ELSE 0 END) AS internal_task_open_count,
+               SUM(CASE WHEN status IN ('completed', 'rejected', 'cancelled') THEN 1 ELSE 0 END) AS internal_task_done_count
+        FROM workflow_internal_tasks
+        GROUP BY ticket_id
+      ) task_stats ON task_stats.ticket_id = t.id
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -933,6 +970,28 @@ router.get('/feed/atom', async (req: Request, res: Response) => {
     const selfUrlObject = new URL(`${req.protocol}://${requestHost}${req.originalUrl || req.path}`);
     selfUrlObject.searchParams.delete('token');
     const selfUrl = selfUrlObject.toString();
+    const statusLabelMap: Record<string, string> = {
+      pending_validation: 'Validierung ausstehend',
+      pending: 'Ausstehend',
+      open: 'Offen',
+      assigned: 'Zugewiesen',
+      'in-progress': 'In Bearbeitung',
+      completed: 'Abgeschlossen',
+      closed: 'Geschlossen',
+    };
+    const priorityLabelMap: Record<string, string> = {
+      low: 'Niedrig',
+      medium: 'Mittel',
+      high: 'Hoch',
+      critical: 'Kritisch',
+    };
+    const toAtomCategoryTerm = (prefix: string, value: unknown): string => {
+      const normalized = normalizeText(value)
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+      return `${prefix}:${normalized || 'na'}`;
+    };
     const feedUpdatedAt = rows.length > 0
       ? toIsoTimestamp(rows[0]?.updated_at || rows[0]?.created_at)
       : new Date().toISOString();
@@ -944,16 +1003,61 @@ router.get('/feed/atom', async (req: Request, res: Response) => {
         const ticketUrl = `${adminBaseUrl}/tickets/${encodeURIComponent(ticketId)}`;
         const workflow = workflowSummaries.get(ticketId);
         const reporter = normalizeText(row?.citizen_name) || normalizeText(row?.citizen_email) || 'Unbekannt';
+        const statusCode = normalizeText(row?.status).toLowerCase();
+        const priorityCode = normalizeText(row?.priority).toLowerCase();
+        const statusLabel = statusLabelMap[statusCode] || normalizeText(row?.status) || '–';
+        const priorityLabel = priorityLabelMap[priorityCode] || normalizeText(row?.priority) || '–';
+        const tenantLabel = normalizeText(row?.tenant_name) || normalizeText(row?.tenant_id) || '–';
+        const locationLabel = normalizeText(row?.city) || normalizeText(row?.address) || '–';
+        const assigneeLabel =
+          normalizeText(row?.primary_assignee_user_name) ||
+          normalizeText(row?.primary_assignee_user_id) ||
+          normalizeText(row?.primary_assignee_org_unit_name) ||
+          normalizeText(row?.primary_assignee_org_unit_id) ||
+          'Nicht zugewiesen';
+        const workflowLabel = workflow
+          ? `${normalizeText(workflow.title) || workflow.id} (${workflow.status})`
+          : 'Nicht gestartet';
+        const commentCount = Number(row?.comment_count || 0);
+        const requestCount = Number(row?.request_count || 0);
+        const answeredRequestCount = Number(row?.answered_request_count || 0);
+        const internalTaskCount = Number(row?.internal_task_count || 0);
+        const internalTaskOpenCount = Number(row?.internal_task_open_count || 0);
+        const internalTaskDoneCount = Number(row?.internal_task_done_count || 0);
         const summaryLines = [
+          `Mandant: ${tenantLabel}`,
           `Kategorie: ${normalizeText(row?.category) || '–'}`,
-          `Status: ${normalizeText(row?.status) || '–'}`,
-          `Prioritaet: ${normalizeText(row?.priority) || '–'}`,
-          `Ort: ${normalizeText(row?.city) || normalizeText(row?.address) || '–'}`,
+          `Status: ${statusLabel}`,
+          `Priorität: ${priorityLabel}`,
+          `Ort: ${locationLabel}`,
+          `Zuweisung: ${assigneeLabel}`,
           `Meldende Person: ${reporter}`,
           `Bilder: ${Number(row?.image_count || 0)}`,
-          `Workflow: ${workflow ? `${normalizeText(workflow.title) || workflow.id} (${workflow.status})` : 'Nicht gestartet'}`,
+          `Kommentare: ${commentCount}`,
+          `Bürgerformulare: ${answeredRequestCount}/${requestCount} beantwortet`,
+          `Interne Aufgaben: ${internalTaskDoneCount}/${internalTaskCount} erledigt (${internalTaskOpenCount} offen)`,
+          `Workflow: ${workflowLabel}`,
         ].join('\n');
-        const title = `[${normalizeText(row?.status) || 'ticket'}] ${normalizeText(row?.category) || 'Ticket'} · ${ticketId.slice(0, 8)}`;
+        const contentLines = [
+          `Ticket-ID: ${ticketId}`,
+          `Submission-ID: ${normalizeText(row?.submission_id) || '–'}`,
+          `Mandant: ${tenantLabel}`,
+          `Kategorie: ${normalizeText(row?.category) || '–'}`,
+          `Verwaltungs-Zuständigkeit: ${normalizeText(row?.responsibility_authority) || '–'}`,
+          `Status: ${statusLabel}`,
+          `Priorität: ${priorityLabel}`,
+          `Ort: ${locationLabel}`,
+          `Primäre Zuweisung: ${assigneeLabel}`,
+          `Meldende Person: ${reporter}`,
+          `Workflow: ${workflowLabel}`,
+          `Bilder: ${Number(row?.image_count || 0)}`,
+          `Kommentare: ${commentCount}`,
+          `Bürgerformulare: ${answeredRequestCount}/${requestCount} beantwortet`,
+          `Interne Aufgaben: ${internalTaskDoneCount}/${internalTaskCount} erledigt (${internalTaskOpenCount} offen)`,
+          `Erstellt: ${toIsoTimestamp(row?.created_at || row?.updated_at)}`,
+          `Aktualisiert: ${toIsoTimestamp(row?.updated_at || row?.created_at)}`,
+        ];
+        const title = `[${statusLabel} · ${priorityLabel}] ${normalizeText(row?.category) || 'Ticket'} · ${ticketId.slice(0, 8)} · ${tenantLabel}`;
         const updated = toIsoTimestamp(row?.updated_at || row?.created_at);
         const published = toIsoTimestamp(row?.created_at || row?.updated_at);
 
@@ -964,8 +1068,13 @@ router.get('/feed/atom', async (req: Request, res: Response) => {
           `  <updated>${escapeXml(updated)}</updated>`,
           `  <published>${escapeXml(published)}</published>`,
           `  <link href="${escapeXml(ticketUrl)}" rel="alternate" />`,
+          `  <category term="${escapeXml(toAtomCategoryTerm('status', statusCode))}" label="${escapeXml(`Status: ${statusLabel}`)}" />`,
+          `  <category term="${escapeXml(toAtomCategoryTerm('priority', priorityCode))}" label="${escapeXml(`Priorität: ${priorityLabel}`)}" />`,
+          `  <category term="${escapeXml(toAtomCategoryTerm('tenant', tenantLabel))}" label="${escapeXml(`Mandant: ${tenantLabel}`)}" />`,
+          `  <category term="${escapeXml(toAtomCategoryTerm('category', normalizeText(row?.category)))}" label="${escapeXml(`Kategorie: ${normalizeText(row?.category) || '–'}`)}" />`,
           `  <author><name>${escapeXml(reporter)}</name></author>`,
-          `  <summary>${escapeXml(summaryLines)}</summary>`,
+          `  <summary type="text">${escapeXml(summaryLines)}</summary>`,
+          `  <content type="text">${escapeXml(contentLines.join('\n'))}</content>`,
           '</entry>',
         ].join('\n');
       })
@@ -977,7 +1086,9 @@ router.get('/feed/atom', async (req: Request, res: Response) => {
       '<feed xmlns="http://www.w3.org/2005/Atom">',
       '  <id>urn:behebes:tickets:feed</id>',
       '  <title>behebes.AI Tickets</title>',
+      '  <subtitle>Operativer Ticket-Feed mit Workflow-, Formular- und Aufgabenmetrik</subtitle>',
       `  <updated>${escapeXml(feedUpdatedAt)}</updated>`,
+      `  <generator uri="https://behebes.de">behebes.AI</generator>`,
       `  <link rel="self" href="${escapeXml(selfUrl)}" />`,
       `  <link rel="alternate" href="${escapeXml(adminBaseUrl)}/tickets" />`,
       entries,

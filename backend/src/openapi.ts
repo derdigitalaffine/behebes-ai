@@ -56,7 +56,9 @@ export const openApiSpec: Record<string, any> = {
     { name: 'AI Queue', description: 'KI-Queue, Monitoring und Testläufe' },
     { name: 'Admin Push', description: 'WebPush für Staff-Clients (Ops/Admin)' },
     { name: 'Ops Mobile', description: 'Mobile-First Dashboard-Aggregationen für das Ops-Frontend' },
-    { name: 'Admin Imports', description: 'CSV-Importjobs für Benutzer und Organisationsstruktur' },
+    { name: 'Admin Imports', description: 'CSV-Importjobs für Benutzer, Organisationsstruktur und Leistungen' },
+    { name: 'Services', description: 'Leistungsverwaltung inklusive Verknüpfungen zu Orga, Mitarbeitenden und Formularen' },
+    { name: 'Keywording', description: 'Mehrstufige, leistungsbasierte KI-Verschlagwortung für Orga-Einheiten und Mitarbeitende' },
     { name: 'Responsibility', description: 'Verwaltungs-Zuständigkeitsprüfung und Konfiguration' },
   ],
   components: {
@@ -1824,7 +1826,7 @@ export const openApiSpec: Record<string, any> = {
       post: {
         tags: ['Admin Imports'],
         operationId: 'createImportJob',
-        summary: 'Erstellt einen neuen Importjob für Benutzer oder Organisationsstruktur.',
+        summary: 'Erstellt einen neuen Importjob für Benutzer, Organisationsstruktur oder Leistungen.',
         security: securedAdmin,
         requestBody: {
           required: true,
@@ -1834,7 +1836,7 @@ export const openApiSpec: Record<string, any> = {
                 type: 'object',
                 required: ['kind'],
                 properties: {
-                  kind: { type: 'string', enum: ['users', 'org_units'] },
+                  kind: { type: 'string', enum: ['users', 'org_units', 'services'] },
                   tenantId: { type: 'string' },
                   options: { type: 'object', additionalProperties: true },
                   mapping: { type: 'object', additionalProperties: true },
@@ -2032,6 +2034,274 @@ export const openApiSpec: Record<string, any> = {
             description: 'Scope-Vorschlag erzeugt.',
             content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
           },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+    },
+    '/api/admin/services': {
+      get: {
+        tags: ['Services'],
+        operationId: 'listServices',
+        summary: 'Listet Leistungen eines Mandanten.',
+        security: securedAdmin,
+        parameters: [
+          { in: 'query', name: 'tenantId', schema: { type: 'string' } },
+          { in: 'query', name: 'q', schema: { type: 'string' } },
+          { in: 'query', name: 'activeOnly', schema: { type: 'string', enum: ['0', '1'] } },
+          { in: 'query', name: 'limit', schema: { type: 'integer', minimum: 1, maximum: 500 } },
+          { in: 'query', name: 'offset', schema: { type: 'integer', minimum: 0 } },
+        ],
+        responses: {
+          '200': { description: 'Leistungen geladen.', content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } } },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+      post: {
+        tags: ['Services'],
+        operationId: 'createService',
+        summary: 'Erstellt eine neue Leistung.',
+        security: securedAdmin,
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+        },
+        responses: {
+          '201': { description: 'Leistung erstellt.', content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } } },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+    },
+    '/api/admin/services/{serviceId}': {
+      patch: {
+        tags: ['Services'],
+        operationId: 'updateService',
+        summary: 'Aktualisiert eine bestehende Leistung.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'serviceId', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+        },
+        responses: {
+          '200': { description: 'Leistung aktualisiert.', content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } } },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+      delete: {
+        tags: ['Services'],
+        operationId: 'deactivateService',
+        summary: 'Deaktiviert eine Leistung (Soft-Delete).',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'serviceId', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': { description: 'Leistung deaktiviert.', content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageResponse' } } } },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/api/admin/services/{serviceId}/links': {
+      get: {
+        tags: ['Services'],
+        operationId: 'getServiceLinks',
+        summary: 'Lädt Verknüpfungen (Orga, Nutzer, Formulare) einer Leistung.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'serviceId', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': { description: 'Verknüpfungen geladen.', content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } } },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+      put: {
+        tags: ['Services'],
+        operationId: 'setServiceLinks',
+        summary: 'Setzt Verknüpfungen (Orga, Nutzer, Formulare) einer Leistung.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'serviceId', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+        },
+        responses: {
+          '200': { description: 'Verknüpfungen gespeichert.', content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } } },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/api/admin/keywording/jobs': {
+      post: {
+        tags: ['Keywording'],
+        operationId: 'createKeywordingJob',
+        summary: 'Erstellt einen Keywording-Job.',
+        security: securedAdmin,
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['tenantId'],
+                properties: {
+                  tenantId: { type: 'string' },
+                  sourceScope: { type: 'string', enum: ['services_all', 'services_filtered', 'services_recent_import'] },
+                  targetScope: { type: 'string', enum: ['org_units', 'users', 'both'] },
+                  includeExistingKeywords: { type: 'boolean' },
+                  applyMode: { type: 'string', enum: ['review', 'auto_if_confident'] },
+                  minSuggestConfidence: { type: 'number', minimum: 0, maximum: 1 },
+                  minAutoApplyConfidence: { type: 'number', minimum: 0, maximum: 1 },
+                  maxKeywordsPerTarget: { type: 'integer', minimum: 1, maximum: 40 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': { description: 'Job erstellt.', content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } } },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+    },
+    '/api/admin/keywording/jobs/{id}': {
+      get: {
+        tags: ['Keywording'],
+        operationId: 'getKeywordingJob',
+        summary: 'Lädt Jobstatus, Events und Statistiken.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': { description: 'Job geladen.', content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } } },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/api/admin/keywording/jobs/{id}/run': {
+      post: {
+        tags: ['Keywording'],
+        operationId: 'runKeywordingJob',
+        summary: 'Startet den asynchronen Keywording-Lauf.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        responses: {
+          '202': { description: 'Job gestartet.', content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } } },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/api/admin/keywording/jobs/{id}/candidates': {
+      get: {
+        tags: ['Keywording'],
+        operationId: 'listKeywordingCandidates',
+        summary: 'Listet Review-Kandidaten eines Keywording-Jobs.',
+        security: securedAdmin,
+        parameters: [
+          { in: 'path', name: 'id', required: true, schema: { type: 'string' } },
+          { in: 'query', name: 'targetType', schema: { type: 'string', enum: ['org_unit', 'user'] } },
+          { in: 'query', name: 'action', schema: { type: 'string', enum: ['add', 'keep', 'remove', 'skip'] } },
+          { in: 'query', name: 'q', schema: { type: 'string' } },
+          { in: 'query', name: 'minConfidence', schema: { type: 'number', minimum: 0, maximum: 1 } },
+          { in: 'query', name: 'limit', schema: { type: 'integer', minimum: 1, maximum: 500 } },
+          { in: 'query', name: 'offset', schema: { type: 'integer', minimum: 0 } },
+        ],
+        responses: {
+          '200': { description: 'Kandidaten geladen.', content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } } },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/api/admin/keywording/jobs/{id}/apply': {
+      post: {
+        tags: ['Keywording'],
+        operationId: 'applyKeywordingCandidates',
+        summary: 'Übernimmt Kandidaten in User-/Orga-Schlagworte.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+        },
+        responses: {
+          '200': { description: 'Kandidaten übernommen.', content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } } },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+    },
+    '/api/admin/keywording/jobs/{id}/revert': {
+      post: {
+        tags: ['Keywording'],
+        operationId: 'revertKeywordingApply',
+        summary: 'Setzt Übernahmen eines Keywording-Jobs zurück.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': { description: 'Revert durchgeführt.', content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } } },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/api/admin/keywording/jobs/{id}/cancel': {
+      post: {
+        tags: ['Keywording'],
+        operationId: 'cancelKeywordingJob',
+        summary: 'Bricht einen Keywording-Job ab.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': { description: 'Job abgebrochen.', content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } } },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/api/admin/keywording/dictionary': {
+      get: {
+        tags: ['Keywording'],
+        operationId: 'getKeywordingDictionary',
+        summary: 'Lädt das tenant-spezifische Keyword-Wörterbuch.',
+        security: securedAdmin,
+        parameters: [{ in: 'query', name: 'tenantId', schema: { type: 'string' } }],
+        responses: {
+          '200': { description: 'Wörterbuch geladen.', content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } } },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+      patch: {
+        tags: ['Keywording'],
+        operationId: 'patchKeywordingDictionary',
+        summary: 'Aktualisiert das tenant-spezifische Keyword-Wörterbuch.',
+        security: securedAdmin,
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+        },
+        responses: {
+          '200': { description: 'Wörterbuch gespeichert.', content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } } },
+          '400': { $ref: '#/components/responses/ValidationError' },
           '401': { $ref: '#/components/responses/UnauthorizedError' },
           '403': { $ref: '#/components/responses/ForbiddenError' },
         },

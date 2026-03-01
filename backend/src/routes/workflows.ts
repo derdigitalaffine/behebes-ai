@@ -14472,6 +14472,11 @@ function normalizeInternalTaskResponsePayload(input: unknown): Record<string, an
   return sanitizeWorkflowStorageValue(input) as Record<string, any>;
 }
 
+function hasInternalTaskResponsePayload(responsePayload: Record<string, any> | null | undefined): boolean {
+  if (!responsePayload || typeof responsePayload !== 'object' || Array.isArray(responsePayload)) return false;
+  return Object.keys(responsePayload).length > 0;
+}
+
 async function applyInternalTaskDecisionToWorkflow(
   options: {
     internalTaskRow: any;
@@ -18394,6 +18399,7 @@ router.get('/api/admin/internal-tasks', authMiddleware, staffOnly, async (req: R
           .filter((value, index, self) => self.indexOf(value) === index)
       : [];
     const tenantIdFilter = asTrimmedString(req.query?.tenantId || req.query?.tenant_id);
+    const ticketIdFilter = asTrimmedString(req.query?.ticketId || req.query?.ticket_id);
     const assignmentFilter = asTrimmedString(req.query?.assignment).toLowerCase();
     const limitRaw = Number(req.query?.limit);
     const offsetRaw = Number(req.query?.offset);
@@ -18418,6 +18424,10 @@ router.get('/api/admin/internal-tasks', authMiddleware, staffOnly, async (req: R
     if (tenantIdFilter) {
       sql += ` AND it.tenant_id = ?`;
       params.push(tenantIdFilter);
+    }
+    if (ticketIdFilter) {
+      sql += ` AND it.ticket_id = ?`;
+      params.push(ticketIdFilter);
     }
     if (assignmentFilter === 'me') {
       const orgIds = access.readableOrgUnitIds || [];
@@ -18741,6 +18751,11 @@ router.post(
       const actorUserId = asTrimmedString((req as any).userId);
       const note = asTrimmedString(req.body?.note || req.body?.comment);
       const responsePayload = normalizeInternalTaskResponsePayload(req.body?.response || req.body?.payload);
+      if (currentStatus !== 'in_progress' && hasInternalTaskResponsePayload(responsePayload)) {
+        return res
+          .status(409)
+          .json({ message: 'Antwortformular kann erst nach Start der Aufgabe ausgefüllt werden.' });
+      }
       const nowIso = new Date().toISOString();
       const updateResult = await db.run(
         `UPDATE workflow_internal_tasks
@@ -18840,6 +18855,11 @@ router.post(
       const actorUserId = asTrimmedString((req as any).userId);
       const note = asTrimmedString(req.body?.note || req.body?.comment || req.body?.reason);
       const responsePayload = normalizeInternalTaskResponsePayload(req.body?.response || req.body?.payload);
+      if (currentStatus !== 'in_progress' && hasInternalTaskResponsePayload(responsePayload)) {
+        return res
+          .status(409)
+          .json({ message: 'Antwortformular kann erst nach Start der Aufgabe ausgefüllt werden.' });
+      }
       const nowIso = new Date().toISOString();
       const updateResult = await db.run(
         `UPDATE workflow_internal_tasks
