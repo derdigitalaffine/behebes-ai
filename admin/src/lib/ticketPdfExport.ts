@@ -1158,6 +1158,92 @@ function buildAdminTicketUrlForPdf(ticketId: unknown): string {
   return `${window.location.origin}${ticketPath}`;
 }
 
+function buildOpsTicketUrlForPdf(ticketId: unknown): string {
+  const normalizedTicketId = encodeURIComponent(safeString(ticketId));
+  const ticketPath = `/ops/tickets/${normalizedTicketId}`;
+  if (typeof window === 'undefined') return ticketPath;
+  return `${window.location.origin}${ticketPath}`;
+}
+
+function drawOpsQrSection(ctx: PdfContext, opsTicketUrl: string, qrDataUrl: string | null) {
+  drawSectionTitle(ctx, 'OPS-App Link');
+
+  const doc = ctx.doc;
+  const boxX = PAGE_MARGIN_X;
+  const boxW = contentWidth(doc);
+  const textX = boxX + 12;
+  const textWidth = boxW - 24;
+  const qrSize = 106;
+  const qrGap = 14;
+  const contentY = ctx.y - 10;
+  const hasQr = Boolean(qrDataUrl);
+  const textMaxWidth = hasQr ? textWidth - qrSize - qrGap : textWidth;
+
+  const headingLines = splitLines(doc, 'Direktzugriff auf dieses Ticket in der OPS-App', textMaxWidth, 11, 'bold');
+  const urlLines = splitLines(doc, opsTicketUrl, textMaxWidth, 9, 'normal');
+  const hintLines = splitLines(
+    doc,
+    hasQr
+      ? 'QR-Code mit der OPS-App scannen oder Link manuell öffnen.'
+      : 'QR-Code konnte nicht geladen werden. Bitte den Link manuell öffnen.',
+    textMaxWidth,
+    9,
+    'normal'
+  );
+  const textHeight = 10 + headingLines.length * 13 + 8 + urlLines.length * 11 + 8 + hintLines.length * 11 + 10;
+  const cardHeight = Math.max(textHeight, hasQr ? qrSize + 20 : 0);
+
+  ensureSpace(ctx, cardHeight + 8);
+
+  doc.setFillColor(COLOR.cardBg[0], COLOR.cardBg[1], COLOR.cardBg[2]);
+  doc.setDrawColor(COLOR.cardBorder[0], COLOR.cardBorder[1], COLOR.cardBorder[2]);
+  doc.roundedRect(boxX, contentY, boxW, cardHeight, 4, 4, 'FD');
+
+  let cursorY = contentY + 16;
+  doc.setFont('helvetica', 'bold');
+  doc.setFontSize(11);
+  setTextColor(doc, COLOR.textMain);
+  for (const line of headingLines) {
+    doc.text(line, textX, cursorY);
+    cursorY += 13;
+  }
+
+  cursorY += 4;
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(9);
+  setTextColor(doc, [30, 64, 175]);
+  for (const line of urlLines) {
+    doc.text(line, textX, cursorY);
+    cursorY += 11;
+  }
+
+  cursorY += 4;
+  setTextColor(doc, COLOR.textMuted);
+  for (const line of hintLines) {
+    doc.text(line, textX, cursorY);
+    cursorY += 11;
+  }
+
+  if (hasQr && qrDataUrl) {
+    const qrX = boxX + boxW - qrSize - 12;
+    const qrY = contentY + (cardHeight - qrSize) / 2;
+    const imageFormat = /^data:image\/jpe?g/i.test(qrDataUrl) ? 'JPEG' : 'PNG';
+    try {
+      doc.addImage(qrDataUrl, imageFormat, qrX, qrY, qrSize, qrSize);
+      doc.setDrawColor(COLOR.cardBorder[0], COLOR.cardBorder[1], COLOR.cardBorder[2]);
+      doc.setLineWidth(0.6);
+      doc.roundedRect(qrX - 2, qrY - 2, qrSize + 4, qrSize + 4, 3, 3);
+    } catch {
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      setTextColor(doc, COLOR.textMuted);
+      doc.text('QR konnte nicht eingebettet werden.', qrX, qrY + qrSize + 12);
+    }
+  }
+
+  ctx.y = contentY + cardHeight + SECTION_GAP;
+}
+
 async function blobToDataUrl(blob: Blob): Promise<string> {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -1203,7 +1289,7 @@ async function loadTicketQrCodeDataUrl(ticketUrl: string, sizePx = 120): Promise
   return null;
 }
 
-export function exportSingleTicketPdf(bundle: TicketPdfBundle, options?: TicketPdfSingleOptions) {
+export async function exportSingleTicketPdf(bundle: TicketPdfBundle, options?: TicketPdfSingleOptions) {
   const ticketIdShort = safeString(bundle.ticket.id).slice(0, 8) || 'ticket';
   const fileName =
     safeString(options?.fileName) ||
@@ -1222,6 +1308,10 @@ export function exportSingleTicketPdf(bundle: TicketPdfBundle, options?: TicketP
     safeString(options?.subtitle) ||
     'DIN A4 Hochformat · Vollständiger Ticketreport inkl. Workflow-/Fragen-/Kommentarjournal';
   drawHero(ctx, title, subtitle, options?.generatedBy);
+
+  const opsTicketUrl = buildOpsTicketUrlForPdf(bundle.ticket.id);
+  const qrCodeDataUrl = await loadTicketQrCodeDataUrl(opsTicketUrl, 240);
+  drawOpsQrSection(ctx, opsTicketUrl, qrCodeDataUrl);
 
   renderTicketBundle(ctx, bundle, { titlePrefix: `Ticket ${ticketIdShort}` });
 

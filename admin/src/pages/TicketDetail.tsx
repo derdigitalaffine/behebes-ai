@@ -2626,7 +2626,7 @@ const normalizeTicketPayload = (payload: any): Ticket => ({
             }
           : null;
 
-      exportSingleTicketPdf(
+      await exportSingleTicketPdf(
         {
           ticket: {
             ...ticket,
