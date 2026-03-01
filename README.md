@@ -13,7 +13,7 @@ behebes.AI ist eine mandantenfaehige Plattform fuer moderne Verwaltungsprozesse.
 
 ## Latest Release | Aktueller Release
 
-**Version:** `v1.0.6` (2026-03-01)
+**Version:** `v1.0.7` (2026-03-01)
 
 - **EN:** Admin mail operations were consolidated to a consistent MUI/SmartTable UI (`SMTP/IMAP`, templates, mailbox).
 - **DE:** Die Admin-Mailoberflaechen wurden konsistent auf MUI/SmartTable vereinheitlicht (`SMTP/IMAP`, Templates, Postfach).
@@ -21,6 +21,8 @@ behebes.AI ist eine mandantenfaehige Plattform fuer moderne Verwaltungsprozesse.
 - **DE:** Realtime-/Chat-Stabilitaet fuer Admin und OPS wurde gehaertet (Auth-Fehlerhandling, Reconnect-Verhalten, Call-Session-Lifecycle).
 - **EN:** Ticket PDF exports now include an OPS deep-link QR code for direct mobile handoff.
 - **DE:** Ticket-PDF-Exporte enthalten jetzt einen OPS-Deep-Link als QR-Code fuer den direkten mobilen Uebergang.
+- **EN:** Hotfix: fixed admin email settings runtime crash caused by a missing MUI `FormControlLabel` import.
+- **DE:** Hotfix: Runtime-Absturz in den Admin-E-Mail-Einstellungen durch fehlenden MUI-Import `FormControlLabel` behoben.
 
 ## Mission | Leitbild
 

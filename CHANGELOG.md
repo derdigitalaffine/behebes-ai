@@ -12,6 +12,12 @@ Das Format orientiert sich an Keep a Changelog und folgt Semantic Versioning.
 - DE: Laufende Weiterentwicklung fuer Messenger-Stabilitaet, Mobile-UX und Admin-Konsistenz.
   EN: Ongoing development for messenger stability, mobile UX, and admin consistency.
 
+## [v1.0.7] - 2026-03-01
+
+### Fixed / Behoben
+- DE: Email-Settings-Seite im Admin repariert (fehlender MUI-Import `FormControlLabel`), wodurch der Runtime-Fehler in `/admin-settings/email` behoben wurde.
+  EN: Fixed admin email settings page (missing MUI import `FormControlLabel`), resolving the runtime error in `/admin-settings/email`.
+
 ## [v1.0.6] - 2026-03-01
 
 ### Added / Hinzugefuegt
@@ -107,7 +113,8 @@ Das Format orientiert sich an Keep a Changelog und folgt Semantic Versioning.
 ---
 
 ## Links
-- [Unreleased]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.6...HEAD
+- [Unreleased]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.7...HEAD
+- [v1.0.7]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.6...v1.0.7
 - [v1.0.6]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.5...v1.0.6
 - [v1.0.3]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.2a...v1.0.3
 - [v1.0.2a]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.2...v1.0.2a
