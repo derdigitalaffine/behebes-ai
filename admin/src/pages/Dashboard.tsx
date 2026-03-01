@@ -114,9 +114,31 @@ interface WorkflowExecution {
   tasks: WorkflowTask[];
 }
 
-type SortKey = 'createdAt' | 'status' | 'priority' | 'category' | 'location';
-type SortDirection = 'asc' | 'desc';
-type PageSize = 5 | 10 | 20 | 50;
+interface BlockedWorkflowRow {
+  id: string;
+  title: string;
+  ticketId: string;
+  blockedReason: string;
+  slaState: 'ok' | 'risk' | 'overdue';
+  startedAt: string;
+}
+
+interface ActiveTimerRow {
+  id: string;
+  workflowId: string;
+  workflowTitle: string;
+  workflowStatus: WorkflowExecution['status'];
+  workflowBlockedReason: string;
+  workflowSlaState: 'ok' | 'risk' | 'overdue';
+  ticketId: string;
+  ticketCategory: string;
+  taskId: string;
+  taskTitle: string;
+  taskType: WorkflowTask['type'];
+  awaitingUntilMs: number;
+  countdown: string;
+  overdue: boolean;
+}
 
 const STATUS_LABELS: Record<string, string> = {
   pending_validation: 'Validierung ausstehend',
@@ -233,10 +255,6 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
   const [workflows, setWorkflows] = useState<WorkflowExecution[]>([]);
   const [statusFilter, setStatusFilter] = useState('all');
   const [search, setSearch] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('createdAt');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [pageSize, setPageSize] = useState<PageSize>(10);
-  const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [bulkLoading, setBulkLoading] = useState(false);
@@ -394,10 +412,6 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
     return () => window.clearInterval(timer);
   }, []);
 
-  useEffect(() => {
-    setPage(1);
-  }, [search, statusFilter, pageSize]);
-
   const parseDate = (value?: string) => {
     if (!value) return 0;
     const date = new Date(value);
@@ -432,21 +446,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
   }, [tickets]);
 
   const activeTimerRows = useMemo(() => {
-    const rows: Array<{
-      workflowId: string;
-      workflowTitle: string;
-      workflowStatus: WorkflowExecution['status'];
-      workflowBlockedReason: string;
-      workflowSlaState: 'ok' | 'risk' | 'overdue';
-      ticketId: string;
-      ticketCategory: string;
-      taskId: string;
-      taskTitle: string;
-      taskType: WorkflowTask['type'];
-      awaitingUntilMs: number;
-      countdown: string;
-      overdue: boolean;
-    }> = [];
+    const rows: ActiveTimerRow[] = [];
 
     const workflowList = Array.isArray(workflows) ? workflows : [];
     workflowList.forEach((workflow) => {
@@ -458,6 +458,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
         if (awaitingUntilMs === null) return;
         const ticket = workflow.ticketId ? ticketById.get(workflow.ticketId) : null;
         rows.push({
+          id: `${workflow.id}:${task.id}`,
           workflowId: workflow.id,
           workflowTitle: workflow.title || 'Workflow',
           workflowStatus: workflow.status,
@@ -593,7 +594,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
     ];
   }, [stats, workflowSlaDistribution]);
 
-  const blockedWorkflows = useMemo(
+  const blockedWorkflows = useMemo<BlockedWorkflowRow[]>(
     () =>
       workflows
         .filter((workflow) => (workflow.blockedReason || 'none') !== 'none')
@@ -610,68 +611,20 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
     [workflows]
   );
 
-  const sortedTickets = useMemo(() => {
-    return [...filteredTickets].sort((a, b) => {
-      let aValue: string | number = '';
-      let bValue: string | number = '';
+  const sortedTickets = useMemo(
+    () =>
+      [...filteredTickets].sort((a, b) => {
+        const priorityDiff =
+          Math.max(0, PRIORITY_ORDER.indexOf(a.priority)) - Math.max(0, PRIORITY_ORDER.indexOf(b.priority));
+        if (priorityDiff !== 0) return priorityDiff;
+        const statusDiff = Math.max(0, STATUS_ORDER.indexOf(a.status)) - Math.max(0, STATUS_ORDER.indexOf(b.status));
+        if (statusDiff !== 0) return statusDiff;
+        return parseDate(b.createdAt) - parseDate(a.createdAt);
+      }),
+    [filteredTickets]
+  );
 
-      switch (sortKey) {
-        case 'status':
-          aValue = Math.max(0, STATUS_ORDER.indexOf(a.status));
-          bValue = Math.max(0, STATUS_ORDER.indexOf(b.status));
-          break;
-        case 'priority':
-          aValue = Math.max(0, PRIORITY_ORDER.indexOf(a.priority));
-          bValue = Math.max(0, PRIORITY_ORDER.indexOf(b.priority));
-          break;
-        case 'category':
-          aValue = (a.category || '').toLowerCase();
-          bValue = (b.category || '').toLowerCase();
-          break;
-        case 'location':
-          aValue = (a.city || a.address || '').toLowerCase();
-          bValue = (b.city || b.address || '').toLowerCase();
-          break;
-        case 'createdAt':
-        default:
-          aValue = parseDate(a.createdAt);
-          bValue = parseDate(b.createdAt);
-      }
-
-      let result = 0;
-      if (typeof aValue === 'string' && typeof bValue === 'string') {
-        result = aValue.localeCompare(bValue, 'de', { sensitivity: 'base' });
-      } else {
-        result = Number(aValue) - Number(bValue);
-      }
-
-      return sortDirection === 'asc' ? result : -result;
-    });
-  }, [filteredTickets, sortKey, sortDirection]);
-
-  const total = sortedTickets.length;
   const selection = useTableSelection(sortedTickets);
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const start = (page - 1) * pageSize;
-  const pageItems = sortedTickets.slice(start, start + pageSize);
-
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
-
-  const setSort = (nextKey: SortKey) => {
-    if (sortKey === nextKey) {
-      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-      return;
-    }
-    setSortKey(nextKey);
-    setSortDirection('asc');
-  };
-
-  const sortIndicator = (key: SortKey) => {
-    if (sortKey !== key) return '↕';
-    return sortDirection === 'asc' ? '▲' : '▼';
-  };
 
   const formatDate = (value: string) => {
     const date = new Date(value);
@@ -848,6 +801,184 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
               tone="primary"
               onClick={() => {
                 navigate(`/tickets/${params.row.id}`);
+              }}
+            />
+          </SmartTableRowActions>
+        ),
+      },
+    ],
+    [navigate]
+  );
+
+  const blockedWorkflowColumns = useMemo<SmartTableColumnDef<BlockedWorkflowRow>[]>(
+    () => [
+      {
+        field: 'title',
+        headerName: 'Workflow',
+        minWidth: 220,
+        flex: 1,
+        renderCell: (params) => (
+          <div>
+            <div className="timer-workflow-title">{params.row.title}</div>
+            <div className="timer-workflow-id">{params.row.id.slice(0, 12)}</div>
+          </div>
+        ),
+      },
+      {
+        field: 'ticketId',
+        headerName: 'Ticket',
+        minWidth: 120,
+        renderCell: (params) => <code className="ticket-id">{params.row.ticketId?.slice(0, 8) || '–'}</code>,
+      },
+      {
+        field: 'blockedReason',
+        headerName: 'Blocker',
+        minWidth: 180,
+        valueFormatter: (value) => WORKFLOW_BLOCKED_REASON_LABELS[String(value || '')] || String(value || '–'),
+      },
+      {
+        field: 'slaState',
+        headerName: 'SLA',
+        minWidth: 140,
+        renderCell: (params) => (
+          <span className={`timer-countdown-chip ${params.row.slaState === 'overdue' ? 'is-overdue' : 'is-running'}`}>
+            {WORKFLOW_SLA_LABELS[params.row.slaState] || WORKFLOW_SLA_LABELS.ok}
+          </span>
+        ),
+      },
+      {
+        field: 'startedAt',
+        headerName: 'Start',
+        minWidth: 160,
+        valueFormatter: (value) => formatDate(String(value || '')),
+      },
+      {
+        field: 'actions',
+        headerName: 'Aktion',
+        minWidth: 96,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        hideable: false,
+        renderCell: (params) => (
+          <SmartTableRowActions>
+            <SmartTableRowActionButton
+              label={params.row.ticketId ? 'Ticket öffnen' : 'Workflows öffnen'}
+              icon={<OpenInNewRoundedIcon fontSize="inherit" />}
+              tone="primary"
+              onClick={() => {
+                if (params.row.ticketId) {
+                  navigate(`/tickets/${params.row.ticketId}`);
+                  return;
+                }
+                navigate('/workflows');
+              }}
+            />
+          </SmartTableRowActions>
+        ),
+      },
+    ],
+    [navigate]
+  );
+
+  const activeTimerColumns = useMemo<SmartTableColumnDef<ActiveTimerRow>[]>(
+    () => [
+      {
+        field: 'workflowTitle',
+        headerName: 'Workflow',
+        minWidth: 220,
+        flex: 1,
+        renderCell: (params) => (
+          <div>
+            <div className="timer-workflow-title">{params.row.workflowTitle}</div>
+            <div className="timer-workflow-id">{params.row.workflowId.slice(0, 12)}</div>
+          </div>
+        ),
+      },
+      {
+        field: 'ticketId',
+        headerName: 'Ticket',
+        minWidth: 170,
+        renderCell: (params) => (
+          <div>
+            <div className="timer-ticket-main">
+              <code className="ticket-id">{params.row.ticketId.slice(0, 8)}</code>
+            </div>
+            <div className="timer-ticket-category">{params.row.ticketCategory}</div>
+          </div>
+        ),
+      },
+      {
+        field: 'taskTitle',
+        headerName: 'Schritt',
+        minWidth: 210,
+        flex: 1,
+        renderCell: (params) => (
+          <div>
+            <div className="timer-task-title">{params.row.taskTitle}</div>
+            <div className="timer-task-type">{WORKFLOW_TASK_LABELS[params.row.taskType] || params.row.taskType}</div>
+          </div>
+        ),
+      },
+      {
+        field: 'awaitingUntilMs',
+        headerName: 'Fällig um',
+        minWidth: 170,
+        valueFormatter: (value) => formatDateTimeFromMs(Number(value || 0)),
+      },
+      {
+        field: 'countdown',
+        headerName: 'Restzeit',
+        minWidth: 170,
+        renderCell: (params) => (
+          <span className={`timer-countdown-chip ${params.row.overdue ? 'is-overdue' : 'is-running'}`}>
+            <i className={`fa-solid ${params.row.overdue ? 'fa-triangle-exclamation' : 'fa-stopwatch'}`} />
+            {params.row.countdown}
+          </span>
+        ),
+      },
+      {
+        field: 'workflowStatus',
+        headerName: 'Status',
+        minWidth: 130,
+        renderCell: (params) => (
+          <span className={`status-pill status-${params.row.workflowStatus.toLowerCase()}`}>
+            {WORKFLOW_STATUS_LABELS[params.row.workflowStatus]}
+          </span>
+        ),
+      },
+      {
+        field: 'workflowSlaState',
+        headerName: 'SLA',
+        minWidth: 120,
+        renderCell: (params) => (
+          <span className={`timer-countdown-chip ${params.row.workflowSlaState === 'overdue' ? 'is-overdue' : 'is-running'}`}>
+            {WORKFLOW_SLA_LABELS[params.row.workflowSlaState]}
+          </span>
+        ),
+      },
+      {
+        field: 'workflowBlockedReason',
+        headerName: 'Blocker',
+        minWidth: 180,
+        valueFormatter: (value) => WORKFLOW_BLOCKED_REASON_LABELS[String(value || '')] || String(value || '–'),
+      },
+      {
+        field: 'actions',
+        headerName: 'Aktion',
+        minWidth: 96,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        hideable: false,
+        renderCell: (params) => (
+          <SmartTableRowActions>
+            <SmartTableRowActionButton
+              label="Ticket öffnen"
+              icon={<OpenInNewRoundedIcon fontSize="inherit" />}
+              tone="primary"
+              onClick={() => {
+                navigate(`/tickets/${params.row.ticketId}`);
               }}
             />
           </SmartTableRowActions>
@@ -1130,18 +1261,9 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
                 placeholder="Ticket-ID, Kategorie, Ort..."
               />
             </div>
-            <div className="control-group">
-              <label>Pro Seite</label>
-              <select value={pageSize} onChange={(e) => setPageSize(Number(e.target.value) as PageSize)}>
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-            </div>
           </div>
 
-          {pageItems.length === 0 ? (
+          {sortedTickets.length === 0 ? (
             <p className="no-tickets">Keine Tickets gefunden.</p>
           ) : (
             <>
@@ -1165,7 +1287,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
                 tableId="dashboard-tickets"
                 userId={token}
                 title="Tickets"
-                rows={pageItems}
+                rows={sortedTickets}
                 columns={ticketColumns}
                 loading={isLoading}
                 checkboxSelection={admin}
@@ -1178,31 +1300,12 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
                 lastEventAt={liveLastEventAt}
                 lastSyncAt={lastSyncAt ? new Date(lastSyncAt).toISOString() : null}
                 isRefreshing={isLiveRefreshing}
-                defaultPageSize={pageSize}
+                defaultPageSize={10}
                 pageSizeOptions={[5, 10, 20, 50]}
                 disableRowSelectionOnClick
               />
             </>
           )}
-
-          <div className="dashboard-pagination">
-            <span>
-              Zeige {total === 0 ? 0 : start + 1}-{Math.min(start + pageSize, total)} von {total}
-            </span>
-            <div className="pagination-actions">
-              <button type="button" onClick={() => setPage((prev) => Math.max(1, prev - 1))} disabled={page <= 1}>
-                Zurück
-              </button>
-              <span>Seite {page} / {totalPages}</span>
-              <button
-                type="button"
-                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                disabled={page >= totalPages}
-              >
-                Weiter
-              </button>
-            </div>
-          </div>
         </section>
       </div>
 
@@ -1214,51 +1317,24 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
         {blockedWorkflows.length === 0 ? (
           <p className="timer-empty">Aktuell sind keine Workflows mit Blocker gemeldet.</p>
         ) : (
-          <div className="dashboard-table-wrap">
-            <table className="dashboard-table">
-              <thead>
-                <tr>
-                  <th>Workflow</th>
-                  <th>Ticket</th>
-                  <th>Blocker</th>
-                  <th>SLA</th>
-                  <th>Start</th>
-                  <th>Aktion</th>
-                </tr>
-              </thead>
-              <tbody>
-                {blockedWorkflows.map((row) => (
-                  <tr key={row.id}>
-                    <td>
-                      <div className="timer-workflow-title">{row.title}</div>
-                      <div className="timer-workflow-id">{row.id.slice(0, 12)}</div>
-                    </td>
-                    <td>
-                      <code className="ticket-id">{row.ticketId?.slice(0, 8) || '–'}</code>
-                    </td>
-                    <td>{WORKFLOW_BLOCKED_REASON_LABELS[row.blockedReason] || row.blockedReason}</td>
-                    <td>
-                      <span className={`timer-countdown-chip ${row.slaState === 'overdue' ? 'is-overdue' : 'is-running'}`}>
-                        {WORKFLOW_SLA_LABELS[row.slaState as 'ok' | 'risk' | 'overdue'] || WORKFLOW_SLA_LABELS.ok}
-                      </span>
-                    </td>
-                    <td>{formatDate(row.startedAt)}</td>
-                    <td>
-                      {row.ticketId ? (
-                        <Link className="panel-link" to={`/tickets/${row.ticketId}`}>
-                          Ticket öffnen
-                        </Link>
-                      ) : (
-                        <Link className="panel-link" to="/workflows">
-                          Workflows
-                        </Link>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <SmartTable<BlockedWorkflowRow>
+            tableId="dashboard-blocked-workflows"
+            userId={token}
+            title="Blockierte Workflows"
+            rows={blockedWorkflows}
+            columns={blockedWorkflowColumns}
+            loading={isLoading}
+            onRefresh={() => {
+              void fetchData();
+            }}
+            liveState={liveConnectionState}
+            lastEventAt={liveLastEventAt}
+            lastSyncAt={lastSyncAt ? new Date(lastSyncAt).toISOString() : null}
+            isRefreshing={isLiveRefreshing}
+            defaultPageSize={8}
+            pageSizeOptions={[5, 8, 10, 20]}
+            disableRowSelectionOnClick
+          />
         )}
       </section>
 
@@ -1272,71 +1348,24 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
         {activeTimerRows.length === 0 ? (
           <p className="timer-empty">Aktuell laufen keine Timer in Workflow-Schritten.</p>
         ) : (
-          <div className="dashboard-table-wrap timer-table-wrap">
-            <table className="dashboard-table timer-table">
-              <thead>
-                <tr>
-                  <th>Workflow</th>
-                  <th>Ticket</th>
-                  <th>Schritt</th>
-                  <th>Fällig um</th>
-                  <th>Restzeit</th>
-                  <th>Status</th>
-                  <th>SLA</th>
-                  <th>Blocker</th>
-                  <th>Aktion</th>
-                </tr>
-              </thead>
-              <tbody>
-                {activeTimerRows.map((row) => (
-                  <tr key={`${row.workflowId}-${row.taskId}`}>
-                    <td>
-                      <div className="timer-workflow-title">{row.workflowTitle}</div>
-                      <div className="timer-workflow-id">{row.workflowId.slice(0, 12)}</div>
-                    </td>
-                    <td>
-                      <div className="timer-ticket-main">
-                        <code className="ticket-id">{row.ticketId.slice(0, 8)}</code>
-                      </div>
-                      <div className="timer-ticket-category">{row.ticketCategory}</div>
-                    </td>
-                    <td>
-                      <div className="timer-task-title">{row.taskTitle}</div>
-                      <div className="timer-task-type">{WORKFLOW_TASK_LABELS[row.taskType] || row.taskType}</div>
-                    </td>
-                    <td>{formatDateTimeFromMs(row.awaitingUntilMs)}</td>
-                    <td>
-                      <span className={`timer-countdown-chip ${row.overdue ? 'is-overdue' : 'is-running'}`}>
-                        <i className={`fa-solid ${row.overdue ? 'fa-triangle-exclamation' : 'fa-stopwatch'}`} />
-                        {row.countdown}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`status-pill status-${row.workflowStatus.toLowerCase()}`}>
-                        {WORKFLOW_STATUS_LABELS[row.workflowStatus]}
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`timer-countdown-chip ${row.workflowSlaState === 'overdue' ? 'is-overdue' : 'is-running'}`}>
-                        {WORKFLOW_SLA_LABELS[row.workflowSlaState]}
-                      </span>
-                    </td>
-                    <td>{WORKFLOW_BLOCKED_REASON_LABELS[row.workflowBlockedReason] || row.workflowBlockedReason}</td>
-                    <td>
-                      <div className="timer-actions">
-                        <Link className="panel-link" to={`/tickets/${row.ticketId}`}>
-                          Ticket
-                        </Link>
-                        <Link className="panel-link" to="/workflows">
-                          Workflows
-                        </Link>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <SmartTable<ActiveTimerRow>
+            tableId="dashboard-active-timers"
+            userId={token}
+            title="Aktive laufende Timer"
+            rows={activeTimerRows}
+            columns={activeTimerColumns}
+            loading={isLoading}
+            onRefresh={() => {
+              void fetchData();
+            }}
+            liveState={liveConnectionState}
+            lastEventAt={liveLastEventAt}
+            lastSyncAt={lastSyncAt ? new Date(lastSyncAt).toISOString() : null}
+            isRefreshing={isLiveRefreshing}
+            defaultPageSize={10}
+            pageSizeOptions={[5, 10, 20, 50]}
+            disableRowSelectionOnClick
+          />
         )}
       </section>
     </div>

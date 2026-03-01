@@ -35,27 +35,6 @@
   color: var(--admin-text-muted);
 }
 
-.systeminfos-alert {
-  border-radius: 10px;
-  padding: 0.75rem 0.9rem;
-  font-size: 0.9rem;
-  border: 1px solid transparent;
-}
-
-.systeminfos-alert.error {
-  background: var(--admin-danger-bg);
-  color: var(--admin-danger-text);
-  border-color: #efc5bd;
-}
-
-.systeminfos-alert.warning {
-  background: var(--admin-warning-bg);
-  color: var(--admin-warning-text);
-  border-color: #f1d699;
-  display: grid;
-  gap: 0.25rem;
-}
-
 .systeminfos-kpis {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
@@ -94,7 +73,7 @@
   border-radius: 12px;
   padding: 0.85rem;
   display: grid;
-  gap: 0.7rem;
+  gap: 0.8rem;
 }
 
 .systeminfos-section h3 {
@@ -103,110 +82,22 @@
   color: var(--admin-primary);
 }
 
-.systeminfos-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 0.7rem;
-}
-
-.systeminfos-card {
-  border: 1px solid var(--admin-border);
-  border-radius: 10px;
-  padding: 0.75rem;
-  background: linear-gradient(180deg, #ffffff 0%, #f7fbff 100%);
-}
-
-.systeminfos-card h4 {
-  margin: 0 0 0.55rem;
-  font-size: 0.92rem;
-  color: var(--admin-primary);
-}
-
-.systeminfos-card dl {
-  margin: 0;
-  display: grid;
-  gap: 0.32rem;
-}
-
-.systeminfos-card dl div {
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  gap: 0.6rem;
-}
-
-.systeminfos-card dt {
-  color: var(--admin-text-muted);
-  font-size: 0.79rem;
-}
-
-.systeminfos-card dd {
-  margin: 0;
-  color: var(--admin-text);
-  font-size: 0.82rem;
-  text-align: right;
-  word-break: break-word;
-}
-
-.systeminfos-table-wrap {
-  overflow: auto;
-  border: 1px solid var(--admin-border);
-  border-radius: 10px;
-}
-
-.systeminfos-table-wrap table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.82rem;
-}
-
-.systeminfos-table-wrap th,
-.systeminfos-table-wrap td {
-  border-bottom: 1px solid var(--admin-border);
-  text-align: left;
-  padding: 0.48rem 0.55rem;
-  vertical-align: top;
-}
-
-.systeminfos-table-wrap th {
-  position: sticky;
-  top: 0;
-  background: #edf4fa;
-  z-index: 1;
-  color: var(--admin-primary);
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.07em;
-}
-
-.systeminfos-table-wrap tr:last-child td {
-  border-bottom: none;
-}
-
-.systeminfos-subsection {
-  display: grid;
-  gap: 0.5rem;
-}
-
-.systeminfos-subsection h4 {
-  margin: 0;
-  font-size: 0.89rem;
-  color: var(--admin-primary);
-}
-
 .systeminfos-section-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.7rem;
+  flex-wrap: wrap;
 }
 
-.systeminfos-section-head input {
-  border: 1px solid var(--admin-border);
-  border-radius: 9px;
-  padding: 0.45rem 0.6rem;
-  min-width: 230px;
-  font-size: 0.85rem;
+.systeminfos-subsection {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.systeminfos-table-block {
+  display: grid;
+  gap: 0.45rem;
 }
 
 .systeminfos-note {
@@ -215,60 +106,23 @@
   font-size: 0.8rem;
 }
 
-.systeminfos-db-grid {
+.systeminfos-db-detail-grid {
   display: grid;
-  gap: 0.7rem;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 0.8rem;
+  grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
 }
 
-.systeminfos-db-card {
-  border: 1px solid var(--admin-border);
-  border-radius: 10px;
-  background: #fbfdff;
-  padding: 0.65rem;
-  display: grid;
-  gap: 0.5rem;
+.systeminfos-create-sql-block {
+  grid-column: 1 / -1;
 }
 
-.systeminfos-db-card header {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
-  align-items: baseline;
-}
-
-.systeminfos-db-card h4 {
+.systeminfos-create-sql {
   margin: 0;
-  font-size: 0.9rem;
-  color: var(--admin-primary);
-}
-
-.systeminfos-db-card header span,
-.systeminfos-db-card p {
-  margin: 0;
-  font-size: 0.8rem;
-  color: var(--admin-text-muted);
-}
-
-.systeminfos-db-card details {
-  border-top: 1px dashed var(--admin-border);
-  padding-top: 0.5rem;
-}
-
-.systeminfos-db-card summary {
-  cursor: pointer;
-  color: var(--admin-primary);
-  font-size: 0.82rem;
-  font-weight: 700;
-}
-
-.systeminfos-db-card pre {
-  margin: 0.45rem 0 0;
-  max-height: 220px;
+  max-height: 320px;
   overflow: auto;
   white-space: pre-wrap;
   word-break: break-word;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   background: #f0f5fb;
   border: 1px solid var(--admin-border);
   border-radius: 8px;
@@ -294,18 +148,7 @@
     align-items: stretch;
   }
 
-  .systeminfos-section-head input {
-    min-width: 0;
-    width: 100%;
-  }
-
-  .systeminfos-card dl div {
-    display: grid;
+  .systeminfos-db-detail-grid {
     grid-template-columns: 1fr;
-    gap: 0.16rem;
-  }
-
-  .systeminfos-card dd {
-    text-align: left;
   }
 }

@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { subscribeAdminRealtime } from '../lib/realtime';
+import {
+  SmartTable,
+  type SmartTableColumnDef,
+} from '../modules/smart-table';
 import './TicketAnalytics.css';
 
 type PeriodDays = 30 | 90 | 180 | 365;
@@ -76,6 +80,26 @@ interface HotspotRow {
   latitude: number;
   longitude: number;
   count: number;
+}
+
+interface CategoryAnalyticsTableRow extends CategoryAnalyticsRow {
+  id: string;
+}
+
+interface CityAnalyticsTableRow extends CityAnalyticsRow {
+  id: string;
+}
+
+interface StatusAnalyticsTableRow extends StatusAnalyticsRow {
+  id: string;
+}
+
+interface BacklogAgeTableRow extends BacklogAgeRow {
+  id: string;
+}
+
+interface HotspotTableRow extends HotspotRow {
+  id: string;
 }
 
 interface TicketAnalyticsResponse {
@@ -214,12 +238,130 @@ const TicketAnalytics: React.FC<{ token: string }> = ({ token }) => {
 
   const topCategories = useMemo(() => (data?.byCategory || []).slice(0, 10), [data]);
   const topCities = useMemo(() => (data?.byCity || []).slice(0, 10), [data]);
-  const maxCategoryShare = useMemo(() => Math.max(1, ...topCategories.map((entry) => entry.share)), [topCategories]);
-  const maxCityShare = useMemo(() => Math.max(1, ...topCities.map((entry) => entry.share)), [topCities]);
-  const maxStatusCount = useMemo(() => Math.max(1, ...(data?.byStatus || []).map((entry) => entry.count)), [data]);
-  const maxBacklog = useMemo(() => Math.max(1, ...(data?.backlogAge || []).map((entry) => entry.count)), [data]);
   const maxWeekday = useMemo(() => Math.max(1, ...(data?.byWeekday || []).map((entry) => entry.count)), [data]);
   const maxHour = useMemo(() => Math.max(1, ...(data?.byHour || []).map((entry) => entry.count)), [data]);
+
+  const categoryRows = useMemo<CategoryAnalyticsTableRow[]>(
+    () =>
+      topCategories.map((entry) => ({
+        ...entry,
+        id: entry.category,
+      })),
+    [topCategories]
+  );
+
+  const cityRows = useMemo<CityAnalyticsTableRow[]>(
+    () =>
+      topCities.map((entry) => ({
+        ...entry,
+        id: entry.city,
+      })),
+    [topCities]
+  );
+
+  const statusRows = useMemo<StatusAnalyticsTableRow[]>(
+    () =>
+      (data?.byStatus || []).map((entry) => ({
+        ...entry,
+        id: entry.status,
+      })),
+    [data]
+  );
+
+  const backlogRows = useMemo<BacklogAgeTableRow[]>(
+    () =>
+      (data?.backlogAge || []).map((entry) => ({
+        ...entry,
+        id: entry.bucket,
+      })),
+    [data]
+  );
+
+  const hotspotRows = useMemo<HotspotTableRow[]>(
+    () =>
+      (data?.mapHotspots || []).slice(0, 12).map((entry, index) => ({
+        ...entry,
+        id: `${entry.latitude}-${entry.longitude}-${index}`,
+      })),
+    [data]
+  );
+
+  const categoryColumns = useMemo<SmartTableColumnDef<CategoryAnalyticsTableRow>[]>(
+    () => [
+      { field: 'category', headerName: 'Kategorie', minWidth: 220, flex: 1 },
+      { field: 'totalCount', headerName: 'Tickets', minWidth: 110 },
+      { field: 'openCount', headerName: 'Offen', minWidth: 100 },
+      { field: 'closedCount', headerName: 'Geschlossen', minWidth: 120 },
+      {
+        field: 'avgResolutionHours',
+        headerName: 'Ø Lösungszeit',
+        minWidth: 140,
+        valueFormatter: (value) => formatHours(Number(value || 0)),
+      },
+      {
+        field: 'share',
+        headerName: 'Anteil',
+        minWidth: 100,
+        valueFormatter: (value) =>
+          `${Number(value || 0).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`,
+      },
+    ],
+    []
+  );
+
+  const cityColumns = useMemo<SmartTableColumnDef<CityAnalyticsTableRow>[]>(
+    () => [
+      { field: 'city', headerName: 'Ort', minWidth: 220, flex: 1 },
+      { field: 'totalCount', headerName: 'Tickets', minWidth: 110 },
+      { field: 'openCount', headerName: 'Offen', minWidth: 100 },
+      { field: 'closedCount', headerName: 'Geschlossen', minWidth: 120 },
+      { field: 'withCoordinates', headerName: 'Mit Koordinaten', minWidth: 140 },
+      {
+        field: 'share',
+        headerName: 'Anteil',
+        minWidth: 100,
+        valueFormatter: (value) =>
+          `${Number(value || 0).toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} %`,
+      },
+    ],
+    []
+  );
+
+  const statusColumns = useMemo<SmartTableColumnDef<StatusAnalyticsTableRow>[]>(
+    () => [
+      {
+        field: 'status',
+        headerName: 'Status',
+        minWidth: 240,
+        flex: 1,
+        valueGetter: (_value, row) => STATUS_LABELS[row.status] || row.status,
+      },
+      { field: 'count', headerName: 'Tickets', minWidth: 120 },
+    ],
+    []
+  );
+
+  const backlogColumns = useMemo<SmartTableColumnDef<BacklogAgeTableRow>[]>(
+    () => [
+      { field: 'bucket', headerName: 'Altersklasse', minWidth: 240, flex: 1 },
+      { field: 'count', headerName: 'Offene Tickets', minWidth: 140 },
+    ],
+    []
+  );
+
+  const hotspotColumns = useMemo<SmartTableColumnDef<HotspotTableRow>[]>(
+    () => [
+      {
+        field: 'coordinate',
+        headerName: 'Koordinate',
+        minWidth: 260,
+        flex: 1,
+        valueGetter: (_value, row) => `${row.latitude.toFixed(5)}, ${row.longitude.toFixed(5)}`,
+      },
+      { field: 'count', headerName: 'Tickets', minWidth: 120 },
+    ],
+    []
+  );
 
   const timeline = useMemo(() => {
     if (!data?.timeSeries?.length) return [];
@@ -368,24 +510,20 @@ const TicketAnalytics: React.FC<{ token: string }> = ({ token }) => {
                 <h3>Kategorien</h3>
                 <span>Top 10 im Zeitraum</span>
               </div>
-              <div className="analytics-list">
-                {topCategories.map((entry) => (
-                  <div key={entry.category} className="analytics-list-item">
-                    <div className="list-row">
-                      <strong>{entry.category}</strong>
-                      <span>{entry.totalCount.toLocaleString('de-DE')} Tickets</span>
-                    </div>
-                    <div className="list-row list-row-meta">
-                      <span>Offen {entry.openCount}</span>
-                      <span>Geschlossen {entry.closedCount}</span>
-                      <span>Ø {formatHours(entry.avgResolutionHours)}</span>
-                    </div>
-                    <div className="bar-track">
-                      <div className="bar-fill" style={{ width: `${Math.max(3, (entry.share / maxCategoryShare) * 100)}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <SmartTable<CategoryAnalyticsTableRow>
+                tableId="analytics-categories"
+                userId={token}
+                title="Kategorien"
+                rows={categoryRows}
+                columns={categoryColumns}
+                loading={loading}
+                onRefresh={() => {
+                  void fetchAnalytics();
+                }}
+                defaultPageSize={10}
+                pageSizeOptions={[5, 10, 20]}
+                disableRowSelectionOnClick
+              />
             </article>
 
             <article className="analytics-panel">
@@ -393,24 +531,20 @@ const TicketAnalytics: React.FC<{ token: string }> = ({ token }) => {
                 <h3>Orte</h3>
                 <span>Top 10 nach Meldungsmenge</span>
               </div>
-              <div className="analytics-list">
-                {topCities.map((entry) => (
-                  <div key={entry.city} className="analytics-list-item">
-                    <div className="list-row">
-                      <strong>{entry.city}</strong>
-                      <span>{entry.totalCount.toLocaleString('de-DE')} Tickets</span>
-                    </div>
-                    <div className="list-row list-row-meta">
-                      <span>Offen {entry.openCount}</span>
-                      <span>Geschlossen {entry.closedCount}</span>
-                      <span>Koordinaten {entry.withCoordinates}</span>
-                    </div>
-                    <div className="bar-track">
-                      <div className="bar-fill city" style={{ width: `${Math.max(3, (entry.share / maxCityShare) * 100)}%` }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <SmartTable<CityAnalyticsTableRow>
+                tableId="analytics-cities"
+                userId={token}
+                title="Orte"
+                rows={cityRows}
+                columns={cityColumns}
+                loading={loading}
+                onRefresh={() => {
+                  void fetchAnalytics();
+                }}
+                defaultPageSize={10}
+                pageSizeOptions={[5, 10, 20]}
+                disableRowSelectionOnClick
+              />
             </article>
           </section>
 
@@ -420,22 +554,20 @@ const TicketAnalytics: React.FC<{ token: string }> = ({ token }) => {
                 <h3>Statusverteilung</h3>
                 <span>Nur Tickets aus dem gewählten Zeitraum</span>
               </div>
-              <div className="analytics-list">
-                {data.byStatus.map((entry) => (
-                  <div key={entry.status} className="analytics-list-item compact">
-                    <div className="list-row">
-                      <strong>{STATUS_LABELS[entry.status] || entry.status}</strong>
-                      <span>{entry.count.toLocaleString('de-DE')}</span>
-                    </div>
-                    <div className="bar-track slim">
-                      <div
-                        className="bar-fill status"
-                        style={{ width: entry.count === 0 ? '0%' : `${Math.max(3, (entry.count / maxStatusCount) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <SmartTable<StatusAnalyticsTableRow>
+                tableId="analytics-status"
+                userId={token}
+                title="Statusverteilung"
+                rows={statusRows}
+                columns={statusColumns}
+                loading={loading}
+                onRefresh={() => {
+                  void fetchAnalytics();
+                }}
+                defaultPageSize={10}
+                pageSizeOptions={[5, 10, 20]}
+                disableRowSelectionOnClick
+              />
             </article>
 
             <article className="analytics-panel">
@@ -443,22 +575,20 @@ const TicketAnalytics: React.FC<{ token: string }> = ({ token }) => {
                 <h3>Backlog-Alter</h3>
                 <span>Alle aktuell offenen Tickets</span>
               </div>
-              <div className="analytics-list">
-                {data.backlogAge.map((entry) => (
-                  <div key={entry.bucket} className="analytics-list-item compact">
-                    <div className="list-row">
-                      <strong>{entry.bucket}</strong>
-                      <span>{entry.count.toLocaleString('de-DE')}</span>
-                    </div>
-                    <div className="bar-track slim">
-                      <div
-                        className="bar-fill backlog"
-                        style={{ width: entry.count === 0 ? '0%' : `${Math.max(3, (entry.count / maxBacklog) * 100)}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <SmartTable<BacklogAgeTableRow>
+                tableId="analytics-backlog-age"
+                userId={token}
+                title="Backlog-Alter"
+                rows={backlogRows}
+                columns={backlogColumns}
+                loading={loading}
+                onRefresh={() => {
+                  void fetchAnalytics();
+                }}
+                defaultPageSize={10}
+                pageSizeOptions={[5, 10, 20]}
+                disableRowSelectionOnClick
+              />
             </article>
           </section>
 
@@ -539,17 +669,20 @@ const TicketAnalytics: React.FC<{ token: string }> = ({ token }) => {
                 <h3>Hotspots</h3>
                 <span>Koordinaten-Cluster (Top 12)</span>
               </div>
-              <div className="hotspot-list">
-                {data.mapHotspots.slice(0, 12).map((entry, index) => (
-                  <div key={`${entry.latitude}-${entry.longitude}-${index}`} className="hotspot-item">
-                    <strong>#{index + 1}</strong>
-                    <span>
-                      {entry.latitude.toFixed(2)}, {entry.longitude.toFixed(2)}
-                    </span>
-                    <span>{entry.count} Tickets</span>
-                  </div>
-                ))}
-              </div>
+              <SmartTable<HotspotTableRow>
+                tableId="analytics-hotspots"
+                userId={token}
+                title="Hotspots"
+                rows={hotspotRows}
+                columns={hotspotColumns}
+                loading={loading}
+                onRefresh={() => {
+                  void fetchAnalytics();
+                }}
+                defaultPageSize={12}
+                pageSizeOptions={[6, 12, 24]}
+                disableRowSelectionOnClick
+              />
             </article>
 
             <article className="analytics-panel">

@@ -1,6 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import { Alert, Button, Chip, Stack, TextField, Typography } from '@mui/material';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import { getAdminToken } from '../lib/auth';
+import {
+  SmartTable,
+  type SmartTableColumnDef,
+} from '../modules/smart-table';
 import './SystemInfos.css';
 
 interface PackageMetadata {
@@ -221,6 +227,133 @@ interface SystemInfoResponse {
   featureHistory: FeatureHistoryEntry[];
 }
 
+interface SystemFactRow {
+  id: string;
+  section: string;
+  key: string;
+  value: string;
+}
+
+interface VersionRow {
+  id: string;
+  component: string;
+  packageName: string;
+  version: string;
+  available: string;
+  path: string;
+  description: string;
+}
+
+interface GitInfoRow {
+  id: string;
+  release: string;
+  appVersion: string;
+  buildId: string;
+  buildTime: string;
+  envCommit: string;
+  branch: string;
+  headCommit: string;
+  describe: string;
+  fetchedAt: string;
+  gitAvailable: string;
+  gitError: string;
+}
+
+interface SessionRow {
+  id: string;
+  user: string;
+  role: string;
+  ipAddress: string;
+  userAgent: string;
+  rememberMe: string;
+  issuedAt: string;
+  lastSeenAt: string;
+  expiresAt: string;
+  status: string;
+}
+
+interface FeedTokenRow {
+  id: string;
+  scope: string;
+  user: string;
+  role: string;
+  tokenMasked: string;
+  tokenLength: number;
+  createdAt: string;
+  lastUsedAt: string;
+}
+
+interface OAuthTokenRow {
+  id: string;
+  provider: string;
+  accountId: string;
+  status: string;
+  expiresAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface ValidationTokenRow {
+  id: string;
+  ticketId: string;
+  submissionId: string;
+  executionId: string;
+  taskId: string;
+  email: string;
+  tokenMasked: string;
+  tokenLength: number;
+  status: string;
+  createdAt: string;
+  expiresAt: string;
+}
+
+interface DatabaseTableRow {
+  id: string;
+  name: string;
+  rowCount: number;
+  columnCount: number;
+  foreignKeyCount: number;
+}
+
+interface DatabaseColumnRow {
+  id: string;
+  name: string;
+  type: string;
+  primaryKeyOrder: string;
+  notNull: string;
+  defaultValue: string;
+}
+
+interface DatabaseForeignKeyRow {
+  id: string;
+  from: string;
+  table: string;
+  to: string;
+  onUpdate: string;
+  onDelete: string;
+  match: string;
+}
+
+interface BuildHistoryRow {
+  id: string;
+  authoredAt: string;
+  shortCommit: string;
+  commit: string;
+  author: string;
+  subject: string;
+}
+
+interface FeatureHistoryRow {
+  id: string;
+  createdAt: string;
+  eventType: string;
+  severity: string;
+  username: string;
+  method: string;
+  path: string;
+  detailsPreview: string;
+}
+
 const formatDateTime = (value?: string | null): string => {
   if (!value) return '–';
   const parsed = new Date(value);
@@ -259,20 +392,20 @@ const formatUptime = (seconds: number): string => {
 const formatJsonPreview = (value: unknown): string => {
   if (value === null || value === undefined || value === '') return '–';
   if (typeof value === 'string') {
-    return value.length > 200 ? `${value.slice(0, 200)}…` : value;
+    return value.length > 250 ? `${value.slice(0, 250)}…` : value;
   }
   try {
     const serialized = JSON.stringify(value);
     if (!serialized) return '–';
-    return serialized.length > 200 ? `${serialized.slice(0, 200)}…` : serialized;
+    return serialized.length > 250 ? `${serialized.slice(0, 250)}…` : serialized;
   } catch {
     return String(value);
   }
 };
 
-const renderPackageVersion = (entry: PackageMetadata) => {
-  return `${entry.name}@${entry.version}`;
-};
+const asYesNo = (value: boolean): string => (value ? 'ja' : 'nein');
+
+const renderPackageVersion = (entry: PackageMetadata) => `${entry.name}@${entry.version}`;
 
 const SystemInfos: React.FC = () => {
   const [data, setData] = useState<SystemInfoResponse | null>(null);
@@ -280,8 +413,12 @@ const SystemInfos: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [tableSearch, setTableSearch] = useState('');
+  const [selectedTableName, setSelectedTableName] = useState('');
 
-  const loadSystemInfos = async (silent = false) => {
+  const currentToken = getAdminToken();
+  const tableUserId = currentToken || 'anonymous';
+
+  const loadSystemInfos = useCallback(async (silent = false) => {
     const token = getAdminToken();
     if (!token) {
       setError('Kein Admin-Token gefunden. Bitte erneut anmelden.');
@@ -299,7 +436,13 @@ const SystemInfos: React.FC = () => {
       const response = await axios.get<SystemInfoResponse>('/api/admin/system-info', {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setData(response.data);
+      const next = response.data;
+      setData(next);
+      setSelectedTableName((current) => {
+        const names = new Set((next.databaseStructure.tables || []).map((table) => table.name));
+        if (current && names.has(current)) return current;
+        return next.databaseStructure.tables[0]?.name || '';
+      });
       setError('');
     } catch (err) {
       if (axios.isAxiosError(err)) {
@@ -311,11 +454,11 @@ const SystemInfos: React.FC = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     void loadSystemInfos(false);
-  }, []);
+  }, [loadSystemInfos]);
 
   const filteredTables = useMemo(() => {
     if (!data) return [];
@@ -327,6 +470,21 @@ const SystemInfos: React.FC = () => {
     });
   }, [data, tableSearch]);
 
+  useEffect(() => {
+    if (!filteredTables.length) {
+      setSelectedTableName('');
+      return;
+    }
+    if (!selectedTableName || !filteredTables.some((table) => table.name === selectedTableName)) {
+      setSelectedTableName(filteredTables[0].name);
+    }
+  }, [filteredTables, selectedTableName]);
+
+  const selectedTable = useMemo(
+    () => filteredTables.find((table) => table.name === selectedTableName) || null,
+    [filteredTables, selectedTableName]
+  );
+
   const totalOpenTokens = useMemo(() => {
     if (!data) return 0;
     const summary = data.tokens.summary;
@@ -337,6 +495,387 @@ const SystemInfos: React.FC = () => {
       Number(summary.openWorkflowValidationTokens || 0)
     );
   }, [data]);
+
+  const systemFacts = useMemo<SystemFactRow[]>(() => {
+    if (!data) return [];
+    const mysql = data.backend.database.mysql;
+    const rows: Array<Omit<SystemFactRow, 'id'>> = [
+      { section: 'Runtime', key: 'Framework', value: data.backend.framework },
+      { section: 'Runtime', key: 'Node', value: data.backend.runtime.nodeVersion },
+      { section: 'Runtime', key: 'PID', value: String(data.backend.runtime.pid) },
+      { section: 'Runtime', key: 'Uptime', value: formatUptime(data.backend.runtime.uptimeSeconds) },
+      { section: 'Runtime', key: 'Gestartet', value: formatDateTime(data.backend.runtime.startedAt) },
+      { section: 'Runtime', key: 'Plattform', value: `${data.backend.runtime.platform}/${data.backend.runtime.arch}` },
+      { section: 'Runtime', key: 'Zeitzone', value: data.backend.runtime.timezone },
+      { section: 'Runtime', key: 'RSS', value: formatBytes(data.backend.runtime.memory.rssBytes) },
+      { section: 'Runtime', key: 'Heap total', value: formatBytes(data.backend.runtime.memory.heapTotalBytes) },
+      { section: 'Runtime', key: 'Heap genutzt', value: formatBytes(data.backend.runtime.memory.heapUsedBytes) },
+      { section: 'Runtime', key: 'External', value: formatBytes(data.backend.runtime.memory.externalBytes) },
+
+      { section: 'Backend', key: 'NODE_ENV', value: data.backend.environment.nodeEnv },
+      { section: 'Backend', key: 'Port', value: String(data.backend.environment.port) },
+      { section: 'Backend', key: 'Trust Proxy', value: String(data.backend.environment.trustProxy) },
+      { section: 'Backend', key: 'Datenbank-Client', value: data.backend.database.client },
+      {
+        section: 'Backend',
+        key: 'SQLite Pfad',
+        value: data.backend.database.client === 'sqlite' ? data.backend.database.sqlitePath || '–' : '–',
+      },
+      { section: 'Backend', key: 'MySQL Host', value: mysql?.host || '–' },
+      { section: 'Backend', key: 'MySQL Port', value: mysql?.port ? String(mysql.port) : '–' },
+      { section: 'Backend', key: 'MySQL DB', value: mysql?.database || '–' },
+      { section: 'Backend', key: 'Migrationspfad', value: mysql?.migrationSourcePath || '–' },
+      { section: 'Backend', key: 'Frontend URL', value: data.backend.environment.frontendUrl || '–' },
+      { section: 'Backend', key: 'Admin URL', value: data.backend.environment.adminUrl || '–' },
+
+      { section: 'KI', key: 'Provider', value: data.backend.ai.provider || '–' },
+      { section: 'KI', key: 'Modell', value: data.backend.ai.model || '–' },
+      { section: 'KI', key: 'Provider Quelle', value: data.backend.ai.providerSource || '–' },
+      { section: 'KI', key: 'Modell Quelle', value: data.backend.ai.modelSource || '–' },
+      { section: 'KI', key: 'OpenAI Client ID', value: data.backend.ai.credentials.hasOpenaiClientId ? 'gesetzt' : 'leer' },
+      { section: 'KI', key: 'OpenAI Secret', value: data.backend.ai.credentials.hasOpenaiClientSecret ? 'gesetzt' : 'leer' },
+      { section: 'KI', key: 'AskCodi API Key', value: data.backend.ai.credentials.hasAskcodiApiKey ? 'gesetzt' : 'leer' },
+      { section: 'KI', key: 'OpenAI Client ID Quelle', value: data.backend.ai.credentials.openaiClientIdSource || '–' },
+      { section: 'KI', key: 'OpenAI Secret Quelle', value: data.backend.ai.credentials.openaiClientSecretSource || '–' },
+      { section: 'KI', key: 'AskCodi Key Quelle', value: data.backend.ai.credentials.askcodiApiKeySource || '–' },
+      { section: 'KI', key: 'AskCodi Base URL', value: data.backend.ai.credentials.askcodiBaseUrl || '–' },
+      { section: 'KI', key: 'AskCodi URL Quelle', value: data.backend.ai.credentials.askcodiBaseUrlSource || '–' },
+    ];
+    return rows.map((row, index) => ({
+      id: `fact-${index}-${row.section}-${row.key}`,
+      ...row,
+    }));
+  }, [data]);
+
+  const versionsRows = useMemo<VersionRow[]>(() => {
+    if (!data) return [];
+    const entries: Array<[string, PackageMetadata]> = [
+      ['Workspace', data.versions.workspace],
+      ['Backend', data.versions.backend],
+      ['Admin', data.versions.admin],
+      ['Frontend', data.versions.frontend],
+      ['Ops', data.versions.ops],
+    ];
+    return entries.map(([component, entry]) => ({
+      id: component.toLowerCase(),
+      component,
+      packageName: entry.name,
+      version: entry.version,
+      available: entry.available ? 'ja' : 'nein',
+      path: entry.path || '–',
+      description: entry.description || '–',
+    }));
+  }, [data]);
+
+  const gitInfoRows = useMemo<GitInfoRow[]>(() => {
+    if (!data) return [];
+    const release = data.build.appVersion ? `v${data.build.appVersion}` : renderPackageVersion(data.versions.workspace);
+    return [
+      {
+        id: 'git-build',
+        release,
+        appVersion: data.build.appVersion || data.versions.workspace.version,
+        buildId: data.build.envBuildId || '–',
+        buildTime: formatDateTime(data.build.envBuildTime),
+        envCommit: data.build.envCommitRef || '–',
+        branch: data.build.git.branch || '–',
+        headCommit: data.build.git.headCommit || '–',
+        describe: data.build.git.describe || '–',
+        fetchedAt: formatDateTime(data.build.git.fetchedAt),
+        gitAvailable: data.build.git.available ? 'ja' : 'nein',
+        gitError: data.build.git.error || '–',
+      },
+    ];
+  }, [data]);
+
+  const sessionRows = useMemo<SessionRow[]>(() => {
+    if (!data) return [];
+    return data.sessions.active.map((entry) => ({
+      id: entry.id,
+      user: entry.username || entry.adminUserId,
+      role: entry.role || '–',
+      ipAddress: entry.ipAddress || '–',
+      userAgent: entry.userAgent || '–',
+      rememberMe: entry.rememberMe ? 'ja' : 'nein',
+      issuedAt: formatDateTime(entry.issuedAt),
+      lastSeenAt: formatDateTime(entry.lastSeenAt),
+      expiresAt: entry.expiresAt ? formatDateTime(entry.expiresAt) : 'ohne Ablauf',
+      status: entry.isExpired ? 'abgelaufen' : 'aktiv',
+    }));
+  }, [data]);
+
+  const feedTokenRows = useMemo<FeedTokenRow[]>(() => {
+    if (!data) return [];
+    return data.tokens.feedTokens.map((entry) => ({
+      id: entry.id,
+      scope: entry.scope || '–',
+      user: entry.username || entry.adminUserId,
+      role: entry.role || '–',
+      tokenMasked: entry.tokenMasked || '–',
+      tokenLength: Number(entry.tokenLength || 0),
+      createdAt: formatDateTime(entry.createdAt),
+      lastUsedAt: formatDateTime(entry.lastUsedAt),
+    }));
+  }, [data]);
+
+  const oauthTokenRows = useMemo<OAuthTokenRow[]>(() => {
+    if (!data) return [];
+    return data.tokens.oauthTokens.map((entry) => ({
+      id: entry.id,
+      provider: entry.provider || '–',
+      accountId: entry.accountId || '–',
+      status: entry.isExpired ? 'abgelaufen' : 'aktiv',
+      expiresAt: entry.expiresAt ? formatDateTime(entry.expiresAt) : 'kein Ablauf',
+      createdAt: formatDateTime(entry.createdAt),
+      updatedAt: formatDateTime(entry.updatedAt),
+    }));
+  }, [data]);
+
+  const ticketValidationRows = useMemo<ValidationTokenRow[]>(() => {
+    if (!data) return [];
+    return data.tokens.ticketValidationTokens.map((entry) => ({
+      id: entry.id,
+      ticketId: entry.ticketId || '–',
+      submissionId: entry.submissionId || '–',
+      executionId: entry.executionId || '–',
+      taskId: entry.taskId || '–',
+      email: entry.citizenEmail || '–',
+      tokenMasked: entry.tokenMasked || '–',
+      tokenLength: Number(entry.tokenLength || 0),
+      status: entry.isExpired ? 'abgelaufen' : 'aktiv',
+      createdAt: formatDateTime(entry.createdAt),
+      expiresAt: entry.expiresAt ? formatDateTime(entry.expiresAt) : 'kein Ablauf',
+    }));
+  }, [data]);
+
+  const workflowValidationRows = useMemo<ValidationTokenRow[]>(() => {
+    if (!data) return [];
+    return data.tokens.workflowValidationTokens.map((entry) => ({
+      id: entry.id,
+      ticketId: entry.ticketId || '–',
+      submissionId: entry.submissionId || '–',
+      executionId: entry.executionId || '–',
+      taskId: entry.taskId || '–',
+      email: entry.recipientEmail || '–',
+      tokenMasked: entry.tokenMasked || '–',
+      tokenLength: Number(entry.tokenLength || 0),
+      status: entry.isExpired ? 'abgelaufen' : 'aktiv',
+      createdAt: formatDateTime(entry.createdAt),
+      expiresAt: entry.expiresAt ? formatDateTime(entry.expiresAt) : 'kein Ablauf',
+    }));
+  }, [data]);
+
+  const databaseTableRows = useMemo<DatabaseTableRow[]>(() => {
+    return filteredTables.map((table) => ({
+      id: table.name,
+      name: table.name,
+      rowCount: Number(table.rowCount || 0),
+      columnCount: Number(table.columns.length || 0),
+      foreignKeyCount: Number(table.foreignKeys.length || 0),
+    }));
+  }, [filteredTables]);
+
+  const selectedColumnRows = useMemo<DatabaseColumnRow[]>(() => {
+    if (!selectedTable) return [];
+    return selectedTable.columns.map((column) => ({
+      id: `${selectedTable.name}-${column.cid}-${column.name}`,
+      name: column.name,
+      type: column.type || '–',
+      primaryKeyOrder: column.primaryKeyOrder > 0 ? String(column.primaryKeyOrder) : '–',
+      notNull: asYesNo(column.notNull),
+      defaultValue: column.defaultValue ?? '–',
+    }));
+  }, [selectedTable]);
+
+  const selectedForeignKeyRows = useMemo<DatabaseForeignKeyRow[]>(() => {
+    if (!selectedTable) return [];
+    return selectedTable.foreignKeys.map((fk) => ({
+      id: `${selectedTable.name}-fk-${fk.id}-${fk.seq}`,
+      from: fk.from || '–',
+      table: fk.table || '–',
+      to: fk.to || '–',
+      onUpdate: fk.onUpdate || '–',
+      onDelete: fk.onDelete || '–',
+      match: fk.match || '–',
+    }));
+  }, [selectedTable]);
+
+  const buildHistoryRows = useMemo<BuildHistoryRow[]>(() => {
+    if (!data) return [];
+    return data.buildHistory.map((entry, index) => ({
+      id: `${entry.commit}-${entry.authoredAt}-${index}`,
+      authoredAt: formatDateTime(entry.authoredAt),
+      shortCommit: entry.shortCommit || '–',
+      commit: entry.commit || '–',
+      author: entry.author || '–',
+      subject: entry.subject || '–',
+    }));
+  }, [data]);
+
+  const featureHistoryRows = useMemo<FeatureHistoryRow[]>(() => {
+    if (!data) return [];
+    return data.featureHistory.map((entry) => ({
+      id: entry.id,
+      createdAt: formatDateTime(entry.createdAt),
+      eventType: entry.eventType || '–',
+      severity: entry.severity || '–',
+      username: entry.username || '–',
+      method: entry.method || '–',
+      path: entry.path || '–',
+      detailsPreview: formatJsonPreview(entry.details),
+    }));
+  }, [data]);
+
+  const systemFactsColumns = useMemo<SmartTableColumnDef<SystemFactRow>[]>(
+    () => [
+      { field: 'section', headerName: 'Bereich', minWidth: 160 },
+      { field: 'key', headerName: 'Schlüssel', minWidth: 220, flex: 1 },
+      { field: 'value', headerName: 'Wert', minWidth: 260, flex: 1 },
+    ],
+    []
+  );
+
+  const versionsColumns = useMemo<SmartTableColumnDef<VersionRow>[]>(
+    () => [
+      { field: 'component', headerName: 'Komponente', minWidth: 140 },
+      { field: 'packageName', headerName: 'Paket', minWidth: 190 },
+      { field: 'version', headerName: 'Version', minWidth: 120 },
+      { field: 'available', headerName: 'Verfügbar', minWidth: 110 },
+      { field: 'path', headerName: 'Pfad', minWidth: 260, flex: 1 },
+      { field: 'description', headerName: 'Beschreibung', minWidth: 240, flex: 1 },
+    ],
+    []
+  );
+
+  const gitInfoColumns = useMemo<SmartTableColumnDef<GitInfoRow>[]>(
+    () => [
+      { field: 'release', headerName: 'Release', minWidth: 140 },
+      { field: 'appVersion', headerName: 'App-Version', minWidth: 120 },
+      { field: 'buildId', headerName: 'Build-ID', minWidth: 180 },
+      { field: 'buildTime', headerName: 'Build-Zeit', minWidth: 170 },
+      { field: 'envCommit', headerName: 'Commit (ENV)', minWidth: 180 },
+      { field: 'branch', headerName: 'Git Branch', minWidth: 140 },
+      { field: 'headCommit', headerName: 'Git Head Commit', minWidth: 220 },
+      { field: 'describe', headerName: 'Git Describe', minWidth: 180 },
+      { field: 'fetchedAt', headerName: 'Git aktualisiert', minWidth: 170 },
+      { field: 'gitAvailable', headerName: 'Git verfügbar', minWidth: 120 },
+      { field: 'gitError', headerName: 'Git Fehler', minWidth: 260, flex: 1 },
+    ],
+    []
+  );
+
+  const sessionColumns = useMemo<SmartTableColumnDef<SessionRow>[]>(
+    () => [
+      { field: 'user', headerName: 'Benutzer', minWidth: 170 },
+      { field: 'role', headerName: 'Rolle', minWidth: 120 },
+      { field: 'ipAddress', headerName: 'IP', minWidth: 140 },
+      { field: 'rememberMe', headerName: 'Remember', minWidth: 100 },
+      { field: 'status', headerName: 'Status', minWidth: 110 },
+      { field: 'issuedAt', headerName: 'Ausgestellt', minWidth: 170 },
+      { field: 'lastSeenAt', headerName: 'Letzte Aktivität', minWidth: 170 },
+      { field: 'expiresAt', headerName: 'Ablauf', minWidth: 170 },
+      { field: 'userAgent', headerName: 'User-Agent', minWidth: 300, flex: 1 },
+    ],
+    []
+  );
+
+  const feedTokenColumns = useMemo<SmartTableColumnDef<FeedTokenRow>[]>(
+    () => [
+      { field: 'scope', headerName: 'Scope', minWidth: 140 },
+      { field: 'user', headerName: 'Benutzer', minWidth: 170 },
+      { field: 'role', headerName: 'Rolle', minWidth: 120 },
+      { field: 'tokenMasked', headerName: 'Token', minWidth: 180 },
+      { field: 'tokenLength', headerName: 'Länge', minWidth: 90 },
+      { field: 'createdAt', headerName: 'Erstellt', minWidth: 170 },
+      { field: 'lastUsedAt', headerName: 'Zuletzt genutzt', minWidth: 170 },
+    ],
+    []
+  );
+
+  const oauthTokenColumns = useMemo<SmartTableColumnDef<OAuthTokenRow>[]>(
+    () => [
+      { field: 'provider', headerName: 'Provider', minWidth: 130 },
+      { field: 'accountId', headerName: 'Account', minWidth: 190 },
+      { field: 'status', headerName: 'Status', minWidth: 120 },
+      { field: 'expiresAt', headerName: 'Ablauf', minWidth: 170 },
+      { field: 'createdAt', headerName: 'Erstellt', minWidth: 170 },
+      { field: 'updatedAt', headerName: 'Aktualisiert', minWidth: 170 },
+    ],
+    []
+  );
+
+  const validationTokenColumns = useMemo<SmartTableColumnDef<ValidationTokenRow>[]>(
+    () => [
+      { field: 'ticketId', headerName: 'Ticket', minWidth: 130 },
+      { field: 'submissionId', headerName: 'Submission', minWidth: 150 },
+      { field: 'executionId', headerName: 'Execution', minWidth: 150 },
+      { field: 'taskId', headerName: 'Task', minWidth: 150 },
+      { field: 'email', headerName: 'E-Mail', minWidth: 220, flex: 1 },
+      { field: 'tokenMasked', headerName: 'Token', minWidth: 180 },
+      { field: 'tokenLength', headerName: 'Länge', minWidth: 90 },
+      { field: 'status', headerName: 'Status', minWidth: 120 },
+      { field: 'createdAt', headerName: 'Erstellt', minWidth: 170 },
+      { field: 'expiresAt', headerName: 'Ablauf', minWidth: 170 },
+    ],
+    []
+  );
+
+  const databaseTableColumns = useMemo<SmartTableColumnDef<DatabaseTableRow>[]>(
+    () => [
+      { field: 'name', headerName: 'Tabelle', minWidth: 220, flex: 1 },
+      { field: 'rowCount', headerName: 'Zeilen', minWidth: 120 },
+      { field: 'columnCount', headerName: 'Spalten', minWidth: 120 },
+      { field: 'foreignKeyCount', headerName: 'Foreign Keys', minWidth: 140 },
+    ],
+    []
+  );
+
+  const databaseColumnColumns = useMemo<SmartTableColumnDef<DatabaseColumnRow>[]>(
+    () => [
+      { field: 'name', headerName: 'Name', minWidth: 220, flex: 1 },
+      { field: 'type', headerName: 'Typ', minWidth: 160 },
+      { field: 'primaryKeyOrder', headerName: 'PK', minWidth: 70 },
+      { field: 'notNull', headerName: 'Not Null', minWidth: 90 },
+      { field: 'defaultValue', headerName: 'Default', minWidth: 180, flex: 1 },
+    ],
+    []
+  );
+
+  const databaseForeignKeyColumns = useMemo<SmartTableColumnDef<DatabaseForeignKeyRow>[]>(
+    () => [
+      { field: 'from', headerName: 'Von', minWidth: 130 },
+      { field: 'table', headerName: 'Nach Tabelle', minWidth: 180 },
+      { field: 'to', headerName: 'Nach Spalte', minWidth: 160 },
+      { field: 'onUpdate', headerName: 'On Update', minWidth: 130 },
+      { field: 'onDelete', headerName: 'On Delete', minWidth: 130 },
+      { field: 'match', headerName: 'Match', minWidth: 100 },
+    ],
+    []
+  );
+
+  const buildHistoryColumns = useMemo<SmartTableColumnDef<BuildHistoryRow>[]>(
+    () => [
+      { field: 'authoredAt', headerName: 'Zeit', minWidth: 170 },
+      { field: 'shortCommit', headerName: 'Kurz-Commit', minWidth: 140 },
+      { field: 'commit', headerName: 'Commit', minWidth: 220 },
+      { field: 'author', headerName: 'Autor', minWidth: 190 },
+      { field: 'subject', headerName: 'Beschreibung', minWidth: 340, flex: 1 },
+    ],
+    []
+  );
+
+  const featureHistoryColumns = useMemo<SmartTableColumnDef<FeatureHistoryRow>[]>(
+    () => [
+      { field: 'createdAt', headerName: 'Zeit', minWidth: 170 },
+      { field: 'eventType', headerName: 'Event', minWidth: 170 },
+      { field: 'severity', headerName: 'Severity', minWidth: 110 },
+      { field: 'username', headerName: 'Benutzer', minWidth: 170 },
+      { field: 'method', headerName: 'Methode', minWidth: 110 },
+      { field: 'path', headerName: 'Pfad', minWidth: 260, flex: 1 },
+      { field: 'detailsPreview', headerName: 'Details', minWidth: 340, flex: 1 },
+    ],
+    []
+  );
 
   if (loading) {
     return (
@@ -353,24 +892,28 @@ const SystemInfos: React.FC = () => {
           <h2>Systeminfos</h2>
           <p>Letzte Aktualisierung: {formatDateTime(data?.generatedAt)}</p>
         </div>
-        <button
+        <Button
           type="button"
-          className="btn btn-secondary"
+          variant="outlined"
+          color="secondary"
+          startIcon={<RefreshRoundedIcon />}
           onClick={() => void loadSystemInfos(true)}
           disabled={refreshing}
         >
           {refreshing ? 'Aktualisiere…' : 'Neu laden'}
-        </button>
+        </Button>
       </div>
 
-      {error && <div className="systeminfos-alert error">{error}</div>}
+      {error ? <Alert severity="error">{error}</Alert> : null}
 
       {data?.warnings?.length ? (
-        <div className="systeminfos-alert warning">
-          {data.warnings.map((warning) => (
-            <div key={warning}>{warning}</div>
-          ))}
-        </div>
+        <Alert severity="warning">
+          <Stack spacing={0.4}>
+            {data.warnings.map((warning) => (
+              <span key={warning}>{warning}</span>
+            ))}
+          </Stack>
+        </Alert>
       ) : null}
 
       {data ? (
@@ -392,429 +935,295 @@ const SystemInfos: React.FC = () => {
               <small>Seiten: {formatInteger(data.databaseStructure.database.pageCount)}</small>
             </article>
             <article>
-              <span>Tabellen</span>
-              <strong>{formatInteger(data.databaseStructure.tableCount)}</strong>
-              <small>
-                Backend: {renderPackageVersion(data.versions.backend)} | Admin: {renderPackageVersion(data.versions.admin)}
-                {' · '}Frontend: {renderPackageVersion(data.versions.frontend)} · Ops: {renderPackageVersion(data.versions.ops)}
-              </small>
+              <span>Git-Stand</span>
+              <strong>{data.build.git.branch || '–'}</strong>
+              <small>{data.build.git.headCommit ? data.build.git.headCommit.slice(0, 12) : 'kein Commit'}</small>
             </article>
           </section>
 
           <section className="systeminfos-section">
-            <h3>Backend, Runtime und Versionen</h3>
-            <div className="systeminfos-grid">
-              <article className="systeminfos-card">
-                <h4>Laufzeit</h4>
-                <dl>
-                  <div><dt>Framework</dt><dd>{data.backend.framework}</dd></div>
-                  <div><dt>Node</dt><dd>{data.backend.runtime.nodeVersion}</dd></div>
-                  <div><dt>PID</dt><dd>{data.backend.runtime.pid}</dd></div>
-                  <div><dt>Uptime</dt><dd>{formatUptime(data.backend.runtime.uptimeSeconds)}</dd></div>
-                  <div><dt>Gestartet</dt><dd>{formatDateTime(data.backend.runtime.startedAt)}</dd></div>
-                  <div><dt>Plattform</dt><dd>{data.backend.runtime.platform}/{data.backend.runtime.arch}</dd></div>
-                  <div><dt>Zeitzone</dt><dd>{data.backend.runtime.timezone}</dd></div>
-                  <div><dt>Heap genutzt</dt><dd>{formatBytes(data.backend.runtime.memory.heapUsedBytes)}</dd></div>
-                </dl>
-              </article>
-
-              <article className="systeminfos-card">
-                <h4>Backend-Konfiguration</h4>
-                <dl>
-                  <div><dt>Environment</dt><dd>{data.backend.environment.nodeEnv}</dd></div>
-                  <div><dt>Port</dt><dd>{data.backend.environment.port}</dd></div>
-                  <div><dt>Trust Proxy</dt><dd>{String(data.backend.environment.trustProxy)}</dd></div>
-                  <div><dt>Datenbank</dt><dd>{data.backend.database.client}</dd></div>
-                  {data.backend.database.client === 'sqlite' ? (
-                    <div><dt>SQLite Pfad</dt><dd>{data.backend.database.sqlitePath || '–'}</dd></div>
-                  ) : (
-                    <>
-                      <div><dt>MySQL Host</dt><dd>{data.backend.database.mysql?.host || '–'}</dd></div>
-                      <div><dt>MySQL Port</dt><dd>{data.backend.database.mysql?.port || '–'}</dd></div>
-                      <div><dt>MySQL DB</dt><dd>{data.backend.database.mysql?.database || '–'}</dd></div>
-                    </>
-                  )}
-                  <div><dt>Frontend URL</dt><dd>{data.backend.environment.frontendUrl}</dd></div>
-                  <div><dt>Admin URL</dt><dd>{data.backend.environment.adminUrl}</dd></div>
-                </dl>
-              </article>
-
-              <article className="systeminfos-card">
-                <h4>KI-Backend</h4>
-                <dl>
-                  <div><dt>Provider</dt><dd>{data.backend.ai.provider}</dd></div>
-                  <div><dt>Modell</dt><dd>{data.backend.ai.model}</dd></div>
-                  <div><dt>Provider Quelle</dt><dd>{data.backend.ai.providerSource}</dd></div>
-                  <div><dt>Model Quelle</dt><dd>{data.backend.ai.modelSource}</dd></div>
-                  <div><dt>OpenAI Client ID</dt><dd>{data.backend.ai.credentials.hasOpenaiClientId ? 'gesetzt' : 'leer'}</dd></div>
-                  <div><dt>OpenAI Secret</dt><dd>{data.backend.ai.credentials.hasOpenaiClientSecret ? 'gesetzt' : 'leer'}</dd></div>
-                  <div><dt>AskCodi Key</dt><dd>{data.backend.ai.credentials.hasAskcodiApiKey ? 'gesetzt' : 'leer'}</dd></div>
-                  <div><dt>AskCodi Base URL</dt><dd>{data.backend.ai.credentials.askcodiBaseUrl}</dd></div>
-                </dl>
-              </article>
-
-              <article className="systeminfos-card">
-                <h4>Build & Version</h4>
-                <dl>
-                  <div>
-                    <dt>Release</dt>
-                    <dd>{data.build.appVersion ? `v${data.build.appVersion}` : renderPackageVersion(data.versions.workspace)}</dd>
-                  </div>
-                  <div><dt>Workspace</dt><dd>{renderPackageVersion(data.versions.workspace)}</dd></div>
-                  <div><dt>Backend</dt><dd>{renderPackageVersion(data.versions.backend)}</dd></div>
-                  <div><dt>Admin</dt><dd>{renderPackageVersion(data.versions.admin)}</dd></div>
-                  <div><dt>Frontend</dt><dd>{renderPackageVersion(data.versions.frontend)}</dd></div>
-                  <div><dt>Ops</dt><dd>{renderPackageVersion(data.versions.ops)}</dd></div>
-                  <div><dt>Build-ID</dt><dd>{data.build.envBuildId || '–'}</dd></div>
-                  <div><dt>Build-Zeit</dt><dd>{formatDateTime(data.build.envBuildTime)}</dd></div>
-                  <div><dt>Commit (ENV)</dt><dd>{data.build.envCommitRef || '–'}</dd></div>
-                  <div><dt>Git Branch</dt><dd>{data.build.git.branch || '–'}</dd></div>
-                </dl>
-              </article>
+            <div className="systeminfos-section-head">
+              <h3>Version & Git</h3>
+              <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
+                <Chip
+                  size="small"
+                  label={data.build.appVersion ? `Release v${data.build.appVersion}` : renderPackageVersion(data.versions.workspace)}
+                  color="primary"
+                  variant="outlined"
+                />
+                <Chip
+                  size="small"
+                  label={`Branch: ${data.build.git.branch || '–'}`}
+                  color="secondary"
+                  variant="outlined"
+                />
+                <Chip
+                  size="small"
+                  label={`Commit: ${data.build.git.headCommit ? data.build.git.headCommit.slice(0, 12) : data.build.envCommitRef || '–'}`}
+                  color="secondary"
+                  variant="outlined"
+                />
+              </Stack>
+            </div>
+            <div className="systeminfos-table-block">
+              <SmartTable<GitInfoRow>
+                tableId="systeminfos-git"
+                userId={tableUserId}
+                title="Git & Build"
+                rows={gitInfoRows}
+                columns={gitInfoColumns}
+                loading={refreshing}
+                onRefresh={() => {
+                  void loadSystemInfos(true);
+                }}
+                defaultPageSize={1}
+                pageSizeOptions={[1, 5, 10]}
+                disableRowSelectionOnClick
+              />
+            </div>
+            <div className="systeminfos-table-block">
+              <SmartTable<VersionRow>
+                tableId="systeminfos-versions"
+                userId={tableUserId}
+                title="Komponenten-Versionen"
+                rows={versionsRows}
+                columns={versionsColumns}
+                loading={refreshing}
+                onRefresh={() => {
+                  void loadSystemInfos(true);
+                }}
+                defaultPageSize={10}
+                pageSizeOptions={[5, 10, 20]}
+                disableRowSelectionOnClick
+              />
             </div>
           </section>
 
           <section className="systeminfos-section">
+            <h3>Systemdetails</h3>
+            <SmartTable<SystemFactRow>
+              tableId="systeminfos-facts"
+              userId={tableUserId}
+              title="Runtime, Backend und KI"
+              rows={systemFacts}
+              columns={systemFactsColumns}
+              loading={refreshing}
+              onRefresh={() => {
+                void loadSystemInfos(true);
+              }}
+              defaultPageSize={25}
+              pageSizeOptions={[10, 25, 50, 100]}
+              disableRowSelectionOnClick
+            />
+          </section>
+
+          <section className="systeminfos-section">
             <h3>Offene Sessions</h3>
-            <div className="systeminfos-table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Benutzer</th>
-                    <th>Rolle</th>
-                    <th>IP</th>
-                    <th>Letzte Aktivität</th>
-                    <th>Ablauf</th>
-                    <th>Remember</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.sessions.active.length === 0 ? (
-                    <tr>
-                      <td colSpan={6}>Keine aktiven Sessions.</td>
-                    </tr>
-                  ) : (
-                    data.sessions.active.map((session) => (
-                      <tr key={session.id}>
-                        <td>{session.username || session.adminUserId}</td>
-                        <td>{session.role || '–'}</td>
-                        <td>{session.ipAddress || '–'}</td>
-                        <td>{formatDateTime(session.lastSeenAt)}</td>
-                        <td>{session.expiresAt ? formatDateTime(session.expiresAt) : 'ohne Ablauf'}</td>
-                        <td>{session.rememberMe ? 'ja' : 'nein'}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <SmartTable<SessionRow>
+              tableId="systeminfos-sessions"
+              userId={tableUserId}
+              title="Aktive Sessions"
+              rows={sessionRows}
+              columns={sessionColumns}
+              loading={refreshing}
+              onRefresh={() => {
+                void loadSystemInfos(true);
+              }}
+              defaultPageSize={10}
+              pageSizeOptions={[5, 10, 20, 50]}
+              disableRowSelectionOnClick
+            />
           </section>
 
           <section className="systeminfos-section">
             <h3>Offene Tokens</h3>
 
             <div className="systeminfos-subsection">
-              <h4>Feed-Tokens</h4>
-              <div className="systeminfos-table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Scope</th>
-                      <th>Benutzer</th>
-                      <th>Token</th>
-                      <th>Erstellt</th>
-                      <th>Zuletzt genutzt</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.tokens.feedTokens.length === 0 ? (
-                      <tr>
-                        <td colSpan={5}>Keine offenen Feed-Tokens.</td>
-                      </tr>
-                    ) : (
-                      data.tokens.feedTokens.map((token) => (
-                        <tr key={token.id}>
-                          <td>{token.scope}</td>
-                          <td>{token.username || token.adminUserId}</td>
-                          <td>{token.tokenMasked || '–'}</td>
-                          <td>{formatDateTime(token.createdAt)}</td>
-                          <td>{formatDateTime(token.lastUsedAt)}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <Typography variant="subtitle1" fontWeight={700}>Feed-Tokens</Typography>
+              <SmartTable<FeedTokenRow>
+                tableId="systeminfos-feed-tokens"
+                userId={tableUserId}
+                title="Feed-Tokens"
+                rows={feedTokenRows}
+                columns={feedTokenColumns}
+                loading={refreshing}
+                onRefresh={() => {
+                  void loadSystemInfos(true);
+                }}
+                defaultPageSize={10}
+                pageSizeOptions={[5, 10, 20]}
+                disableRowSelectionOnClick
+              />
             </div>
 
             <div className="systeminfos-subsection">
-              <h4>OAuth-Tokens</h4>
-              <div className="systeminfos-table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Provider</th>
-                      <th>Account</th>
-                      <th>Status</th>
-                      <th>Ablauf</th>
-                      <th>Aktualisiert</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.tokens.oauthTokens.length === 0 ? (
-                      <tr>
-                        <td colSpan={5}>Keine OAuth-Tokens vorhanden.</td>
-                      </tr>
-                    ) : (
-                      data.tokens.oauthTokens.map((token) => (
-                        <tr key={token.id}>
-                          <td>{token.provider || '–'}</td>
-                          <td>{token.accountId || '–'}</td>
-                          <td>{token.isExpired ? 'abgelaufen' : 'aktiv'}</td>
-                          <td>{token.expiresAt ? formatDateTime(token.expiresAt) : 'kein Ablauf'}</td>
-                          <td>{formatDateTime(token.updatedAt)}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <Typography variant="subtitle1" fontWeight={700}>OAuth-Tokens</Typography>
+              <SmartTable<OAuthTokenRow>
+                tableId="systeminfos-oauth-tokens"
+                userId={tableUserId}
+                title="OAuth-Tokens"
+                rows={oauthTokenRows}
+                columns={oauthTokenColumns}
+                loading={refreshing}
+                onRefresh={() => {
+                  void loadSystemInfos(true);
+                }}
+                defaultPageSize={10}
+                pageSizeOptions={[5, 10, 20]}
+                disableRowSelectionOnClick
+              />
             </div>
 
             <div className="systeminfos-subsection">
-              <h4>Ticket-Validierungstokens</h4>
-              <div className="systeminfos-table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Ticket</th>
-                      <th>E-Mail</th>
-                      <th>Token</th>
-                      <th>Erstellt</th>
-                      <th>Ablauf</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.tokens.ticketValidationTokens.length === 0 ? (
-                      <tr>
-                        <td colSpan={5}>Keine offenen Ticket-Validierungstokens.</td>
-                      </tr>
-                    ) : (
-                      data.tokens.ticketValidationTokens.map((token) => (
-                        <tr key={token.id}>
-                          <td>{token.ticketId || '–'}</td>
-                          <td>{token.citizenEmail || '–'}</td>
-                          <td>{token.tokenMasked || '–'}</td>
-                          <td>{formatDateTime(token.createdAt)}</td>
-                          <td>{token.expiresAt ? formatDateTime(token.expiresAt) : 'kein Ablauf'}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <Typography variant="subtitle1" fontWeight={700}>Ticket-Validierungstokens</Typography>
+              <SmartTable<ValidationTokenRow>
+                tableId="systeminfos-ticket-validation-tokens"
+                userId={tableUserId}
+                title="Ticket-Validierungstokens"
+                rows={ticketValidationRows}
+                columns={validationTokenColumns}
+                loading={refreshing}
+                onRefresh={() => {
+                  void loadSystemInfos(true);
+                }}
+                defaultPageSize={10}
+                pageSizeOptions={[5, 10, 20]}
+                disableRowSelectionOnClick
+              />
             </div>
 
             <div className="systeminfos-subsection">
-              <h4>Workflow-Validierungstokens</h4>
-              <div className="systeminfos-table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Ticket</th>
-                      <th>Empfänger</th>
-                      <th>Token</th>
-                      <th>Erstellt</th>
-                      <th>Ablauf</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {data.tokens.workflowValidationTokens.length === 0 ? (
-                      <tr>
-                        <td colSpan={5}>Keine offenen Workflow-Validierungstokens.</td>
-                      </tr>
-                    ) : (
-                      data.tokens.workflowValidationTokens.map((token) => (
-                        <tr key={token.id}>
-                          <td>{token.ticketId || '–'}</td>
-                          <td>{token.recipientEmail || '–'}</td>
-                          <td>{token.tokenMasked || '–'}</td>
-                          <td>{formatDateTime(token.createdAt)}</td>
-                          <td>{token.expiresAt ? formatDateTime(token.expiresAt) : 'kein Ablauf'}</td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-              </div>
+              <Typography variant="subtitle1" fontWeight={700}>Workflow-Validierungstokens</Typography>
+              <SmartTable<ValidationTokenRow>
+                tableId="systeminfos-workflow-validation-tokens"
+                userId={tableUserId}
+                title="Workflow-Validierungstokens"
+                rows={workflowValidationRows}
+                columns={validationTokenColumns}
+                loading={refreshing}
+                onRefresh={() => {
+                  void loadSystemInfos(true);
+                }}
+                defaultPageSize={10}
+                pageSizeOptions={[5, 10, 20]}
+                disableRowSelectionOnClick
+              />
             </div>
           </section>
 
           <section className="systeminfos-section">
             <div className="systeminfos-section-head">
               <h3>Datenbankstruktur</h3>
-              <input
-                type="text"
+              <TextField
+                size="small"
                 value={tableSearch}
                 onChange={(event) => setTableSearch(event.target.value)}
                 placeholder="Tabellen-/Spaltenname filtern…"
               />
             </div>
             <p className="systeminfos-note">
-              Snapshot: {formatDateTime(data.databaseStructure.generatedAt)} | Tabellen: {formatInteger(data.databaseStructure.tableCount)} | Größe:{' '}
-              {formatBytes(data.databaseStructure.database.sizeBytes)}
+              Snapshot: {formatDateTime(data.databaseStructure.generatedAt)} | Tabellen: {formatInteger(data.databaseStructure.tableCount)} | Größe: {formatBytes(data.databaseStructure.database.sizeBytes)}
             </p>
 
-            <div className="systeminfos-db-grid">
-              {filteredTables.length === 0 ? (
-                <div className="systeminfos-empty">Keine Tabellen für den aktuellen Filter.</div>
-              ) : (
-                filteredTables.map((table) => (
-                  <article key={table.name} className="systeminfos-db-card">
-                    <header>
-                      <h4>{table.name}</h4>
-                      <span>{formatInteger(table.rowCount)} Zeilen</span>
-                    </header>
-                    <p>
-                      Spalten: {formatInteger(table.columns.length)} | Foreign Keys: {formatInteger(table.foreignKeys.length)}
-                    </p>
-                    <details>
-                      <summary>Spalten anzeigen</summary>
-                      <div className="systeminfos-table-wrap">
-                        <table>
-                          <thead>
-                            <tr>
-                              <th>Name</th>
-                              <th>Typ</th>
-                              <th>PK</th>
-                              <th>Not Null</th>
-                              <th>Default</th>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {table.columns.map((column) => (
-                              <tr key={`${table.name}-${column.cid}-${column.name}`}>
-                                <td>{column.name}</td>
-                                <td>{column.type || '–'}</td>
-                                <td>{column.primaryKeyOrder > 0 ? String(column.primaryKeyOrder) : '–'}</td>
-                                <td>{column.notNull ? 'ja' : 'nein'}</td>
-                                <td>{column.defaultValue ?? '–'}</td>
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
-                      </div>
-                    </details>
-                    {table.foreignKeys.length > 0 ? (
-                      <details>
-                        <summary>Foreign Keys anzeigen</summary>
-                        <div className="systeminfos-table-wrap">
-                          <table>
-                            <thead>
-                              <tr>
-                                <th>Von</th>
-                                <th>Nach Tabelle</th>
-                                <th>Nach Spalte</th>
-                                <th>On Update</th>
-                                <th>On Delete</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {table.foreignKeys.map((fk) => (
-                                <tr key={`${table.name}-fk-${fk.id}-${fk.seq}`}>
-                                  <td>{fk.from}</td>
-                                  <td>{fk.table}</td>
-                                  <td>{fk.to}</td>
-                                  <td>{fk.onUpdate || '–'}</td>
-                                  <td>{fk.onDelete || '–'}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
-                        </div>
-                      </details>
-                    ) : null}
-                    {table.createSql ? (
-                      <details>
-                        <summary>CREATE SQL anzeigen</summary>
-                        <pre>{table.createSql}</pre>
-                      </details>
-                    ) : null}
-                  </article>
-                ))
-              )}
-            </div>
+            <SmartTable<DatabaseTableRow>
+              tableId="systeminfos-database-tables"
+              userId={tableUserId}
+              title="Tabellen"
+              rows={databaseTableRows}
+              columns={databaseTableColumns}
+              loading={refreshing}
+              onRowClick={(row) => setSelectedTableName(row.name)}
+              onRefresh={() => {
+                void loadSystemInfos(true);
+              }}
+              defaultPageSize={10}
+              pageSizeOptions={[5, 10, 20, 50]}
+              disableRowSelectionOnClick
+            />
+
+            {selectedTable ? (
+              <div className="systeminfos-db-detail-grid">
+                <div className="systeminfos-table-block">
+                  <Typography variant="subtitle1" fontWeight={700}>
+                    {selectedTable.name} · Spalten ({formatInteger(selectedTable.columns.length)})
+                  </Typography>
+                  <SmartTable<DatabaseColumnRow>
+                    tableId={`systeminfos-db-columns-${selectedTable.name}`}
+                    userId={tableUserId}
+                    title="Spalten"
+                    rows={selectedColumnRows}
+                    columns={databaseColumnColumns}
+                    loading={refreshing}
+                    defaultPageSize={10}
+                    pageSizeOptions={[5, 10, 25, 50]}
+                    disableRowSelectionOnClick
+                  />
+                </div>
+
+                <div className="systeminfos-table-block">
+                  <Typography variant="subtitle1" fontWeight={700}>
+                    {selectedTable.name} · Foreign Keys ({formatInteger(selectedTable.foreignKeys.length)})
+                  </Typography>
+                  <SmartTable<DatabaseForeignKeyRow>
+                    tableId={`systeminfos-db-fks-${selectedTable.name}`}
+                    userId={tableUserId}
+                    title="Foreign Keys"
+                    rows={selectedForeignKeyRows}
+                    columns={databaseForeignKeyColumns}
+                    loading={refreshing}
+                    defaultPageSize={10}
+                    pageSizeOptions={[5, 10, 25, 50]}
+                    disableRowSelectionOnClick
+                  />
+                </div>
+
+                <div className="systeminfos-table-block systeminfos-create-sql-block">
+                  <Typography variant="subtitle1" fontWeight={700}>CREATE SQL</Typography>
+                  <pre className="systeminfos-create-sql">{selectedTable.createSql || '–'}</pre>
+                </div>
+              </div>
+            ) : (
+              <div className="systeminfos-empty">Keine Tabellen für den aktuellen Filter.</div>
+            )}
           </section>
 
           <section className="systeminfos-section">
             <h3>Build-Historie</h3>
-            <div className="systeminfos-table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Zeit</th>
-                    <th>Commit</th>
-                    <th>Autor</th>
-                    <th>Beschreibung</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.buildHistory.length === 0 ? (
-                    <tr>
-                      <td colSpan={4}>
-                        Keine Build-Historie verfügbar.
-                        {data.build.git.error ? ` (${data.build.git.error})` : ''}
-                      </td>
-                    </tr>
-                  ) : (
-                    data.buildHistory.map((entry) => (
-                      <tr key={entry.commit}>
-                        <td>{formatDateTime(entry.authoredAt)}</td>
-                        <td>{entry.shortCommit}</td>
-                        <td>{entry.author}</td>
-                        <td>{entry.subject}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <SmartTable<BuildHistoryRow>
+              tableId="systeminfos-build-history"
+              userId={tableUserId}
+              title="Build-Historie"
+              rows={buildHistoryRows}
+              columns={buildHistoryColumns}
+              loading={refreshing}
+              onRefresh={() => {
+                void loadSystemInfos(true);
+              }}
+              defaultPageSize={10}
+              pageSizeOptions={[5, 10, 20, 50]}
+              disableRowSelectionOnClick
+            />
+            {buildHistoryRows.length === 0 && data.build.git.error ? (
+              <Alert severity="info">Build-Historie derzeit nicht verfügbar: {data.build.git.error}</Alert>
+            ) : null}
           </section>
 
           <section className="systeminfos-section">
             <h3>Feature-Historie (Admin-Journal)</h3>
-            <div className="systeminfos-table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Zeit</th>
-                    <th>Event</th>
-                    <th>Benutzer</th>
-                    <th>Methode</th>
-                    <th>Pfad</th>
-                    <th>Details</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.featureHistory.length === 0 ? (
-                    <tr>
-                      <td colSpan={6}>Keine Feature-Historie im Journal gefunden.</td>
-                    </tr>
-                  ) : (
-                    data.featureHistory.map((entry) => (
-                      <tr key={entry.id}>
-                        <td>{formatDateTime(entry.createdAt)}</td>
-                        <td>{entry.eventType || '–'}</td>
-                        <td>{entry.username || '–'}</td>
-                        <td>{entry.method || '–'}</td>
-                        <td>{entry.path || '–'}</td>
-                        <td>{formatJsonPreview(entry.details)}</td>
-                      </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <SmartTable<FeatureHistoryRow>
+              tableId="systeminfos-feature-history"
+              userId={tableUserId}
+              title="Feature-Historie"
+              rows={featureHistoryRows}
+              columns={featureHistoryColumns}
+              loading={refreshing}
+              onRefresh={() => {
+                void loadSystemInfos(true);
+              }}
+              defaultPageSize={10}
+              pageSizeOptions={[5, 10, 20, 50, 100]}
+              disableRowSelectionOnClick
+            />
           </section>
         </>
       ) : null}

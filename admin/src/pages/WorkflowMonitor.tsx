@@ -1,8 +1,21 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
+import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
+import CheckRoundedIcon from '@mui/icons-material/CheckRounded';
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded';
+import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
+import ReplayRoundedIcon from '@mui/icons-material/ReplayRounded';
+import SkipNextRoundedIcon from '@mui/icons-material/SkipNextRounded';
+import PlayArrowRoundedIcon from '@mui/icons-material/PlayArrowRounded';
 import { subscribeAdminRealtime } from '../lib/realtime';
 import { useTableSelection } from '../lib/tableSelection';
+import {
+  SmartTable,
+  SmartTableRowActionButton,
+  SmartTableRowActions,
+  type SmartTableColumnDef,
+} from '../modules/smart-table';
 import './WorkflowMonitor.css';
 
 interface WorkflowTask {
@@ -118,8 +131,6 @@ const MODE_LABELS: Record<WorkflowExecution['executionMode'], string> = {
   HYBRID: 'Hybrid',
 };
 
-const STATUS_ORDER: WorkflowExecution['status'][] = ['RUNNING', 'PAUSED', 'COMPLETED', 'FAILED'];
-const MODE_ORDER: WorkflowExecution['executionMode'][] = ['AUTO', 'HYBRID', 'MANUAL'];
 const BLOCKED_REASON_LABELS: Record<string, string> = {
   none: 'Kein Blocker',
   waiting_external: 'Externes Warten',
@@ -134,18 +145,6 @@ const SLA_LABELS: Record<'ok' | 'risk' | 'overdue', string> = {
   risk: 'gefährdet',
   overdue: 'überfällig',
 };
-
-type PageSize = 10 | 25 | 50 | 'all';
-type SortKey =
-  | 'title'
-  | 'category'
-  | 'status'
-  | 'mode'
-  | 'startedAt'
-  | 'currentTask'
-  | 'pending'
-  | 'ticketId';
-type SortDirection = 'asc' | 'desc';
 
 const WorkflowMonitor: React.FC<{ token: string }> = ({ token }) => {
   const [workflows, setWorkflows] = useState<WorkflowExecution[]>([]);
@@ -162,10 +161,6 @@ const WorkflowMonitor: React.FC<{ token: string }> = ({ token }) => {
   const [modeFilter, setModeFilter] = useState<'all' | WorkflowExecution['executionMode']>('all');
   const [blockedFilter, setBlockedFilter] = useState<'all' | 'blocked' | 'none'>('all');
   const [slaFilter, setSlaFilter] = useState<'all' | 'ok' | 'risk' | 'overdue'>('all');
-  const [pageSize, setPageSize] = useState<PageSize>(10);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [sortKey, setSortKey] = useState<SortKey>('startedAt');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
   const [selectedWorkflowId, setSelectedWorkflowId] = useState<string | null>(null);
   const [selectedWorkflow, setSelectedWorkflow] = useState<WorkflowExecution | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
@@ -458,10 +453,6 @@ const WorkflowMonitor: React.FC<{ token: string }> = ({ token }) => {
     });
   };
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [search, statusFilter, modeFilter, blockedFilter, slaFilter, activeFilter, pageSize]);
-
   const filteredWorkflows = useMemo(() => {
     const term = search.trim().toLowerCase();
     return workflows.filter((workflow) => {
@@ -492,19 +483,6 @@ const WorkflowMonitor: React.FC<{ token: string }> = ({ token }) => {
   }, [workflows, activeFilter, statusFilter, modeFilter, blockedFilter, slaFilter, search]);
 
   const sortedWorkflows = useMemo(() => {
-    const parseDate = (value?: string) => {
-      if (!value) return 0;
-      const date = new Date(value);
-      return Number.isNaN(date.getTime()) ? 0 : date.getTime();
-    };
-    const statusIndex = (status: WorkflowExecution['status']) => {
-      const idx = STATUS_ORDER.indexOf(status);
-      return idx === -1 ? STATUS_ORDER.length : idx;
-    };
-    const modeIndex = (mode: WorkflowExecution['executionMode']) => {
-      const idx = MODE_ORDER.indexOf(mode);
-      return idx === -1 ? MODE_ORDER.length : idx;
-    };
     const severityScore = (workflow: WorkflowExecution) => {
       const slaState = getWorkflowSlaState(workflow);
       const slaScore = slaState === 'overdue' ? 3 : slaState === 'risk' ? 2 : 1;
@@ -513,57 +491,12 @@ const WorkflowMonitor: React.FC<{ token: string }> = ({ token }) => {
     };
 
     return [...filteredWorkflows].sort((a, b) => {
-      let aVal: string | number = '';
-      let bVal: string | number = '';
-
-      switch (sortKey) {
-        case 'title':
-          aVal = a.title || '';
-          bVal = b.title || '';
-          break;
-        case 'category':
-          aVal = a.category || '';
-          bVal = b.category || '';
-          break;
-        case 'status':
-          aVal = statusIndex(a.status);
-          bVal = statusIndex(b.status);
-          break;
-        case 'mode':
-          aVal = modeIndex(a.executionMode);
-          bVal = modeIndex(b.executionMode);
-          break;
-        case 'currentTask':
-          aVal = currentTask(a)?.title || '';
-          bVal = currentTask(b)?.title || '';
-          break;
-        case 'pending':
-          aVal = getPendingTasks(a).length;
-          bVal = getPendingTasks(b).length;
-          break;
-        case 'ticketId':
-          aVal = a.ticketId || '';
-          bVal = b.ticketId || '';
-          break;
-        case 'startedAt':
-        default:
-          if (severityScore(a) !== severityScore(b)) {
-            return severityScore(b) - severityScore(a);
-          }
-          aVal = parseDate(a.startedAt);
-          bVal = parseDate(b.startedAt);
+      if (severityScore(a) !== severityScore(b)) {
+        return severityScore(b) - severityScore(a);
       }
-
-      let comparison = 0;
-      if (typeof aVal === 'string' && typeof bVal === 'string') {
-        comparison = aVal.localeCompare(bVal, 'de', { sensitivity: 'base' });
-      } else {
-        comparison = Number(aVal) - Number(bVal);
-      }
-
-      return sortDirection === 'asc' ? comparison : -comparison;
+      return new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime();
     });
-  }, [filteredWorkflows, sortKey, sortDirection]);
+  }, [filteredWorkflows]);
 
   const totalWorkflows = workflows.length;
   const selection = useTableSelection(sortedWorkflows);
@@ -581,35 +514,6 @@ const WorkflowMonitor: React.FC<{ token: string }> = ({ token }) => {
         .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime()),
     [workflows]
   );
-
-  const totalFiltered = sortedWorkflows.length;
-  const effectivePageSize = pageSize === 'all' ? totalFiltered || 1 : pageSize;
-  const totalPages = pageSize === 'all' ? 1 : Math.max(1, Math.ceil(totalFiltered / effectivePageSize));
-  const pageStart = pageSize === 'all' ? 0 : (currentPage - 1) * effectivePageSize;
-  const paginatedWorkflows =
-    pageSize === 'all'
-      ? sortedWorkflows
-      : sortedWorkflows.slice(pageStart, pageStart + effectivePageSize);
-
-  useEffect(() => {
-    if (currentPage > totalPages) {
-      setCurrentPage(totalPages);
-    }
-  }, [currentPage, totalPages]);
-
-  const handleSort = (key: SortKey) => {
-    if (sortKey === key) {
-      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-    } else {
-      setSortKey(key);
-      setSortDirection('asc');
-    }
-  };
-
-  const sortIndicator = (key: SortKey) => {
-    if (sortKey !== key) return '↕';
-    return sortDirection === 'asc' ? '▲' : '▼';
-  };
 
   const taskTypeLabel = (type: WorkflowTask['type']) => {
     switch (type) {
@@ -667,6 +571,196 @@ const WorkflowMonitor: React.FC<{ token: string }> = ({ token }) => {
     if (pendingTasks.length === 0) return null;
     return pendingTasks[0];
   };
+
+  const workflowColumns = useMemo<SmartTableColumnDef<WorkflowExecution>[]>(
+    () => [
+      {
+        field: 'title',
+        headerName: 'Workflow',
+        minWidth: 240,
+        flex: 1,
+        renderCell: (params) => (
+          <div className="workflow-cell">
+            <div className="workflow-title">{params.row.title || 'Workflow'}</div>
+            <div className="workflow-sub">ID {params.row.id.slice(0, 8)}</div>
+          </div>
+        ),
+      },
+      {
+        field: 'status',
+        headerName: 'Status',
+        minWidth: 140,
+        renderCell: (params) => (
+          <span className={`badge status-${params.row.status.toLowerCase()}`} title={params.row.error || ''}>
+            {STATUS_LABELS[params.row.status]}
+          </span>
+        ),
+      },
+      {
+        field: 'slaState',
+        headerName: 'SLA',
+        minWidth: 130,
+        valueGetter: (_value, row) => getWorkflowSlaState(row),
+        renderCell: (params) => {
+          const slaState = getWorkflowSlaState(params.row);
+          return <span className={`badge sla-${slaState}`}>{SLA_LABELS[slaState]}</span>;
+        },
+      },
+      {
+        field: 'blockedReason',
+        headerName: 'Blocker',
+        minWidth: 180,
+        renderCell: (params) => (
+          <span className="badge blocked-reason" title={params.row.blockedReason || ''}>
+            {BLOCKED_REASON_LABELS[params.row.blockedReason || 'none'] || params.row.blockedReason || 'Kein Blocker'}
+          </span>
+        ),
+      },
+      {
+        field: 'executionMode',
+        headerName: 'Modus',
+        minWidth: 130,
+        renderCell: (params) => (
+          <span className={`badge mode-${params.row.executionMode.toLowerCase()}`}>
+            {MODE_LABELS[params.row.executionMode]}
+          </span>
+        ),
+      },
+      {
+        field: 'category',
+        headerName: 'Kategorie',
+        minWidth: 190,
+        flex: 1,
+        valueGetter: (_value, row) => row.category || '–',
+      },
+      {
+        field: 'currentTask',
+        headerName: 'Aktuelle Task',
+        minWidth: 200,
+        flex: 1,
+        valueGetter: (_value, row) => currentTask(row)?.title || '–',
+      },
+      {
+        field: 'pendingManualCount',
+        headerName: 'Freigaben',
+        minWidth: 120,
+        valueGetter: (_value, row) => getPendingTasks(row).length,
+      },
+      {
+        field: 'startedAt',
+        headerName: 'Start',
+        minWidth: 140,
+        valueFormatter: (value) => formatDate(String(value || '')),
+      },
+      {
+        field: 'ticketId',
+        headerName: 'Ticket',
+        minWidth: 140,
+        renderCell: (params) =>
+          params.row.ticketId ? (
+            <Link to={`/tickets/${params.row.ticketId}`} className="workflow-link">
+              {params.row.ticketId.slice(0, 8)}
+            </Link>
+          ) : (
+            '–'
+          ),
+      },
+      {
+        field: 'actions',
+        headerName: 'Aktionen',
+        minWidth: 170,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        hideable: false,
+        renderCell: (params) => {
+          const workflow = params.row;
+          const approvableTask = getApprovableTask(workflow);
+          const failedTask = getFailedTasks(workflow)[0] || null;
+          return (
+            <SmartTableRowActions>
+              <SmartTableRowActionButton
+                label="Details"
+                icon={<OpenInNewRoundedIcon fontSize="inherit" />}
+                tone="primary"
+                onClick={() => {
+                  void handleOpenWorkflowDetails(workflow.id);
+                }}
+              />
+              {approvableTask ? (
+                <>
+                  <SmartTableRowActionButton
+                    label="Freigeben"
+                    icon={<CheckRoundedIcon fontSize="inherit" />}
+                    tone="success"
+                    loading={approvalLoading[approvableTask.id] || bulkLoading}
+                    onClick={() => {
+                      void handleApproveTask(workflow.id, approvableTask.id);
+                    }}
+                  />
+                  <SmartTableRowActionButton
+                    label="Ablehnen"
+                    icon={<CloseRoundedIcon fontSize="inherit" />}
+                    tone="danger"
+                    loading={approvalLoading[approvableTask.id] || bulkLoading}
+                    onClick={() => {
+                      void handleRejectTask(workflow.id, approvableTask.id);
+                    }}
+                  />
+                </>
+              ) : null}
+              {failedTask ? (
+                <>
+                  <SmartTableRowActionButton
+                    label="Retry"
+                    icon={<ReplayRoundedIcon fontSize="inherit" />}
+                    tone="warning"
+                    loading={recoveryLoading[`${workflow.id}:${failedTask.id}:retry`] || bulkLoading}
+                    onClick={() => {
+                      void handleRecoveryAction(workflow.id, failedTask.id, 'retry');
+                    }}
+                  />
+                  <SmartTableRowActionButton
+                    label="Skip"
+                    icon={<SkipNextRoundedIcon fontSize="inherit" />}
+                    tone="warning"
+                    loading={recoveryLoading[`${workflow.id}:${failedTask.id}:skip`] || bulkLoading}
+                    onClick={() => {
+                      void handleRecoveryAction(workflow.id, failedTask.id, 'skip');
+                    }}
+                  />
+                  <SmartTableRowActionButton
+                    label="Fortsetzen"
+                    icon={<PlayArrowRoundedIcon fontSize="inherit" />}
+                    tone="default"
+                    loading={recoveryLoading[`${workflow.id}:${failedTask.id}:resume`] || bulkLoading}
+                    onClick={() => {
+                      void handleRecoveryAction(workflow.id, failedTask.id, 'resume');
+                    }}
+                  />
+                </>
+              ) : null}
+              <SmartTableRowActionButton
+                label="Löschen"
+                icon={<DeleteOutlineRoundedIcon fontSize="inherit" />}
+                tone="danger"
+                loading={deleteLoading[workflow.id] || bulkLoading}
+                onClick={() => {
+                  void handleDeleteWorkflow(workflow.id);
+                }}
+              />
+            </SmartTableRowActions>
+          );
+        },
+      },
+    ],
+    [
+      approvalLoading,
+      bulkLoading,
+      deleteLoading,
+      recoveryLoading,
+    ]
+  );
 
   const handleBulkDeleteWorkflows = async () => {
     if (selection.selectedRows.length === 0) {
@@ -1055,18 +1149,6 @@ const WorkflowMonitor: React.FC<{ token: string }> = ({ token }) => {
             <option value="none">Nur ohne Blocker</option>
           </select>
         </div>
-        <div className="filter-group">
-          <label>Seiten</label>
-          <select
-            value={pageSize}
-            onChange={(e) => setPageSize(e.target.value === 'all' ? 'all' : Number(e.target.value) as PageSize)}
-          >
-            <option value={10}>10</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-            <option value="all">Alle</option>
-          </select>
-        </div>
       </div>
 
       {selection.selectedCount > 0 && (
@@ -1090,245 +1172,33 @@ const WorkflowMonitor: React.FC<{ token: string }> = ({ token }) => {
       )}
 
       <div className="workflows-container">
-        {paginatedWorkflows.length === 0 ? (
+        {sortedWorkflows.length === 0 ? (
           <div className="empty-state">
             <p>Keine Workflow-Instanzen gefunden</p>
             <small>Alle Instanzen laufen automatisch oder sind bereits abgeschlossen</small>
           </div>
         ) : (
-          <>
-            <div className="workflow-table-wrapper">
-              <table className="workflow-table">
-                <thead>
-                  <tr>
-                    <th className="table-select-col">
-                      <input
-                        type="checkbox"
-                        className="table-select-checkbox"
-                        checked={selection.areAllSelected(paginatedWorkflows)}
-                        onChange={() => selection.toggleAll(paginatedWorkflows)}
-                        aria-label="Alle Workflow-Instanzen auf der Seite auswählen"
-                      />
-                    </th>
-                    <th>
-                      <button type="button" className="table-sort" onClick={() => handleSort('title')}>
-                        Workflow (Prozess) <span className="sort-indicator">{sortIndicator('title')}</span>
-                      </button>
-                    </th>
-                    <th>
-                      <button type="button" className="table-sort" onClick={() => handleSort('status')}>
-                        Status <span className="sort-indicator">{sortIndicator('status')}</span>
-                      </button>
-                    </th>
-                    <th>SLA</th>
-                    <th>Blocker</th>
-                    <th>
-                      <button type="button" className="table-sort" onClick={() => handleSort('mode')}>
-                        Modus <span className="sort-indicator">{sortIndicator('mode')}</span>
-                      </button>
-                    </th>
-                    <th>
-                      <button type="button" className="table-sort" onClick={() => handleSort('category')}>
-                        Kategorie <span className="sort-indicator">{sortIndicator('category')}</span>
-                      </button>
-                    </th>
-                    <th>
-                      <button type="button" className="table-sort" onClick={() => handleSort('currentTask')}>
-                        Aktuelle Task <span className="sort-indicator">{sortIndicator('currentTask')}</span>
-                      </button>
-                    </th>
-                    <th>Schritt</th>
-                    <th>
-                      <button type="button" className="table-sort" onClick={() => handleSort('pending')}>
-                        Freigaben <span className="sort-indicator">{sortIndicator('pending')}</span>
-                      </button>
-                    </th>
-                    <th>
-                      <button type="button" className="table-sort" onClick={() => handleSort('startedAt')}>
-                        Start <span className="sort-indicator">{sortIndicator('startedAt')}</span>
-                      </button>
-                    </th>
-                    <th>
-                      <button type="button" className="table-sort" onClick={() => handleSort('ticketId')}>
-                        Ticket <span className="sort-indicator">{sortIndicator('ticketId')}</span>
-                      </button>
-                    </th>
-                    <th>Aktionen</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedWorkflows.map((workflow) => {
-                    const pendingManualCount = getPendingTasks(workflow).length;
-                    const failedTasks = getFailedTasks(workflow);
-                    const failedTask = failedTasks[0] || null;
-                    const displayTask = currentTask(workflow);
-                    const approvableTask = getApprovableTask(workflow);
-                    const canApprove = !!approvableTask;
-                    const slaState = getWorkflowSlaState(workflow);
-                    return (
-                      <tr key={workflow.id}>
-                        <td className="table-select-cell">
-                          <input
-                            type="checkbox"
-                            className="table-select-checkbox"
-                            checked={selection.isSelected(workflow.id)}
-                            onChange={() => selection.toggleRow(workflow.id)}
-                            aria-label={`Workflow ${workflow.id} auswählen`}
-                          />
-                        </td>
-                        <td>
-                          <div className="workflow-cell">
-                            <div className="workflow-title">{workflow.title}</div>
-                            <div className="workflow-sub">ID {workflow.id.slice(0, 8)}</div>
-                          </div>
-                        </td>
-                        <td>
-                          <span
-                            className={`badge status-${workflow.status.toLowerCase()}`}
-                            title={workflow.error || ''}
-                          >
-                            {STATUS_LABELS[workflow.status]}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`badge sla-${slaState}`}>{SLA_LABELS[slaState]}</span>
-                        </td>
-                        <td>
-                          <span className="badge blocked-reason" title={workflow.blockedReason || ''}>
-                            {BLOCKED_REASON_LABELS[workflow.blockedReason || 'none'] || workflow.blockedReason || 'Kein Blocker'}
-                          </span>
-                        </td>
-                        <td>
-                          <span className={`badge mode-${workflow.executionMode.toLowerCase()}`}>
-                            {MODE_LABELS[workflow.executionMode]}
-                          </span>
-                        </td>
-                        <td>{workflow.category || '–'}</td>
-                        <td>{displayTask?.title || '–'}</td>
-                        <td>
-                          {workflow.tasks.length === 0
-                            ? '–'
-                            : `${Math.min(workflow.currentTaskIndex + 1, workflow.tasks.length)}/${workflow.tasks.length}`}
-                        </td>
-                        <td>{pendingManualCount > 0 ? pendingManualCount : '–'}</td>
-                        <td>{formatDate(workflow.startedAt)}</td>
-                        <td>
-                          {workflow.ticketId ? (
-                            <Link to={`/tickets/${workflow.ticketId}`} className="workflow-link">
-                              {workflow.ticketId.slice(0, 8)}
-                            </Link>
-                          ) : (
-                            '–'
-                          )}
-                        </td>
-                        <td>
-                          <div className="workflow-actions">
-                            <button
-                              className="workflow-action details"
-                              onClick={() => handleOpenWorkflowDetails(workflow.id)}
-                            >
-                              <i className="fa-solid fa-circle-info" /> Details
-                            </button>
-                            {canApprove && approvableTask && (
-                              <>
-                                <button
-                                  className="workflow-action approve"
-                                  onClick={() => handleApproveTask(workflow.id, approvableTask.id)}
-                                  disabled={approvalLoading[approvableTask.id] || bulkLoading}
-                                >
-                                  {approvalLoading[approvableTask.id] ? (
-                                    <i className="fa-solid fa-spinner fa-spin" />
-                                  ) : (
-                                    <i className="fa-solid fa-check" />
-                                  )}
-                                  Freigeben
-                                </button>
-                                <button
-                                  className="workflow-action reject"
-                                  onClick={() => handleRejectTask(workflow.id, approvableTask.id)}
-                                  disabled={approvalLoading[approvableTask.id] || bulkLoading}
-                                >
-                                  <i className="fa-solid fa-xmark" /> Ablehnen
-                                </button>
-                              </>
-                            )}
-                            {failedTask && (
-                              <>
-                                <button
-                                  className="workflow-action approve"
-                                  onClick={() => handleRecoveryAction(workflow.id, failedTask.id, 'retry')}
-                                  disabled={recoveryLoading[`${workflow.id}:${failedTask.id}:retry`] || bulkLoading}
-                                >
-                                  {recoveryLoading[`${workflow.id}:${failedTask.id}:retry`] ? (
-                                    <i className="fa-solid fa-spinner fa-spin" />
-                                  ) : (
-                                    <i className="fa-solid fa-rotate-right" />
-                                  )}
-                                  Retry
-                                </button>
-                                <button
-                                  className="workflow-action reject"
-                                  onClick={() => handleRecoveryAction(workflow.id, failedTask.id, 'skip')}
-                                  disabled={recoveryLoading[`${workflow.id}:${failedTask.id}:skip`] || bulkLoading}
-                                >
-                                  <i className="fa-solid fa-forward" /> Skip
-                                </button>
-                                <button
-                                  className="workflow-action details"
-                                  onClick={() => handleRecoveryAction(workflow.id, failedTask.id, 'resume')}
-                                  disabled={recoveryLoading[`${workflow.id}:${failedTask.id}:resume`] || bulkLoading}
-                                >
-                                  <i className="fa-solid fa-user-check" /> Fortsetzen
-                                </button>
-                              </>
-                            )}
-                            <button
-                              className="workflow-action delete"
-                              onClick={() => handleDeleteWorkflow(workflow.id)}
-                              disabled={deleteLoading[workflow.id] || bulkLoading}
-                            >
-                              {deleteLoading[workflow.id] ? (
-                                <i className="fa-solid fa-spinner fa-spin" />
-                              ) : (
-                                <i className="fa-solid fa-trash" />
-                              )}
-                              Löschen
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="workflow-pagination">
-              <div className="pagination-info">
-                {pageSize === 'all'
-                  ? `Alle ${totalFiltered} Instanzen`
-                  : `Seite ${currentPage} von ${totalPages} · ${totalFiltered} Instanzen`}
-              </div>
-              <div className="pagination-actions">
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1 || pageSize === 'all'}
-                >
-                  Zurück
-                </button>
-                <button
-                  type="button"
-                  className="btn btn-secondary"
-                  onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages || pageSize === 'all'}
-                >
-                  Weiter
-                </button>
-              </div>
-            </div>
-          </>
+          <SmartTable<WorkflowExecution>
+            tableId="workflow-monitor-instances"
+            userId={token}
+            title="Workflow-Instanzen"
+            rows={sortedWorkflows}
+            columns={workflowColumns}
+            loading={loading}
+            checkboxSelection
+            selectionModel={selection.selectedIds}
+            onSelectionModelChange={(ids) => selection.setSelectedIds(ids)}
+            onRowClick={(row) => {
+              void handleOpenWorkflowDetails(row.id);
+            }}
+            onRefresh={() => {
+              void fetchWorkflows();
+            }}
+            liveState="live"
+            defaultPageSize={25}
+            pageSizeOptions={[10, 25, 50, 100]}
+            disableRowSelectionOnClick
+          />
         )}
       </div>
 
