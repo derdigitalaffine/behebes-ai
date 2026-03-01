@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { getAdminToken } from '../lib/auth';
+import {
+  SmartTable,
+  type SmartTableColumnDef,
+} from '../modules/smart-table';
 import './TranslationPlanner.css';
 
 type EntryKind = 'ui' | 'email';
@@ -139,6 +143,58 @@ const TranslationPlanner: React.FC = () => {
       minute: '2-digit',
     });
   };
+
+  const translationColumns = useMemo<SmartTableColumnDef<TranslationEntry>[]>(
+    () => [
+      {
+        field: 'kind',
+        headerName: 'Typ',
+        minWidth: 100,
+        flex: 0.5,
+        valueGetter: (_value, row) => (row.kind === 'ui' ? 'UI' : 'E-Mail'),
+      },
+      {
+        field: 'language',
+        headerName: 'Sprache',
+        minWidth: 110,
+        flex: 0.45,
+      },
+      {
+        field: 'title',
+        headerName: 'Eintrag',
+        minWidth: 260,
+        flex: 1.1,
+        renderCell: (params) => (
+          <div style={{ lineHeight: 1.3, paddingTop: 4, paddingBottom: 4 }}>
+            <strong>{params.row.title}</strong>
+            <div style={{ fontSize: 12, color: '#64748b' }}>{params.row.subtitle}</div>
+          </div>
+        ),
+      },
+      {
+        field: 'sourcePreview',
+        headerName: 'Quelle',
+        minWidth: 230,
+        flex: 1,
+        valueGetter: (_value, row) => row.sourcePreview || '–',
+      },
+      {
+        field: 'translationPreview',
+        headerName: 'Übersetzung',
+        minWidth: 230,
+        flex: 1,
+        valueGetter: (_value, row) => row.translationPreview || '–',
+      },
+      {
+        field: 'updatedAt',
+        headerName: 'Aktualisiert',
+        minWidth: 170,
+        flex: 0.7,
+        valueGetter: (_value, row) => formatDate(row.updatedAt),
+      },
+    ],
+    []
+  );
 
   const loadStatus = async (silent = false) => {
     if (!silent) setStatusLoading(true);
@@ -600,53 +656,22 @@ const TranslationPlanner: React.FC = () => {
           </div>
 
           <div className="translation-table-wrap">
-            <table className="translation-table">
-              <thead>
-                <tr>
-                  <th>Typ</th>
-                  <th>Sprache</th>
-                  <th>Eintrag</th>
-                  <th>Quelle</th>
-                  <th>Übersetzung</th>
-                  <th>Aktualisiert</th>
-                </tr>
-              </thead>
-              <tbody>
-                {listLoading ? (
-                  <tr>
-                    <td colSpan={6} className="translation-empty-cell">
-                      <i className="fa-solid fa-spinner fa-spin" /> Lade Übersetzungen...
-                    </td>
-                  </tr>
-                ) : (entries?.items || []).length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="translation-empty-cell">
-                      Keine Übersetzungen gefunden.
-                    </td>
-                  </tr>
-                ) : (
-                  (entries?.items || []).map((entry) => (
-                    <tr
-                      key={entry.id}
-                      className={selectedEntry?.id === entry.id ? 'is-active' : ''}
-                      onClick={() => {
-                        void handleSelectEntry(entry);
-                      }}
-                    >
-                      <td>{entry.kind === 'ui' ? 'UI' : 'E-Mail'}</td>
-                      <td>{entry.language}</td>
-                      <td>
-                        <strong>{entry.title}</strong>
-                        <span>{entry.subtitle}</span>
-                      </td>
-                      <td>{entry.sourcePreview || '–'}</td>
-                      <td>{entry.translationPreview || '–'}</td>
-                      <td>{formatDate(entry.updatedAt)}</td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
+            <SmartTable<TranslationEntry>
+              tableId="admin-translation-planner-entries"
+              userId={headers.Authorization}
+              title="Übersetzungen"
+              rows={entries?.items || []}
+              columns={translationColumns}
+              loading={listLoading}
+              onRefresh={() => {
+                void loadEntries();
+              }}
+              onRowClick={(row) => {
+                void handleSelectEntry(row);
+              }}
+              getRowClassName={(row) => (selectedEntry?.id === row.id ? 'is-selected' : '')}
+              disableRowSelectionOnClick
+            />
           </div>
         </div>
 

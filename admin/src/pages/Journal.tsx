@@ -1,7 +1,24 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
-import { useTableSelection } from '../lib/tableSelection';
-import './Audit.css';
+import {
+  Alert,
+  Button,
+  Chip,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded';
+import UploadFileRoundedIcon from '@mui/icons-material/UploadFileRounded';
+import {
+  SmartTable,
+  SmartTableRowActionButton,
+  SmartTableRowActions,
+  type SmartTableColumnDef,
+} from '../modules/smart-table';
+import { AdminKpiStrip, AdminPageHero, AdminSurfaceCard } from '../components/admin-ui';
 
 interface JournalEvent {
   id: string;
@@ -13,7 +30,7 @@ interface JournalEvent {
   path?: string;
   ipAddress?: string;
   userAgent?: string;
-  details?: any;
+  details?: unknown;
   createdAt?: string;
 }
 
@@ -21,36 +38,84 @@ interface JournalProps {
   token: string;
 }
 
-type SortKey = 'createdAt' | 'eventType' | 'username' | 'path' | 'severity';
-type SortDirection = 'asc' | 'desc';
-type PageSize = 10 | 25 | 50 | 100;
+const severityColor = (value?: JournalEvent['severity']): 'success' | 'warning' | 'error' | 'default' => {
+  if (value === 'error') return 'error';
+  if (value === 'warning') return 'warning';
+  if (value === 'info') return 'success';
+  return 'default';
+};
+
+const formatDate = (value?: string): string => {
+  if (!value) return '–';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '–';
+  return date.toLocaleString('de-DE');
+};
+
+const detailsAsText = (details: unknown): string => {
+  if (!details) return '–';
+  try {
+    const raw = typeof details === 'string' ? details : JSON.stringify(details);
+    const normalized = raw.trim();
+    if (!normalized) return '–';
+    return normalized.length > 220 ? `${normalized.slice(0, 220)}...` : normalized;
+  } catch {
+    return '–';
+  }
+};
 
 const Journal: React.FC<JournalProps> = ({ token }) => {
   const [items, setItems] = useState<JournalEvent[]>([]);
   const [eventType, setEventType] = useState('');
   const [eventOptions, setEventOptions] = useState<Array<{ eventType: string; count: number }>>([]);
-  const [search, setSearch] = useState('');
-  const [sortKey, setSortKey] = useState<SortKey>('createdAt');
-  const [sortDirection, setSortDirection] = useState<SortDirection>('desc');
-  const [pageSize, setPageSize] = useState<PageSize>(25);
-  const [page, setPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [deleteLoading, setDeleteLoading] = useState<Record<string, boolean>>({});
   const [bulkLoading, setBulkLoading] = useState(false);
 
-  useEffect(() => {
-    const load = async () => {
+  const fetchJournal = useCallback(
+    async (options?: { silent?: boolean }) => {
+      const silent = options?.silent === true;
       try {
+        if (silent) {
+          setRefreshing(true);
+        } else {
+          setLoading(true);
+        }
         const response = await axios.get('/api/admin/journal', {
           headers: { Authorization: `Bearer ${token}` },
           params: {
-            limit: 800,
+            limit: 1000,
             offset: 0,
             ...(eventType ? { eventType } : {}),
           },
         });
-        setItems(Array.isArray(response.data?.items) ? response.data.items : []);
+
+        const rows: JournalEvent[] = Array.isArray(response.data?.items)
+          ? response.data.items
+              .map((entry: any, index: number) => ({
+                id: String(entry?.id || `journal-${entry?.createdAt || index}`),
+                eventType: String(entry?.eventType || 'unknown'),
+                severity:
+                  entry?.severity === 'warning' || entry?.severity === 'error' || entry?.severity === 'info'
+                    ? entry.severity
+                    : undefined,
+                username: String(entry?.username || ''),
+                role: String(entry?.role || ''),
+                method: String(entry?.method || ''),
+                path: String(entry?.path || ''),
+                ipAddress: String(entry?.ipAddress || ''),
+                userAgent: String(entry?.userAgent || ''),
+                details: entry?.details,
+                createdAt: String(entry?.createdAt || ''),
+              }))
+              .filter((entry: JournalEvent) => entry.id.length > 0)
+          : [];
+
+        setItems(rows);
         setEventOptions(
           Array.isArray(response.data?.availableEventTypes) ? response.data.availableEventTypes : []
         );
@@ -62,143 +127,79 @@ const Journal: React.FC<JournalProps> = ({ token }) => {
           setError('Fehler beim Laden des Journals');
         }
       } finally {
-        setIsLoading(false);
+        if (silent) {
+          setRefreshing(false);
+        } else {
+          setLoading(false);
+        }
       }
-    };
-
-    load();
-    const timer = setInterval(load, 12000);
-    return () => clearInterval(timer);
-  }, [token, eventType]);
+    },
+    [eventType, token]
+  );
 
   useEffect(() => {
-    setPage(1);
-  }, [eventType, search, pageSize]);
-
-  const formatDate = (value?: string) => {
-    if (!value) return '–';
-    const date = new Date(value);
-    if (Number.isNaN(date.getTime())) return '–';
-    return date.toLocaleString('de-DE');
-  };
-
-  const detailsAsText = (details: any) => {
-    if (!details) return '–';
-    try {
-      const raw = typeof details === 'string' ? details : JSON.stringify(details);
-      return raw.length > 160 ? `${raw.slice(0, 160)}...` : raw;
-    } catch {
-      return '–';
-    }
-  };
-
-  const parseDate = (value?: string) => {
-    if (!value) return 0;
-    const date = new Date(value);
-    return Number.isNaN(date.getTime()) ? 0 : date.getTime();
-  };
-
-  const filteredItems = useMemo(() => {
-    const term = search.trim().toLowerCase();
-    if (!term) return items;
-    return items.filter((event) => {
-      const haystack = [
-        event.eventType,
-        event.severity,
-        event.username,
-        event.role,
-        event.method,
-        event.path,
-        event.ipAddress,
-        event.userAgent,
-        detailsAsText(event.details),
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return haystack.includes(term);
-    });
-  }, [items, search]);
-
-  const sortedItems = useMemo(() => {
-    return [...filteredItems].sort((a, b) => {
-      let comparison = 0;
-      switch (sortKey) {
-        case 'eventType':
-          comparison = (a.eventType || '').localeCompare(b.eventType || '', 'de', { sensitivity: 'base' });
-          break;
-        case 'username':
-          comparison = (a.username || '').localeCompare(b.username || '', 'de', { sensitivity: 'base' });
-          break;
-        case 'path':
-          comparison = (a.path || '').localeCompare(b.path || '', 'de', { sensitivity: 'base' });
-          break;
-        case 'severity':
-          comparison = (a.severity || '').localeCompare(b.severity || '', 'de', { sensitivity: 'base' });
-          break;
-        case 'createdAt':
-        default:
-          comparison = parseDate(a.createdAt) - parseDate(b.createdAt);
+    void fetchJournal();
+    const timer = window.setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        void fetchJournal({ silent: true });
       }
-      return sortDirection === 'asc' ? comparison : -comparison;
-    });
-  }, [filteredItems, sortDirection, sortKey]);
+    }, 12000);
+    return () => window.clearInterval(timer);
+  }, [fetchJournal]);
 
-  const total = sortedItems.length;
-  const selection = useTableSelection(sortedItems);
-  const totalPages = Math.max(1, Math.ceil(total / pageSize));
-  const start = (page - 1) * pageSize;
-  const pageItems = sortedItems.slice(start, start + pageSize);
+  const selectedRows = useMemo(
+    () => items.filter((entry) => selectedIds.includes(entry.id)),
+    [items, selectedIds]
+  );
 
-  useEffect(() => {
-    if (page > totalPages) setPage(totalPages);
-  }, [page, totalPages]);
+  const handleDelete = useCallback(
+    async (entry: JournalEvent) => {
+      if (!window.confirm('Journal-Eintrag wirklich löschen?')) return;
+      setDeleteLoading((prev) => ({ ...prev, [entry.id]: true }));
+      setError('');
+      setSuccess('');
+      try {
+        await axios.delete(`/api/admin/journal/${entry.id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        setItems((prev) => prev.filter((item) => item.id !== entry.id));
+        setSelectedIds((prev) => prev.filter((id) => id !== entry.id));
+        setSuccess('Journal-Eintrag gelöscht.');
+      } catch (err) {
+        if (axios.isAxiosError(err)) {
+          setError(err.response?.data?.message || 'Löschen fehlgeschlagen');
+        } else {
+          setError('Löschen fehlgeschlagen');
+        }
+      } finally {
+        setDeleteLoading((prev) => ({ ...prev, [entry.id]: false }));
+      }
+    },
+    [token]
+  );
 
-  const handleSort = (nextKey: SortKey) => {
-    if (sortKey === nextKey) {
-      setSortDirection((prev) => (prev === 'asc' ? 'desc' : 'asc'));
-      return;
-    }
-    setSortKey(nextKey);
-    setSortDirection('asc');
-  };
-
-  const sortIcon = (key: SortKey) => {
-    if (sortKey !== key) return '↕';
-    return sortDirection === 'asc' ? '▲' : '▼';
-  };
-
-  const handleBulkDelete = async () => {
-    if (selection.selectedRows.length === 0) {
+  const handleBulkDelete = useCallback(async () => {
+    if (selectedRows.length === 0) {
       setError('Keine Journal-Einträge ausgewählt.');
       return;
     }
-    if (!window.confirm(`${selection.selectedRows.length} Journal-Einträge wirklich löschen?`)) {
+    if (!window.confirm(`${selectedRows.length} Journal-Einträge wirklich löschen?`)) {
       return;
     }
+
     setBulkLoading(true);
     setError('');
     setSuccess('');
     try {
       await axios.delete('/api/admin/journal', {
         headers: { Authorization: `Bearer ${token}` },
-        data: { ids: selection.selectedRows.map((entry) => entry.id) },
+        data: { ids: selectedRows.map((entry) => entry.id) },
       });
-      setSuccess(`${selection.selectedRows.length} Journal-Eintrag/Einträge gelöscht.`);
-      selection.clearSelection();
-      await axios
-        .get('/api/admin/journal', {
-          headers: { Authorization: `Bearer ${token}` },
-          params: {
-            limit: 800,
-            offset: 0,
-            ...(eventType ? { eventType } : {}),
-          },
-        })
-        .then((response) => {
-          setItems(Array.isArray(response.data?.items) ? response.data.items : []);
-          setEventOptions(Array.isArray(response.data?.availableEventTypes) ? response.data.availableEventTypes : []);
-        });
+
+      const selectedSet = new Set(selectedRows.map((entry) => entry.id));
+      setItems((prev) => prev.filter((entry) => !selectedSet.has(entry.id)));
+      setSelectedIds([]);
+      setSuccess(`${selectedRows.length} Journal-Eintrag/Einträge gelöscht.`);
     } catch (err) {
       if (axios.isAxiosError(err)) {
         setError(err.response?.data?.message || 'Fehler beim Löschen der Journal-Einträge');
@@ -208,12 +209,12 @@ const Journal: React.FC<JournalProps> = ({ token }) => {
     } finally {
       setBulkLoading(false);
     }
-  };
+  }, [selectedRows, token]);
 
-  const handleExportSelection = () => {
-    if (selection.selectedRows.length === 0) return;
+  const handleExportSelection = useCallback(() => {
+    if (selectedRows.length === 0) return;
     try {
-      const blob = new Blob([JSON.stringify(selection.selectedRows, null, 2)], { type: 'application/json' });
+      const blob = new Blob([JSON.stringify(selectedRows, null, 2)], { type: 'application/json' });
       const url = URL.createObjectURL(blob);
       const anchor = document.createElement('a');
       const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-');
@@ -226,194 +227,232 @@ const Journal: React.FC<JournalProps> = ({ token }) => {
     } catch {
       setError('Auswahl konnte nicht exportiert werden.');
     }
-  };
+  }, [selectedRows]);
+
+  const columns = useMemo<SmartTableColumnDef<JournalEvent>[]>(
+    () => [
+      {
+        field: 'createdAt',
+        headerName: 'Zeit',
+        minWidth: 170,
+        flex: 0.75,
+        valueGetter: (_value, row) => formatDate(row.createdAt),
+      },
+      {
+        field: 'eventType',
+        headerName: 'Ereignis',
+        minWidth: 220,
+        flex: 1,
+        renderCell: (params) => (
+          <Stack direction="row" spacing={1} alignItems="center" sx={{ width: '100%' }}>
+            <Chip
+              size="small"
+              color={severityColor(params.row.severity)}
+              label={params.row.severity || 'info'}
+              variant="outlined"
+            />
+            <Typography variant="body2" sx={{ fontWeight: 600 }}>
+              {params.row.eventType || '–'}
+            </Typography>
+          </Stack>
+        ),
+      },
+      {
+        field: 'username',
+        headerName: 'Benutzer',
+        minWidth: 180,
+        flex: 0.9,
+        renderCell: (params) => (
+          <Stack spacing={0.2} sx={{ py: 0.3 }}>
+            <Typography variant="body2">{params.row.username || '–'}</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {params.row.role || '–'}
+            </Typography>
+          </Stack>
+        ),
+      },
+      {
+        field: 'request',
+        headerName: 'Anfrage',
+        minWidth: 210,
+        flex: 1,
+        valueGetter: (_value, row) => `${row.method || '–'} ${row.path || '–'}`,
+      },
+      {
+        field: 'client',
+        headerName: 'Client',
+        minWidth: 230,
+        flex: 1.2,
+        renderCell: (params) => (
+          <Stack spacing={0.2} sx={{ py: 0.3 }}>
+            <Typography variant="body2">{params.row.ipAddress || '–'}</Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ maxWidth: 320 }} noWrap>
+              {params.row.userAgent || '–'}
+            </Typography>
+          </Stack>
+        ),
+      },
+      {
+        field: 'details',
+        headerName: 'Details',
+        minWidth: 260,
+        flex: 1.2,
+        valueGetter: (_value, row) => detailsAsText(row.details),
+      },
+      {
+        field: 'actions',
+        headerName: 'Aktionen',
+        minWidth: 100,
+        sortable: false,
+        filterable: false,
+        disableColumnMenu: true,
+        align: 'right',
+        headerAlign: 'right',
+        renderCell: (params) => (
+          <SmartTableRowActions>
+            <SmartTableRowActionButton
+              label="Eintrag löschen"
+              icon={<DeleteOutlineRoundedIcon fontSize="small" />}
+              tone="danger"
+              loading={Boolean(deleteLoading[params.row.id]) || bulkLoading}
+              onClick={() => {
+                void handleDelete(params.row);
+              }}
+            />
+          </SmartTableRowActions>
+        ),
+      },
+    ],
+    [bulkLoading, deleteLoading, handleDelete]
+  );
+
+  const kpis = useMemo(
+    () => [
+      {
+        id: 'journal-total',
+        label: 'Einträge',
+        value: items.length.toLocaleString('de-DE'),
+      },
+      {
+        id: 'journal-selected',
+        label: 'Ausgewählt',
+        value: selectedRows.length.toLocaleString('de-DE'),
+        tone: selectedRows.length > 0 ? ('warning' as const) : ('default' as const),
+      },
+      {
+        id: 'journal-sync',
+        label: 'Sync',
+        value: refreshing ? 'Aktualisiert' : 'Live',
+        tone: refreshing ? ('info' as const) : ('success' as const),
+      },
+    ],
+    [items.length, refreshing, selectedRows.length]
+  );
 
   return (
-    <div className="audit-page">
-      <h2>Journal</h2>
-      <div className="audit-toolbar">
-        <div className="left">
-          <label htmlFor="event-type">Ereignis</label>
-          <select
-            id="event-type"
-            className="audit-select"
-            value={eventType}
-            onChange={(e) => setEventType(e.target.value)}
-          >
-            <option value="">Alle</option>
-            {eventOptions.map((item) => (
-              <option key={item.eventType} value={item.eventType}>
-                {item.eventType} ({item.count})
-              </option>
-            ))}
-          </select>
-          <input
-            className="audit-input"
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Suche Ereignis, Benutzer, Pfad..."
-          />
-          <select
-            className="audit-select"
-            value={pageSize}
-            onChange={(e) => setPageSize(Number(e.target.value) as PageSize)}
-          >
-            <option value={10}>10</option>
-            <option value={25}>25</option>
-            <option value={50}>50</option>
-            <option value={100}>100</option>
-          </select>
-        </div>
-      </div>
-
-      {selection.selectedCount > 0 && (
-        <div className="bulk-actions-bar">
-          <div className="bulk-actions-meta">
-            <span className="count">{selection.selectedCount}</span>
-            <span>ausgewählt</span>
-          </div>
-          <div className="bulk-actions-buttons">
-            <button className="bulk-btn info" type="button" onClick={handleExportSelection} disabled={bulkLoading}>
-              <i className="fa-solid fa-file-export" /> Exportieren
-            </button>
-            <button className="bulk-btn danger" type="button" onClick={handleBulkDelete} disabled={bulkLoading}>
-              <i className="fa-solid fa-trash" /> Löschen
-            </button>
-            <button className="bulk-btn" type="button" onClick={selection.clearSelection} disabled={bulkLoading}>
-              Auswahl aufheben
-            </button>
-          </div>
-        </div>
-      )}
-
-      {error && <div className="error-message">{error}</div>}
-      {success && <div className="success-message">{success}</div>}
-      {isLoading ? (
-        <div className="loading">Lade Journal...</div>
-      ) : pageItems.length === 0 ? (
-        <p>Keine Journal-Einträge gefunden.</p>
-      ) : (
-        <div className="audit-table-wrap">
-          <table className="audit-table">
-            <thead>
-              <tr>
-                <th className="table-select-col">
-                  <input
-                    type="checkbox"
-                    className="table-select-checkbox"
-                    checked={selection.areAllSelected(pageItems)}
-                    onChange={() => selection.toggleAll(pageItems)}
-                    aria-label="Alle Journal-Einträge auf der Seite auswählen"
-                  />
-                </th>
-                <th>
-                  <button type="button" className="audit-sort" onClick={() => handleSort('createdAt')}>
-                    Zeit {sortIcon('createdAt')}
-                  </button>
-                </th>
-                <th>
-                  <button type="button" className="audit-sort" onClick={() => handleSort('eventType')}>
-                    Ereignis {sortIcon('eventType')}
-                  </button>
-                </th>
-                <th>
-                  <button type="button" className="audit-sort" onClick={() => handleSort('username')}>
-                    Benutzer {sortIcon('username')}
-                  </button>
-                </th>
-                <th>
-                  <button type="button" className="audit-sort" onClick={() => handleSort('path')}>
-                    Anfrage {sortIcon('path')}
-                  </button>
-                </th>
-                <th>Client</th>
-                <th>Details</th>
-                <th>Aktion</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pageItems.map((event) => (
-                <tr key={event.id}>
-                  <td className="table-select-cell">
-                    <input
-                      type="checkbox"
-                      className="table-select-checkbox"
-                      checked={selection.isSelected(event.id)}
-                      onChange={() => selection.toggleRow(event.id)}
-                      aria-label={`Journal-Eintrag ${event.id} auswählen`}
-                    />
-                  </td>
-                  <td>{formatDate(event.createdAt)}</td>
-                  <td>
-                    <div className={`audit-event ${event.severity || 'info'}`}>{event.eventType}</div>
-                  </td>
-                  <td>
-                    <div>{event.username || '–'}</div>
-                    <div className="audit-meta">{event.role || '–'}</div>
-                  </td>
-                  <td>
-                    <div>{event.method || '–'}</div>
-                    <div className="audit-meta">{event.path || '–'}</div>
-                  </td>
-                  <td>
-                    <div>{event.ipAddress || '–'}</div>
-                    <div className="audit-meta">{event.userAgent || '–'}</div>
-                  </td>
-                  <td>
-                    <span className="audit-code">{detailsAsText(event.details)}</span>
-                  </td>
-                  <td>
-                    <button
-                      className="bulk-btn danger"
-                      type="button"
-                      disabled={bulkLoading}
-                      onClick={async () => {
-                        if (!window.confirm('Journal-Eintrag wirklich löschen?')) return;
-                        try {
-                          await axios.delete(`/api/admin/journal/${event.id}`, {
-                            headers: { Authorization: `Bearer ${token}` },
-                          });
-                          setItems((prev) => prev.filter((item) => item.id !== event.id));
-                          setSuccess('Journal-Eintrag gelöscht.');
-                          setError('');
-                        } catch (err) {
-                          if (axios.isAxiosError(err)) {
-                            setError(err.response?.data?.message || 'Löschen fehlgeschlagen');
-                          } else {
-                            setError('Löschen fehlgeschlagen');
-                          }
-                        }
-                      }}
-                    >
-                      <i className="fa-solid fa-trash" /> Löschen
-                    </button>
-                  </td>
-                </tr>
+    <Stack spacing={2.5} className="admin-page">
+      <AdminPageHero
+        title="Journal"
+        subtitle="Revisionsfähige Ereignisübersicht mit konsistenten SmartTable-Aktionen und Event-Filterung."
+        actions={
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="stretch">
+            <TextField
+              select
+              size="small"
+              label="Ereignis"
+              value={eventType}
+              onChange={(event) => setEventType(event.target.value)}
+              sx={{ minWidth: 220 }}
+            >
+              <MenuItem value="">Alle</MenuItem>
+              {eventOptions.map((option) => (
+                <MenuItem key={option.eventType} value={option.eventType}>
+                  {option.eventType} ({option.count})
+                </MenuItem>
               ))}
-            </tbody>
-          </table>
-          <div className="audit-pagination">
-            <span>
-              Zeige {total === 0 ? 0 : start + 1}-{Math.min(start + pageSize, total)} von {total}
-            </span>
-            <div className="audit-pagination-actions">
-              <button type="button" onClick={() => setPage((prev) => Math.max(1, prev - 1))} disabled={page <= 1}>
-                Zurück
-              </button>
-              <span>Seite {page} / {totalPages}</span>
-              <button
-                type="button"
-                onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
-                disabled={page >= totalPages}
+            </TextField>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshRoundedIcon fontSize="small" />}
+              onClick={() => {
+                void fetchJournal();
+              }}
+              disabled={loading || bulkLoading}
+            >
+              Aktualisieren
+            </Button>
+          </Stack>
+        }
+      />
+
+      <AdminKpiStrip items={kpis} />
+
+      {error ? <Alert severity="error">{error}</Alert> : null}
+      {success ? <Alert severity="success">{success}</Alert> : null}
+
+      <AdminSurfaceCard
+        title="Journal-Einträge"
+        subtitle="Selektion, Export und Bereinigung ohne Medienbruch zum restlichen Admin-UI."
+        actions={
+          selectedRows.length > 0 ? (
+            <Stack direction="row" spacing={1} alignItems="center">
+              <Chip size="small" color="warning" label={`${selectedRows.length} ausgewählt`} />
+              <Button
+                size="small"
+                variant="outlined"
+                startIcon={<UploadFileRoundedIcon fontSize="small" />}
+                onClick={handleExportSelection}
+                disabled={bulkLoading}
               >
-                Weiter
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+                Export
+              </Button>
+              <Button
+                size="small"
+                color="error"
+                variant="outlined"
+                startIcon={<DeleteOutlineRoundedIcon fontSize="small" />}
+                onClick={() => {
+                  void handleBulkDelete();
+                }}
+                disabled={bulkLoading}
+              >
+                Löschen
+              </Button>
+              <Button size="small" variant="text" onClick={() => setSelectedIds([])} disabled={bulkLoading}>
+                Auswahl aufheben
+              </Button>
+            </Stack>
+          ) : null
+        }
+      >
+        {loading ? (
+          <Typography variant="body2" color="text.secondary">
+            Lade Journal...
+          </Typography>
+        ) : items.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            Keine Journal-Einträge gefunden.
+          </Typography>
+        ) : (
+          <SmartTable<JournalEvent>
+            tableId="admin-journal"
+            userId={token}
+            title="Journal"
+            rows={items}
+            columns={columns}
+            loading={loading}
+            error={error}
+            onRefresh={() => {
+              void fetchJournal();
+            }}
+            checkboxSelection
+            selectionModel={selectedIds}
+            onSelectionModelChange={setSelectedIds}
+            disableRowSelectionOnClick
+          />
+        )}
+      </AdminSurfaceCard>
+    </Stack>
   );
 };
 

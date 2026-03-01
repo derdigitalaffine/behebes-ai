@@ -1,5 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import {
+  SmartTable,
+  type SmartTableColumnDef,
+} from '../modules/smart-table';
 
 interface UserRegistrationsProps {
   token: string;
@@ -316,6 +320,49 @@ const UserRegistrations: React.FC<UserRegistrationsProps> = ({ token }) => {
 
   const detailReadonly = !detail || detail.status !== 'pending_review' || saving;
 
+  const registrationColumns = useMemo<SmartTableColumnDef<RegistrationRequest>[]>(
+    () => [
+      {
+        field: 'emailOriginal',
+        headerName: 'E-Mail',
+        minWidth: 260,
+        flex: 1.2,
+        renderCell: (params) => (
+          <div style={{ lineHeight: 1.3, paddingTop: 4, paddingBottom: 4 }}>
+            <div style={{ fontWeight: 600 }}>{params.row.emailOriginal || params.row.emailNormalized || '–'}</div>
+            <div style={{ fontSize: 12, color: '#64748b' }}>
+              {[params.row.firstName, params.row.lastName].filter(Boolean).join(' ') || '–'}
+            </div>
+          </div>
+        ),
+      },
+      {
+        field: 'tenantName',
+        headerName: 'Mandant',
+        minWidth: 180,
+        flex: 0.9,
+        valueGetter: (_value, row) => row.tenantName || row.tenantId || '–',
+      },
+      {
+        field: 'status',
+        headerName: 'Status',
+        minWidth: 180,
+        flex: 0.8,
+        renderCell: (params) => (
+          <span className={`badge ${statusBadgeClass(params.row.status)}`}>{statusLabel(params.row.status)}</span>
+        ),
+      },
+      {
+        field: 'updatedAt',
+        headerName: 'Aktualisiert',
+        minWidth: 170,
+        flex: 0.8,
+        valueGetter: (_value, row) => (row.updatedAt ? new Date(row.updatedAt).toLocaleString('de-DE') : '–'),
+      },
+    ],
+    []
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -356,48 +403,20 @@ const UserRegistrations: React.FC<UserRegistrationsProps> = ({ token }) => {
           {loading ? (
             <p className="text-slate-500">Lade Registrierungen...</p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-slate-500">
-                    <th className="py-2">E-Mail</th>
-                    <th className="py-2">Mandant</th>
-                    <th className="py-2">Status</th>
-                    <th className="py-2">Aktualisiert</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {requests.map((entry) => (
-                    <tr
-                      key={entry.id}
-                      className={`border-t border-slate-200 cursor-pointer ${
-                        selectedId === entry.id ? 'bg-slate-50' : ''
-                      }`}
-                      onClick={() => setSelectedId(entry.id)}
-                    >
-                      <td className="py-2">
-                        <div className="font-semibold">{entry.emailOriginal || entry.emailNormalized}</div>
-                        <div className="text-xs text-slate-500">{[entry.firstName, entry.lastName].filter(Boolean).join(' ') || '–'}</div>
-                      </td>
-                      <td className="py-2 text-slate-600">{entry.tenantName || entry.tenantId || '–'}</td>
-                      <td className="py-2">
-                        <span className={`badge ${statusBadgeClass(entry.status)}`}>{statusLabel(entry.status)}</span>
-                      </td>
-                      <td className="py-2 text-slate-600">
-                        {entry.updatedAt ? new Date(entry.updatedAt).toLocaleString('de-DE') : '–'}
-                      </td>
-                    </tr>
-                  ))}
-                  {requests.length === 0 && (
-                    <tr>
-                      <td colSpan={4} className="py-4 text-center text-slate-500">
-                        Keine Registrierungen gefunden.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
+            <SmartTable<RegistrationRequest>
+              tableId="admin-user-registrations"
+              userId={token}
+              title="Registrierungsanfragen"
+              rows={requests}
+              columns={registrationColumns}
+              loading={loading}
+              onRefresh={() => {
+                void loadRequests(false);
+              }}
+              onRowClick={(row) => setSelectedId(row.id)}
+              getRowClassName={(row) => (row.id === selectedId ? 'is-selected' : '')}
+              disableRowSelectionOnClick
+            />
           )}
         </div>
 

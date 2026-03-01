@@ -1,6 +1,33 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import {
+  Alert,
+  Box,
+  Button,
+  Card,
+  CardActionArea,
+  CardContent,
+  Chip,
+  CircularProgress,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
 import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded';
+import AnalyticsRoundedIcon from '@mui/icons-material/AnalyticsRounded';
+import ConfirmationNumberRoundedIcon from '@mui/icons-material/ConfirmationNumberRounded';
+import MapRoundedIcon from '@mui/icons-material/MapRounded';
+import AccountTreeRoundedIcon from '@mui/icons-material/AccountTreeRounded';
+import AutoGraphRoundedIcon from '@mui/icons-material/AutoGraphRounded';
+import LocalOfferRoundedIcon from '@mui/icons-material/LocalOfferRounded';
+import MailOutlineRoundedIcon from '@mui/icons-material/MailOutlineRounded';
+import SecurityRoundedIcon from '@mui/icons-material/SecurityRounded';
+import MenuBookRoundedIcon from '@mui/icons-material/MenuBookRounded';
+import AttachFileRoundedIcon from '@mui/icons-material/AttachFileRounded';
+import TaskAltRoundedIcon from '@mui/icons-material/TaskAltRounded';
 import { Link, useNavigate } from 'react-router-dom';
 import { isAdminRole } from '../lib/auth';
 import { subscribeAdminRealtime } from '../lib/realtime';
@@ -12,7 +39,7 @@ import {
   SmartTableRowActions,
   type SmartTableColumnDef,
 } from '../modules/smart-table';
-import './Dashboard.css';
+import { AdminKpiStrip, AdminPageHero, AdminSurfaceCard } from '../components/admin-ui';
 
 interface Ticket {
   id: string;
@@ -95,6 +122,7 @@ interface WorkflowExecution {
   ticketId: string;
   category?: string;
   status: 'RUNNING' | 'PAUSED' | 'COMPLETED' | 'FAILED';
+  startedAt?: string;
   blockedReason?:
     | 'none'
     | 'waiting_external'
@@ -138,6 +166,22 @@ interface ActiveTimerRow {
   awaitingUntilMs: number;
   countdown: string;
   overdue: boolean;
+}
+
+interface DashboardKpiCard {
+  key: string;
+  value: string | number;
+  label: string;
+  tone: 'primary' | 'success' | 'warning' | 'danger' | 'neutral';
+  hint?: string;
+}
+
+interface QuickLinkItem {
+  id: string;
+  title: string;
+  description: string;
+  to: string;
+  icon: React.ReactNode;
 }
 
 const STATUS_LABELS: Record<string, string> = {
@@ -211,14 +255,37 @@ const WORKFLOW_TASK_LABELS: Record<WorkflowTask['type'], string> = {
   RESPONSIBILITY_CHECK: 'Zuständigkeit',
 };
 
-interface DashboardKpiCard {
-  key: string;
-  value: string | number;
-  label: string;
-  icon: string;
-  tone: 'primary' | 'success' | 'warning' | 'danger' | 'neutral';
-  hint?: string;
-}
+const codeSx = {
+  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+  fontSize: '0.78rem',
+  px: 0.6,
+  py: 0.15,
+  borderRadius: '6px',
+  border: '1px solid',
+  borderColor: 'divider',
+  bgcolor: 'background.paper',
+};
+
+const statusChipColor = (status: Ticket['status']): 'default' | 'info' | 'warning' | 'success' => {
+  if (status === 'pending_validation' || status === 'assigned') return 'info';
+  if (status === 'in-progress' || status === 'pending') return 'warning';
+  if (status === 'completed' || status === 'closed') return 'success';
+  return 'default';
+};
+
+const workflowStatusChipColor = (status: WorkflowExecution['status']): 'default' | 'info' | 'warning' | 'success' | 'error' => {
+  if (status === 'RUNNING') return 'info';
+  if (status === 'PAUSED') return 'warning';
+  if (status === 'COMPLETED') return 'success';
+  if (status === 'FAILED') return 'error';
+  return 'default';
+};
+
+const workflowSlaChipColor = (state: 'ok' | 'risk' | 'overdue'): 'success' | 'warning' | 'error' => {
+  if (state === 'risk') return 'warning';
+  if (state === 'overdue') return 'error';
+  return 'success';
+};
 
 const parseTaskAwaitingUntilMs = (task: WorkflowTask | null | undefined): number | null => {
   if (!task) return null;
@@ -254,7 +321,6 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
   const [myTickets, setMyTickets] = useState<Ticket[]>([]);
   const [workflows, setWorkflows] = useState<WorkflowExecution[]>([]);
   const [statusFilter, setStatusFilter] = useState('all');
-  const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
   const [bulkLoading, setBulkLoading] = useState(false);
@@ -352,7 +418,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
       );
       const candidates = Array.isArray(response.data?.candidates) ? response.data.candidates : [];
       setResponsibilityResult(candidates);
-    } catch (err) {
+    } catch {
       setError('Zuständigkeitsabfrage fehlgeschlagen.');
     } finally {
       setResponsibilityLoading(false);
@@ -390,7 +456,6 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
       },
       onError: () => {
         setLiveConnectionState('reconnecting');
-        // Fallback polling continues below.
       },
     });
 
@@ -419,25 +484,11 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
   };
 
   const filteredTickets = useMemo(() => {
-    const term = search.trim().toLowerCase();
     return (Array.isArray(tickets) ? tickets : []).filter((ticket) => {
       const statusOk = statusFilter === 'all' || ticket.status === statusFilter;
-      if (!statusOk) return false;
-      if (!term) return true;
-
-      const haystack = [
-        ticket.id,
-        ticket.category,
-        ticket.status,
-        ticket.city,
-        ticket.address,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return haystack.includes(term);
+      return statusOk;
     });
-  }, [tickets, search, statusFilter]);
+  }, [tickets, statusFilter]);
 
   const ticketById = useMemo(() => {
     const map = new Map<string, Ticket>();
@@ -538,7 +589,6 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
         key: 'database',
         value: databaseLabel,
         label: 'Aktive Datenbank',
-        icon: 'fa-database',
         tone: 'primary',
         hint: databaseConnection,
       },
@@ -546,49 +596,42 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
         key: 'totalSubmissions',
         value: stats.totalSubmissions,
         label: 'Gesamt Meldungen',
-        icon: 'fa-inbox',
         tone: 'primary',
       },
       {
         key: 'openTickets',
         value: stats.openTickets,
         label: 'Offene Tickets',
-        icon: 'fa-folder-open',
         tone: 'warning',
       },
       {
         key: 'closedTickets',
         value: stats.closedTickets,
         label: 'Geschlossene Tickets',
-        icon: 'fa-circle-check',
         tone: 'success',
       },
       {
         key: 'avgResolution',
         value: `${stats.averageResolutionTime}h`,
         label: 'Ø Bearbeitungszeit',
-        icon: 'fa-hourglass-half',
         tone: 'neutral',
       },
       {
         key: 'slaOk',
         value: workflowSlaDistribution.ok,
         label: 'Workflows SLA im Ziel',
-        icon: 'fa-shield-halved',
         tone: 'success',
       },
       {
         key: 'slaRisk',
         value: workflowSlaDistribution.risk,
         label: 'Workflows SLA gefährdet',
-        icon: 'fa-triangle-exclamation',
         tone: 'warning',
       },
       {
         key: 'slaOverdue',
         value: workflowSlaDistribution.overdue,
         label: 'Workflows SLA überfällig',
-        icon: 'fa-fire',
         tone: 'danger',
       },
     ];
@@ -604,7 +647,7 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
           ticketId: workflow.ticketId,
           blockedReason: workflow.blockedReason || 'none',
           slaState: workflow.health?.slaState || 'ok',
-          startedAt: workflow.startedAt,
+          startedAt: workflow.startedAt || '',
         }))
         .sort((a, b) => parseDate(b.startedAt) - parseDate(a.startedAt))
         .slice(0, 8),
@@ -698,7 +741,11 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
         field: 'id',
         headerName: 'Ticket',
         minWidth: 120,
-        renderCell: (params) => <code className="ticket-id">{String(params.row.id || '').slice(0, 8)}</code>,
+        renderCell: (params) => (
+          <Typography component="code" sx={codeSx}>
+            {String(params.row.id || '').slice(0, 8)}
+          </Typography>
+        ),
       },
       {
         field: 'submissionId',
@@ -717,9 +764,12 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
         headerName: 'Status',
         minWidth: 170,
         renderCell: (params) => (
-          <span className={`status-pill status-${params.row.status}`}>
-            {STATUS_LABELS[params.row.status] || params.row.status}
-          </span>
+          <Chip
+            size="small"
+            color={statusChipColor(params.row.status)}
+            variant="filled"
+            label={STATUS_LABELS[params.row.status] || params.row.status}
+          />
         ),
       },
       {
@@ -737,14 +787,18 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
       {
         field: 'imageCount',
         headerName: 'Bilder',
-        minWidth: 100,
+        minWidth: 120,
         renderCell: (params) =>
           params.row.hasImages ? (
-            <span className="attachment-indicator has-images" title={`${params.row.imageCount || 1} Bild(er)`}>
-              <i className="fa-solid fa-paperclip" /> {params.row.imageCount || 1}
-            </span>
+            <Chip
+              size="small"
+              color="info"
+              icon={<AttachFileRoundedIcon fontSize="small" />}
+              label={params.row.imageCount || 1}
+              variant="outlined"
+            />
           ) : (
-            <span className="attachment-indicator no-images">–</span>
+            <Typography color="text.secondary">–</Typography>
           ),
       },
       {
@@ -818,22 +872,24 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
         minWidth: 220,
         flex: 1,
         renderCell: (params) => (
-          <div>
-            <div className="timer-workflow-title">{params.row.title}</div>
-            <div className="timer-workflow-id">{params.row.id.slice(0, 12)}</div>
-          </div>
+          <Stack spacing={0.3}>
+            <Typography fontWeight={700} variant="body2">{params.row.title}</Typography>
+            <Typography component="code" sx={codeSx}>{params.row.id.slice(0, 12)}</Typography>
+          </Stack>
         ),
       },
       {
         field: 'ticketId',
         headerName: 'Ticket',
         minWidth: 120,
-        renderCell: (params) => <code className="ticket-id">{params.row.ticketId?.slice(0, 8) || '–'}</code>,
+        renderCell: (params) => (
+          <Typography component="code" sx={codeSx}>{params.row.ticketId?.slice(0, 8) || '–'}</Typography>
+        ),
       },
       {
         field: 'blockedReason',
         headerName: 'Blocker',
-        minWidth: 180,
+        minWidth: 190,
         valueFormatter: (value) => WORKFLOW_BLOCKED_REASON_LABELS[String(value || '')] || String(value || '–'),
       },
       {
@@ -841,9 +897,11 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
         headerName: 'SLA',
         minWidth: 140,
         renderCell: (params) => (
-          <span className={`timer-countdown-chip ${params.row.slaState === 'overdue' ? 'is-overdue' : 'is-running'}`}>
-            {WORKFLOW_SLA_LABELS[params.row.slaState] || WORKFLOW_SLA_LABELS.ok}
-          </span>
+          <Chip
+            size="small"
+            color={workflowSlaChipColor(params.row.slaState)}
+            label={WORKFLOW_SLA_LABELS[params.row.slaState] || WORKFLOW_SLA_LABELS.ok}
+          />
         ),
       },
       {
@@ -889,10 +947,10 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
         minWidth: 220,
         flex: 1,
         renderCell: (params) => (
-          <div>
-            <div className="timer-workflow-title">{params.row.workflowTitle}</div>
-            <div className="timer-workflow-id">{params.row.workflowId.slice(0, 12)}</div>
-          </div>
+          <Stack spacing={0.3}>
+            <Typography fontWeight={700} variant="body2">{params.row.workflowTitle}</Typography>
+            <Typography component="code" sx={codeSx}>{params.row.workflowId.slice(0, 12)}</Typography>
+          </Stack>
         ),
       },
       {
@@ -900,12 +958,10 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
         headerName: 'Ticket',
         minWidth: 170,
         renderCell: (params) => (
-          <div>
-            <div className="timer-ticket-main">
-              <code className="ticket-id">{params.row.ticketId.slice(0, 8)}</code>
-            </div>
-            <div className="timer-ticket-category">{params.row.ticketCategory}</div>
-          </div>
+          <Stack spacing={0.3}>
+            <Typography component="code" sx={codeSx}>{params.row.ticketId.slice(0, 8)}</Typography>
+            <Typography variant="caption" color="text.secondary">{params.row.ticketCategory}</Typography>
+          </Stack>
         ),
       },
       {
@@ -914,10 +970,12 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
         minWidth: 210,
         flex: 1,
         renderCell: (params) => (
-          <div>
-            <div className="timer-task-title">{params.row.taskTitle}</div>
-            <div className="timer-task-type">{WORKFLOW_TASK_LABELS[params.row.taskType] || params.row.taskType}</div>
-          </div>
+          <Stack spacing={0.3}>
+            <Typography fontWeight={600} variant="body2">{params.row.taskTitle}</Typography>
+            <Typography variant="caption" color="text.secondary">
+              {WORKFLOW_TASK_LABELS[params.row.taskType] || params.row.taskType}
+            </Typography>
+          </Stack>
         ),
       },
       {
@@ -931,10 +989,11 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
         headerName: 'Restzeit',
         minWidth: 170,
         renderCell: (params) => (
-          <span className={`timer-countdown-chip ${params.row.overdue ? 'is-overdue' : 'is-running'}`}>
-            <i className={`fa-solid ${params.row.overdue ? 'fa-triangle-exclamation' : 'fa-stopwatch'}`} />
-            {params.row.countdown}
-          </span>
+          <Chip
+            size="small"
+            color={params.row.overdue ? 'warning' : 'info'}
+            label={params.row.countdown}
+          />
         ),
       },
       {
@@ -942,9 +1001,11 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
         headerName: 'Status',
         minWidth: 130,
         renderCell: (params) => (
-          <span className={`status-pill status-${params.row.workflowStatus.toLowerCase()}`}>
-            {WORKFLOW_STATUS_LABELS[params.row.workflowStatus]}
-          </span>
+          <Chip
+            size="small"
+            color={workflowStatusChipColor(params.row.workflowStatus)}
+            label={WORKFLOW_STATUS_LABELS[params.row.workflowStatus]}
+          />
         ),
       },
       {
@@ -952,15 +1013,17 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
         headerName: 'SLA',
         minWidth: 120,
         renderCell: (params) => (
-          <span className={`timer-countdown-chip ${params.row.workflowSlaState === 'overdue' ? 'is-overdue' : 'is-running'}`}>
-            {WORKFLOW_SLA_LABELS[params.row.workflowSlaState]}
-          </span>
+          <Chip
+            size="small"
+            color={workflowSlaChipColor(params.row.workflowSlaState)}
+            label={WORKFLOW_SLA_LABELS[params.row.workflowSlaState]}
+          />
         ),
       },
       {
         field: 'workflowBlockedReason',
         headerName: 'Blocker',
-        minWidth: 180,
+        minWidth: 190,
         valueFormatter: (value) => WORKFLOW_BLOCKED_REASON_LABELS[String(value || '')] || String(value || '–'),
       },
       {
@@ -988,334 +1051,458 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
     [navigate]
   );
 
-  if (isLoading) return <div className="loading">Lädt...</div>;
+  const quickLinks = useMemo<QuickLinkItem[]>(() => {
+    const base: QuickLinkItem[] = [
+      {
+        id: 'analytics',
+        title: 'Statistiken',
+        description: 'Orte, Zeiten und Kategorien analysieren',
+        to: '/analytics',
+        icon: <AnalyticsRoundedIcon fontSize="small" />,
+      },
+      {
+        id: 'tickets',
+        title: 'Tickets',
+        description: 'Suchen, filtern und bearbeiten',
+        to: '/tickets',
+        icon: <ConfirmationNumberRoundedIcon fontSize="small" />,
+      },
+      {
+        id: 'map',
+        title: 'Karte / GIS',
+        description: 'Lagebild und Geodaten',
+        to: '/map',
+        icon: <MapRoundedIcon fontSize="small" />,
+      },
+      {
+        id: 'workflows',
+        title: 'Workflow-Instanzen',
+        description: 'Abläufe überwachen',
+        to: '/workflows',
+        icon: <AccountTreeRoundedIcon fontSize="small" />,
+      },
+      {
+        id: 'mail-queue',
+        title: 'Mail Queue',
+        description: 'Status, Retry und Neuversand',
+        to: '/mail-queue',
+        icon: <MailOutlineRoundedIcon fontSize="small" />,
+      },
+    ];
+
+    if (admin) {
+      base.push(
+        {
+          id: 'ai-situation',
+          title: 'KI-Lagebild',
+          description: 'Lageberichte und Trends',
+          to: '/admin-settings/ai-situation',
+          icon: <AutoGraphRoundedIcon fontSize="small" />,
+        },
+        {
+          id: 'categories',
+          title: 'Kategorien',
+          description: 'Kategorielogik und Prompting',
+          to: '/admin-settings/categories',
+          icon: <LocalOfferRoundedIcon fontSize="small" />,
+        },
+        {
+          id: 'sessions',
+          title: 'Sessions',
+          description: 'Aktive Logins und Geräte',
+          to: '/sessions',
+          icon: <SecurityRoundedIcon fontSize="small" />,
+        },
+        {
+          id: 'journal',
+          title: 'Journal',
+          description: 'Login- und API-Ereignisse',
+          to: '/journal',
+          icon: <MenuBookRoundedIcon fontSize="small" />,
+        }
+      );
+    }
+
+    return base;
+  }, [admin]);
+
+  const dashboardKpis = useMemo(
+    () =>
+      kpiCards.map((card) => ({
+        id: card.key,
+        label: card.label,
+        value: card.value,
+        hint: card.hint,
+        tone:
+          card.tone === 'success'
+            ? 'success'
+            : card.tone === 'warning'
+            ? 'warning'
+            : card.tone === 'danger'
+            ? 'danger'
+            : card.tone === 'primary'
+            ? 'info'
+            : 'default',
+      })),
+    [kpiCards]
+  );
+
+  if (isLoading) {
+    return (
+      <Box sx={{ py: 7, textAlign: 'center' }}>
+        <Typography color="text.secondary">Dashboard wird geladen...</Typography>
+      </Box>
+    );
+  }
 
   return (
-    <div className="dashboard">
-      <div className="dashboard-header">
-        <div>
-          <h2>Dashboard Übersicht</h2>
-          <p className="dashboard-subtitle">
-            Zentrale Startseite mit Schnellzugriff, Status und den wichtigsten Tickets.
-          </p>
-        </div>
-        <div className="dashboard-header-chip">
-          <span className="dashboard-header-chip-title">
-            <i className="fa-solid fa-arrows-rotate" /> Live-Synchronisierung
-          </span>
-          <span className="dashboard-header-chip-value">
-            {lastSyncAt ? `Letztes Update: ${formatCompactDateTime(lastSyncAt)}` : 'Wird aktualisiert...'}
-          </span>
-        </div>
-      </div>
-
-      {error && <div className="error-message">{error}</div>}
-
-      <section className="dashboard-panel">
-        <div className="panel-header">
-          <h3>Zuständigkeit abfragen</h3>
-          <span className="panel-hint">Verwaltungs-Zuständigkeitsprüfung</span>
-        </div>
-        <div className="quick-actions">
-          <input
-            className="input w-full"
-            placeholder="Anliegen oder Stichworte eingeben (z. B. Straßenbeleuchtung defekt in Otterbach)"
-            value={responsibilityQuery}
-            onChange={(event) => setResponsibilityQuery(event.target.value)}
-          />
-          <button
-            type="button"
-            className="btn btn-primary"
-            disabled={responsibilityLoading || !responsibilityQuery.trim()}
-            onClick={() => void runResponsibilityQuery()}
+    <Stack spacing={2}>
+      <AdminPageHero
+        title="Dashboard"
+        subtitle="Operative Übersicht mit Live-Status, Zuständigkeitsprüfung und SmartTable-Ansichten für Tickets und Workflow-Lage."
+        icon={<TaskAltRoundedIcon />}
+        badges={[
+          {
+            id: 'live-state',
+            label: liveConnectionState === 'live' ? 'Live verbunden' : 'Synchronisierung stellt neu her',
+            tone: liveConnectionState === 'live' ? 'success' : 'warning',
+          },
+          {
+            id: 'last-sync',
+            label: lastSyncAt ? `Letztes Update: ${formatCompactDateTime(lastSyncAt)}` : 'Wird aktualisiert',
+            tone: 'info',
+          },
+        ]}
+        actions={
+          <Button
+            variant="outlined"
+            startIcon={<RefreshRoundedIcon />}
+            onClick={() => {
+              void fetchData();
+            }}
+            disabled={isLiveRefreshing}
           >
-            <i className={`fa-solid ${responsibilityLoading ? 'fa-spinner fa-spin' : 'fa-magnifying-glass'}`} /> Prüfen
-          </button>
-        </div>
-        {responsibilityResult.length > 0 ? (
-          <div className="ticket-list">
-            {responsibilityResult.map((entry) => (
-              <div key={`${entry.type}-${entry.id}`} className="ticket-row">
-                <div className="ticket-row-header">
-                  <span className="ticket-id">{entry.name}</span>
-                  <span className="status-pill status-open">
-                    {Math.round(Math.max(0, Math.min(1, Number(entry.confidence || 0))) * 100)}%
-                  </span>
-                </div>
-                <div className="ticket-row-meta">
-                  <span>{entry.type === 'user' ? 'Benutzer' : 'Organisationseinheit'}</span>
-                  <span>{entry.id}</span>
-                  <span>{entry.reasoning || 'Regelbasiertes Matching'}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="timer-empty">Noch keine Abfrage durchgeführt.</p>
-        )}
-      </section>
+            Aktualisieren
+          </Button>
+        }
+      />
 
-      <section className="dashboard-panel my-tickets-panel">
-        <div className="panel-header">
-          <h3>Meine Tickets</h3>
-          <Link className="panel-link" to="/tickets">
-            Ticketübersicht
-          </Link>
-        </div>
-        <div className="my-ticket-kpis">
-          <span className="my-ticket-kpi total">
-            <i className="fa-solid fa-user-check" /> {myTicketStatusCounts.total} zugeordnet
-          </span>
-          <span className="my-ticket-kpi open">
-            <i className="fa-solid fa-folder-open" /> {myTicketStatusCounts.open} offen
-          </span>
-          <span className="my-ticket-kpi progress">
-            <i className="fa-solid fa-person-digging" /> {myTicketStatusCounts.inProgress} in Bearbeitung
-          </span>
-          <span className="my-ticket-kpi waiting">
-            <i className="fa-solid fa-hourglass-half" /> {myTicketStatusCounts.waiting} wartend
-          </span>
-          <span className="my-ticket-kpi closed">
-            <i className="fa-solid fa-circle-check" /> {myTicketStatusCounts.closed} erledigt
-          </span>
-        </div>
-        {myTicketsSorted.length === 0 ? (
-          <p className="timer-empty">Dir sind aktuell keine Tickets direkt zugewiesen.</p>
-        ) : (
-          <div className="ticket-list">
-            {myTicketsSorted.slice(0, 8).map((ticket) => (
-              <Link key={`my-ticket-${ticket.id}`} to={`/tickets/${ticket.id}`} className="ticket-row my-ticket-row">
-                <div className="ticket-row-header">
-                  <code className="ticket-id">{ticket.id.slice(0, 8)}</code>
-                  <span className={`status-pill status-${ticket.status}`}>
-                    {STATUS_LABELS[ticket.status] || ticket.status}
-                  </span>
-                </div>
-                <div className="ticket-row-meta">
-                  <span>{ticket.category || '–'}</span>
-                  <span>{ticket.city || ticket.address || '–'}</span>
-                  <span>{formatDate(ticket.createdAt)}</span>
-                </div>
-              </Link>
-            ))}
-          </div>
-        )}
-      </section>
+      {error ? <Alert severity="error">{error}</Alert> : null}
 
-      {kpiCards.length > 0 && (
-        <div className="stats-grid">
-          {kpiCards.map((card) => (
-            <div key={card.key} className={`stat-card stat-${card.tone}`}>
-              <div className="stat-head">
-                <span className="stat-icon">
-                  <i className={`fa-solid ${card.icon}`} />
-                </span>
-                <span className="stat-label">{card.label}</span>
-              </div>
-              <div className="stat-value">{card.value}</div>
-              {card.hint && <div className="stat-meta">{card.hint}</div>}
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div className="dashboard-grid">
-        <section className="dashboard-panel">
-          <div className="panel-header">
-            <h3>Schnellzugriff</h3>
-            <span className="panel-hint">Häufig genutzte Bereiche</span>
-          </div>
-          <div className="widget-grid">
-            <Link to="/analytics" className="widget-card">
-              <span className="widget-icon"><i className="fa-solid fa-chart-pie" /></span>
-              <div>
-                <div className="widget-title">Statistiken</div>
-                <div className="widget-desc">Orte, Zeiten, Kategorien analysieren</div>
-              </div>
-            </Link>
-            <Link to="/tickets" className="widget-card">
-              <span className="widget-icon"><i className="fa-solid fa-ticket" /></span>
-              <div>
-                <div className="widget-title">Tickets</div>
-                <div className="widget-desc">Suchen, filtern, bearbeiten</div>
-              </div>
-            </Link>
-            <Link to="/map" className="widget-card">
-              <span className="widget-icon"><i className="fa-solid fa-map-location-dot" /></span>
-              <div>
-                <div className="widget-title">Karte/GIS</div>
-                <div className="widget-desc">Lagebild, Selektion, Geodaten</div>
-              </div>
-            </Link>
-            <Link to="/workflows" className="widget-card">
-              <span className="widget-icon"><i className="fa-solid fa-diagram-project" /></span>
-              <div>
-                <div className="widget-title">Workflow-Instanzen</div>
-                <div className="widget-desc">Abläufe überwachen</div>
-              </div>
-            </Link>
-            {admin && (
-              <Link to="/admin-settings/ai-situation" className="widget-card">
-                <span className="widget-icon"><i className="fa-solid fa-chart-line" /></span>
-                <div>
-                  <div className="widget-title">KI-Lagebild</div>
-                  <div className="widget-desc">Aktuelle Lageberichte öffnen</div>
-                </div>
-              </Link>
-            )}
-            {admin && (
-              <Link to="/admin-settings/categories" className="widget-card">
-                <span className="widget-icon"><i className="fa-solid fa-tags" /></span>
-                <div>
-                  <div className="widget-title">Kategorien</div>
-                  <div className="widget-desc">Kategorielogik und Prompt</div>
-                </div>
-              </Link>
-            )}
-            <Link to="/mail-queue" className="widget-card">
-              <span className="widget-icon"><i className="fa-solid fa-envelope" /></span>
-              <div>
-                <div className="widget-title">Mail Queue</div>
-                <div className="widget-desc">Status, Retry, Neuversand</div>
-              </div>
-            </Link>
-            {admin && (
-              <Link to="/sessions" className="widget-card">
-                <span className="widget-icon"><i className="fa-solid fa-user-shield" /></span>
-                <div>
-                  <div className="widget-title">Sessions</div>
-                  <div className="widget-desc">Aktive Logins und Cookies</div>
-                </div>
-              </Link>
-            )}
-            {admin && (
-              <Link to="/journal" className="widget-card">
-                <span className="widget-icon"><i className="fa-solid fa-book" /></span>
-                <div>
-                  <div className="widget-title">Journal</div>
-                  <div className="widget-desc">Login-/API-Ereignisse</div>
-                </div>
-              </Link>
-            )}
-          </div>
-        </section>
-
-        {admin && (
-          <section className="dashboard-panel">
-            <div className="panel-header">
-              <h3>Neueste KI-Lageberichte</h3>
-              <Link className="panel-link" to="/admin-settings/ai-situation">
-                Alle öffnen
-              </Link>
-            </div>
-            {latestSituationReports.length === 0 ? (
-              <p className="timer-empty">Noch keine gespeicherten KI-Lageberichte vorhanden.</p>
-            ) : (
-              <div className="ticket-list">
-                {latestSituationReports.map((report) => (
-                  <Link key={report.id} to={`/admin-settings/ai-situation?reportId=${encodeURIComponent(report.id)}`} className="ticket-row">
-                    <div className="ticket-row-header">
-                      <code className="ticket-id">{report.id.slice(0, 16)}</code>
-                      <span className="status-pill status-open">{report.ticketCount || 0} Tickets</span>
-                    </div>
-                    <div className="ticket-row-meta">
-                      <span>Scope: {report.scopeKey || '–'}</span>
-                      <span>{report.createdAt ? formatDate(report.createdAt) : '–'}</span>
-                    </div>
-                    <div className="ticket-row-title">
-                      {(report.summary || 'Keine Zusammenfassung verfügbar.').slice(0, 180)}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
-        )}
-
-        <section className="dashboard-panel dashboard-panel-full">
-          <div className="panel-header">
-            <h3>Tickets</h3>
-            <span className="panel-hint">
-              Suchbar, sortierbar, filterbar, paginiert
-            </span>
-          </div>
-
-          <div className="dashboard-controls">
-            <div className="control-group">
-              <label>Status</label>
-              <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-                <option value="all">Alle</option>
-                {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="control-group grow">
-              <label>Suche</label>
-              <input
-                type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Ticket-ID, Kategorie, Ort..."
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', lg: '1fr 1fr' },
+          gap: 2,
+        }}
+      >
+        <AdminSurfaceCard
+          title="Zuständigkeit abfragen"
+          subtitle="Verwaltungs-Zuständigkeitsprüfung mit Top-Treffern und Konfidenz."
+          actions={
+            <Chip
+              size="small"
+              color="info"
+              icon={<SearchRoundedIcon fontSize="small" />}
+              label="Sofortabfrage"
+              variant="outlined"
+            />
+          }
+        >
+          <Stack spacing={1.2}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+              <TextField
+                fullWidth
+                multiline
+                minRows={2}
+                label="Anliegen"
+                placeholder="z. B. Straßenbeleuchtung defekt in Otterbach"
+                value={responsibilityQuery}
+                onChange={(event) => setResponsibilityQuery(event.target.value)}
               />
-            </div>
-          </div>
-
-          {sortedTickets.length === 0 ? (
-            <p className="no-tickets">Keine Tickets gefunden.</p>
-          ) : (
-            <>
-              {admin && selection.selectedCount > 0 && (
-                <div className="bulk-actions-bar">
-                  <div className="bulk-actions-meta">
-                    <span className="count">{selection.selectedCount}</span>
-                    <span>ausgewählt</span>
-                  </div>
-                  <div className="bulk-actions-buttons">
-                    <button className="bulk-btn danger" type="button" onClick={handleBulkDelete} disabled={bulkLoading}>
-                      <i className="fa-solid fa-trash" /> Löschen
-                    </button>
-                    <button className="bulk-btn" type="button" onClick={selection.clearSelection} disabled={bulkLoading}>
-                      Auswahl aufheben
-                    </button>
-                  </div>
-                </div>
-              )}
-              <SmartTable<Ticket>
-                tableId="dashboard-tickets"
-                userId={token}
-                title="Tickets"
-                rows={sortedTickets}
-                columns={ticketColumns}
-                loading={isLoading}
-                checkboxSelection={admin}
-                selectionModel={selection.selectedIds}
-                onSelectionModelChange={(ids) => selection.setSelectedIds(ids)}
-                onRefresh={() => {
-                  void fetchData();
+              <Button
+                variant="contained"
+                startIcon={responsibilityLoading ? <CircularProgress size={16} color="inherit" /> : <SearchRoundedIcon />}
+                disabled={responsibilityLoading || !responsibilityQuery.trim()}
+                onClick={() => {
+                  void runResponsibilityQuery();
                 }}
-                liveState={liveConnectionState}
-                lastEventAt={liveLastEventAt}
-                lastSyncAt={lastSyncAt ? new Date(lastSyncAt).toISOString() : null}
-                isRefreshing={isLiveRefreshing}
-                defaultPageSize={10}
-                pageSizeOptions={[5, 10, 20, 50]}
-                disableRowSelectionOnClick
-              />
-            </>
-          )}
-        </section>
-      </div>
+                sx={{ minWidth: { sm: 170 }, alignSelf: { sm: 'stretch' } }}
+              >
+                Prüfen
+              </Button>
+            </Stack>
+            {responsibilityResult.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                Noch keine Abfrage durchgeführt.
+              </Typography>
+            ) : (
+              <Stack spacing={0.9}>
+                {responsibilityResult.map((entry) => {
+                  const pct = Math.round(Math.max(0, Math.min(1, Number(entry.confidence || 0))) * 100);
+                  return (
+                    <Box
+                      key={`${entry.type}-${entry.id}`}
+                      sx={{
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        borderRadius: 2,
+                        p: 1,
+                        backgroundColor: 'background.paper',
+                      }}
+                    >
+                      <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                        <Typography variant="body2" fontWeight={700} noWrap>
+                          {entry.name}
+                        </Typography>
+                        <Chip
+                          size="small"
+                          color={pct >= 80 ? 'success' : pct >= 60 ? 'warning' : 'default'}
+                          label={`${pct}%`}
+                        />
+                      </Stack>
+                      <Stack direction="row" spacing={0.8} flexWrap="wrap" useFlexGap sx={{ mt: 0.6 }}>
+                        <Chip size="small" variant="outlined" label={entry.type === 'user' ? 'Benutzer' : 'Organisationseinheit'} />
+                        <Chip size="small" variant="outlined" label={entry.id} />
+                      </Stack>
+                      <Typography variant="caption" color="text.secondary" sx={{ mt: 0.75, display: 'block' }}>
+                        {entry.reasoning || 'Regelbasiertes Matching'}
+                      </Typography>
+                    </Box>
+                  );
+                })}
+              </Stack>
+            )}
+          </Stack>
+        </AdminSurfaceCard>
 
-      <section className="dashboard-panel">
-        <div className="panel-header">
-          <h3>Blockierte Workflows</h3>
-          <span className="panel-hint">{blockedWorkflows.length} sichtbar</span>
-        </div>
+        <AdminSurfaceCard
+          title="Meine Tickets"
+          subtitle="Direkt zugewiesene Tickets mit aktuellem Bearbeitungsstand."
+          actions={
+            <Button component={Link} to="/tickets" size="small" endIcon={<OpenInNewRoundedIcon />}>
+              Ticketübersicht
+            </Button>
+          }
+        >
+          <Stack spacing={1}>
+            <Stack direction="row" flexWrap="wrap" useFlexGap spacing={0.7}>
+              <Chip size="small" color="info" label={`${myTicketStatusCounts.total} zugeordnet`} />
+              <Chip size="small" color="default" label={`${myTicketStatusCounts.open} offen`} />
+              <Chip size="small" color="warning" label={`${myTicketStatusCounts.inProgress} in Bearbeitung`} />
+              <Chip size="small" color="info" variant="outlined" label={`${myTicketStatusCounts.waiting} wartend`} />
+              <Chip size="small" color="success" label={`${myTicketStatusCounts.closed} erledigt`} />
+            </Stack>
+            {myTicketsSorted.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                Dir sind aktuell keine Tickets direkt zugewiesen.
+              </Typography>
+            ) : (
+              <Stack spacing={0.8}>
+                {myTicketsSorted.slice(0, 8).map((ticket) => (
+                  <Card key={`my-ticket-${ticket.id}`} variant="outlined">
+                    <CardActionArea component={Link} to={`/tickets/${ticket.id}`}>
+                      <CardContent sx={{ py: 1, '&:last-child': { pb: 1 } }}>
+                        <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={1}>
+                          <Typography component="code" sx={codeSx}>{ticket.id.slice(0, 8)}</Typography>
+                          <Chip
+                            size="small"
+                            color={statusChipColor(ticket.status)}
+                            label={STATUS_LABELS[ticket.status] || ticket.status}
+                          />
+                        </Stack>
+                        <Typography variant="body2" sx={{ mt: 0.7 }} noWrap>
+                          {ticket.category || '–'}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {ticket.city || ticket.address || '–'} · {formatDate(ticket.createdAt)}
+                        </Typography>
+                      </CardContent>
+                    </CardActionArea>
+                  </Card>
+                ))}
+              </Stack>
+            )}
+          </Stack>
+        </AdminSurfaceCard>
+      </Box>
+
+      {dashboardKpis.length > 0 ? <AdminKpiStrip items={dashboardKpis} /> : null}
+
+      <Box
+        sx={{
+          display: 'grid',
+          gridTemplateColumns: { xs: '1fr', lg: admin ? '1.2fr 1fr' : '1fr' },
+          gap: 2,
+        }}
+      >
+        <AdminSurfaceCard
+          title="Schnellzugriff"
+          subtitle="Direkteinstieg in die operativen Bereiche."
+        >
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+              gap: 1,
+            }}
+          >
+            {quickLinks.map((item) => (
+              <Card key={item.id} variant="outlined">
+                <CardActionArea component={Link} to={item.to}>
+                  <CardContent>
+                    <Stack direction="row" spacing={1.1} alignItems="center">
+                      <Box
+                        sx={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 1.5,
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          bgcolor: 'action.hover',
+                          color: 'primary.main',
+                        }}
+                      >
+                        {item.icon}
+                      </Box>
+                      <Box>
+                        <Typography variant="body2" fontWeight={700}>{item.title}</Typography>
+                        <Typography variant="caption" color="text.secondary">{item.description}</Typography>
+                      </Box>
+                    </Stack>
+                  </CardContent>
+                </CardActionArea>
+              </Card>
+            ))}
+          </Box>
+        </AdminSurfaceCard>
+
+        {admin ? (
+          <AdminSurfaceCard
+            title="Neueste KI-Lageberichte"
+            subtitle="Kompakte Vorschau der letzten Reports."
+            actions={
+              <Button component={Link} to="/admin-settings/ai-situation" size="small" endIcon={<OpenInNewRoundedIcon />}>
+                Alle öffnen
+              </Button>
+            }
+          >
+            {latestSituationReports.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">
+                Noch keine gespeicherten KI-Lageberichte vorhanden.
+              </Typography>
+            ) : (
+              <Stack spacing={0.9}>
+                {latestSituationReports.map((report) => (
+                  <Card key={report.id} variant="outlined">
+                    <CardActionArea
+                      component={Link}
+                      to={`/admin-settings/ai-situation?reportId=${encodeURIComponent(report.id)}`}
+                    >
+                      <CardContent sx={{ py: 1.1, '&:last-child': { pb: 1.1 } }}>
+                        <Stack direction="row" justifyContent="space-between" spacing={1} alignItems="center">
+                          <Typography component="code" sx={codeSx}>
+                            {report.id.slice(0, 16)}
+                          </Typography>
+                          <Chip size="small" color="info" label={`${report.ticketCount || 0} Tickets`} />
+                        </Stack>
+                        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.7, display: 'block' }}>
+                          Scope: {report.scopeKey || '–'} · {report.createdAt ? formatDate(report.createdAt) : '–'}
+                        </Typography>
+                        <Typography variant="body2" sx={{ mt: 0.5 }}>
+                          {(report.summary || 'Keine Zusammenfassung verfügbar.').slice(0, 180)}
+                        </Typography>
+                      </CardContent>
+                    </CardActionArea>
+                  </Card>
+                ))}
+              </Stack>
+            )}
+          </AdminSurfaceCard>
+        ) : null}
+      </Box>
+
+      <AdminSurfaceCard
+        title="Tickets"
+        subtitle="SmartTable-Ansicht mit persistenter Layout-/Spaltenkonfiguration, Suche und Druckansicht."
+      >
+        {sortedTickets.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            Keine Tickets gefunden.
+          </Typography>
+        ) : (
+          <>
+            {admin && selection.selectedCount > 0 ? (
+              <Alert
+                severity="warning"
+                sx={{ mb: 1 }}
+                action={
+                  <Stack direction="row" spacing={0.8}>
+                    <Button color="error" size="small" onClick={() => void handleBulkDelete()} disabled={bulkLoading}>
+                      Löschen
+                    </Button>
+                    <Button size="small" onClick={() => selection.clearSelection()} disabled={bulkLoading}>
+                      Auswahl aufheben
+                    </Button>
+                  </Stack>
+                }
+              >
+                {selection.selectedCount} Ticket(s) ausgewählt
+              </Alert>
+            ) : null}
+
+            <SmartTable<Ticket>
+              tableId="dashboard-tickets"
+              userId={token}
+              title="Tickets"
+              rows={sortedTickets}
+              columns={ticketColumns}
+              loading={isLoading}
+              checkboxSelection={admin}
+              selectionModel={selection.selectedIds}
+              onSelectionModelChange={(ids) => selection.setSelectedIds(ids)}
+              onRefresh={() => {
+                void fetchData();
+              }}
+              liveState={liveConnectionState}
+              lastEventAt={liveLastEventAt}
+              lastSyncAt={lastSyncAt ? new Date(lastSyncAt).toISOString() : null}
+              isRefreshing={isLiveRefreshing}
+              defaultPageSize={10}
+              pageSizeOptions={[5, 10, 20, 50]}
+              disableRowSelectionOnClick
+              toolbarStartActions={
+                <TextField
+                  select
+                  size="small"
+                  label="Status"
+                  value={statusFilter}
+                  onChange={(event) => setStatusFilter(event.target.value)}
+                  sx={{ minWidth: 190 }}
+                >
+                  <MenuItem value="all">Alle</MenuItem>
+                  {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                    <MenuItem key={value} value={value}>
+                      {label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              }
+            />
+          </>
+        )}
+      </AdminSurfaceCard>
+
+      <AdminSurfaceCard
+        title="Blockierte Workflows"
+        subtitle="Instanzen mit aktivem Blocker oder manuellem Eingriffsbedarf."
+        actions={<Chip size="small" color="warning" label={`${blockedWorkflows.length} sichtbar`} />}
+      >
         {blockedWorkflows.length === 0 ? (
-          <p className="timer-empty">Aktuell sind keine Workflows mit Blocker gemeldet.</p>
+          <Typography variant="body2" color="text.secondary">
+            Aktuell sind keine Workflows mit Blocker gemeldet.
+          </Typography>
         ) : (
           <SmartTable<BlockedWorkflowRow>
             tableId="dashboard-blocked-workflows"
@@ -1336,17 +1523,17 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
             disableRowSelectionOnClick
           />
         )}
-      </section>
+      </AdminSurfaceCard>
 
-      <section className="dashboard-panel timer-panel">
-        <div className="panel-header">
-          <h3>Aktive laufende Timer</h3>
-          <span className="panel-hint">
-            {activeTimerRows.length} aktiv · Live-Countdown
-          </span>
-        </div>
+      <AdminSurfaceCard
+        title="Aktive Workflow-Timer"
+        subtitle="Live-Countdown für laufende Timer-Schritte mit direktem Ticket-Sprung."
+        actions={<Chip size="small" color="info" label={`${activeTimerRows.length} aktiv`} />}
+      >
         {activeTimerRows.length === 0 ? (
-          <p className="timer-empty">Aktuell laufen keine Timer in Workflow-Schritten.</p>
+          <Typography variant="body2" color="text.secondary">
+            Aktuell laufen keine Timer in Workflow-Schritten.
+          </Typography>
         ) : (
           <SmartTable<ActiveTimerRow>
             tableId="dashboard-active-timers"
@@ -1367,8 +1554,8 @@ const Dashboard: React.FC<DashboardProps> = ({ token, role }) => {
             disableRowSelectionOnClick
           />
         )}
-      </section>
-    </div>
+      </AdminSurfaceCard>
+    </Stack>
   );
 };
 

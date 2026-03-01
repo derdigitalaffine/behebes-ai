@@ -1,11 +1,23 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  LinearProgress,
+  MenuItem,
+  Stack,
+  TextField,
+  Typography,
+} from '@mui/material';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
 import { subscribeAdminRealtime } from '../lib/realtime';
 import {
   SmartTable,
   type SmartTableColumnDef,
 } from '../modules/smart-table';
-import './TicketAnalytics.css';
+import { AdminKpiStrip, AdminPageHero, AdminSurfaceCard } from '../components/admin-ui';
 
 type PeriodDays = 30 | 90 | 180 | 365;
 
@@ -160,7 +172,8 @@ const formatShortDate = (value: string): string => {
   });
 };
 
-const formatHours = (value: number): string => `${value.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} h`;
+const formatHours = (value: number): string =>
+  `${value.toLocaleString('de-DE', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} h`;
 
 const formatPercent = (value: number | null): string => {
   if (value === null || !Number.isFinite(value)) return 'n/v';
@@ -177,28 +190,51 @@ const trendTone = (change: number | null, inverse = false): 'positive' | 'negati
   return good ? 'positive' : 'negative';
 };
 
+const trendStyle = (
+  tone: 'positive' | 'negative' | 'neutral'
+): { borderColor: string; color: string; bg: string } => {
+  if (tone === 'positive') {
+    return { borderColor: 'success.main', color: 'success.main', bg: 'rgba(34,197,94,.08)' };
+  }
+  if (tone === 'negative') {
+    return { borderColor: 'error.main', color: 'error.main', bg: 'rgba(239,68,68,.08)' };
+  }
+  return { borderColor: 'divider', color: 'text.secondary', bg: 'rgba(148,163,184,.08)' };
+};
+
 const TicketAnalytics: React.FC<{ token: string }> = ({ token }) => {
   const [periodDays, setPeriodDays] = useState<PeriodDays>(90);
   const [data, setData] = useState<TicketAnalyticsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
 
   const fetchAnalytics = useCallback(
     async (options?: { silent?: boolean }) => {
       const silent = options?.silent === true;
       try {
-        if (!silent) setLoading(true);
+        if (silent) {
+          setRefreshing(true);
+        } else {
+          setLoading(true);
+        }
+
         const headers = { Authorization: `Bearer ${token}` };
         const response = await axios.get('/api/admin/dashboard/analytics', {
           headers,
           params: { days: periodDays },
         });
+
         setData(response.data as TicketAnalyticsResponse);
         setError('');
       } catch (err: any) {
         setError(err?.response?.data?.message || 'Fehler beim Laden der Statistikdaten');
       } finally {
-        if (!silent) setLoading(false);
+        if (silent) {
+          setRefreshing(false);
+        } else {
+          setLoading(false);
+        }
       }
     },
     [token, periodDays]
@@ -370,6 +406,7 @@ const TicketAnalytics: React.FC<{ token: string }> = ({ token }) => {
     const step = Math.ceil(data.timeSeries.length / maxColumns);
     return data.timeSeries.filter((_, index) => index % step === 0 || index === data.timeSeries.length - 1);
   }, [data]);
+
   const maxTimeline = useMemo(
     () => Math.max(1, ...timeline.map((entry) => Math.max(entry.createdCount, entry.closedCount))),
     [timeline]
@@ -386,10 +423,10 @@ const TicketAnalytics: React.FC<{ token: string }> = ({ token }) => {
 
     if (topCategory) {
       list.push(
-        `Häufigste Kategorie im Zeitraum: ${topCategory.category} (${topCategory.totalCount} Tickets, ${topCategory.share.toLocaleString(
-          'de-DE',
-          { minimumFractionDigits: 1, maximumFractionDigits: 1 }
-        )} %).`
+        `Häufigste Kategorie: ${topCategory.category} (${topCategory.totalCount} Tickets, ${topCategory.share.toLocaleString('de-DE', {
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        })} %).`
       );
     }
     if (topCity) {
@@ -406,306 +443,384 @@ const TicketAnalytics: React.FC<{ token: string }> = ({ token }) => {
     return list;
   }, [data]);
 
-  if (loading && !data) {
-    return <div className="loading">Lädt Statistikdaten...</div>;
-  }
+  const kpis = useMemo(() => {
+    if (!data) return [];
+    return [
+      {
+        id: 'kpi-total',
+        label: 'Tickets gesamt',
+        value: data.totals.totalTickets.toLocaleString('de-DE'),
+        hint: `Offen: ${data.totals.openTickets.toLocaleString('de-DE')}`,
+      },
+      {
+        id: 'kpi-period',
+        label: 'Neu im Zeitraum',
+        value: data.totals.createdInPeriod.toLocaleString('de-DE'),
+        hint: `Erledigt: ${data.totals.closedInPeriod.toLocaleString('de-DE')}`,
+      },
+      {
+        id: 'kpi-resolution',
+        label: 'Ø Lösungszeit',
+        value: formatHours(data.totals.averageResolutionHours),
+        hint: `Median: ${formatHours(data.totals.medianResolutionHours)}`,
+      },
+      {
+        id: 'kpi-geo',
+        label: 'Standortqualität',
+        value: data.totals.withCoordinates.toLocaleString('de-DE'),
+        hint: `Mit Ort: ${data.totals.withKnownCity.toLocaleString('de-DE')}`,
+      },
+      {
+        id: 'kpi-diversity',
+        label: 'Vielfalt',
+        value: `${data.totals.uniqueCategories.toLocaleString('de-DE')} Kategorien`,
+        hint: `${data.totals.uniqueCities.toLocaleString('de-DE')} Orte`,
+      },
+      {
+        id: 'kpi-backlog',
+        label: 'Offener Backlog',
+        value: data.totals.openBacklog.toLocaleString('de-DE'),
+        tone: data.totals.openBacklog > 0 ? ('warning' as const) : ('default' as const),
+        hint: 'Status offen/zugewiesen/in Bearbeitung',
+      },
+    ];
+  }, [data]);
+
+  const generatedAtLabel = formatDateTime(data?.generatedAt);
 
   return (
-    <div className="ticket-analytics-page">
-      <section className="analytics-header">
-        <div>
-          <h2>Ticket-Statistiken</h2>
-          <p className="analytics-subtitle">
-            Auswertung nach Ort, Zeit und Kategorie mit Trendanalyse und Backlog-Überblick.
-          </p>
-          <p className="analytics-meta">
-            Letzte Aktualisierung: {formatDateTime(data?.generatedAt)} · Zeitraum: {periodDays} Tage
-          </p>
-        </div>
-        <div className="analytics-actions">
-          <label className="analytics-period-label" htmlFor="analytics-period">
-            Zeitraum
-            <select
-              id="analytics-period"
+    <Stack spacing={2.5} className="admin-page">
+      <AdminPageHero
+        title="Ticket-Statistik"
+        subtitle="Operative Auswertung nach Kategorie, Ort, Zeit und Backlog mit konsistentem SmartTable/MUI-Layout."
+        badges={[
+          { label: `Zeitraum: ${periodDays} Tage`, tone: 'info' },
+          { label: `Stand: ${generatedAtLabel}`, tone: 'default' },
+        ]}
+        actions={
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="stretch">
+            <TextField
+              select
+              size="small"
+              label="Zeitraum"
               value={periodDays}
               onChange={(event) => setPeriodDays(Number(event.target.value) as PeriodDays)}
+              sx={{ minWidth: 150 }}
             >
               {PERIOD_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
+                <MenuItem key={option.value} value={option.value}>
                   {option.label}
-                </option>
+                </MenuItem>
               ))}
-            </select>
-          </label>
-          <button type="button" className="btn-secondary analytics-refresh" onClick={() => void fetchAnalytics()} disabled={loading}>
-            <i className="fa-solid fa-rotate-right" /> Aktualisieren
-          </button>
-        </div>
-      </section>
+            </TextField>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshRoundedIcon fontSize="small" />}
+              onClick={() => {
+                void fetchAnalytics();
+              }}
+              disabled={loading}
+            >
+              Aktualisieren
+            </Button>
+          </Stack>
+        }
+      />
 
-      {error ? <div className="error-message">{error}</div> : null}
+      {refreshing ? <LinearProgress /> : null}
+      {error ? <Alert severity="error">{error}</Alert> : null}
+      {loading && !data ? (
+        <Typography variant="body2" color="text.secondary">
+          Lade Statistikdaten...
+        </Typography>
+      ) : null}
+
+      {data ? <AdminKpiStrip items={kpis} /> : null}
 
       {data ? (
-        <>
-          <section className="analytics-kpi-grid">
-            <article className="analytics-kpi-card">
-              <span className="kpi-label">Tickets gesamt</span>
-              <strong className="kpi-value">{data.totals.totalTickets.toLocaleString('de-DE')}</strong>
-              <span className="kpi-note">Offen: {data.totals.openTickets.toLocaleString('de-DE')}</span>
-            </article>
-            <article className="analytics-kpi-card">
-              <span className="kpi-label">Neu im Zeitraum</span>
-              <strong className="kpi-value">{data.totals.createdInPeriod.toLocaleString('de-DE')}</strong>
-              <span className="kpi-note">Erledigt: {data.totals.closedInPeriod.toLocaleString('de-DE')}</span>
-            </article>
-            <article className="analytics-kpi-card">
-              <span className="kpi-label">Ø Lösungszeit</span>
-              <strong className="kpi-value">{formatHours(data.totals.averageResolutionHours)}</strong>
-              <span className="kpi-note">Median: {formatHours(data.totals.medianResolutionHours)}</span>
-            </article>
-            <article className="analytics-kpi-card">
-              <span className="kpi-label">Standortqualität</span>
-              <strong className="kpi-value">{data.totals.withCoordinates.toLocaleString('de-DE')}</strong>
-              <span className="kpi-note">Mit Ort: {data.totals.withKnownCity.toLocaleString('de-DE')}</span>
-            </article>
-            <article className="analytics-kpi-card">
-              <span className="kpi-label">Vielfalt</span>
-              <strong className="kpi-value">{data.totals.uniqueCategories.toLocaleString('de-DE')} Kategorien</strong>
-              <span className="kpi-note">{data.totals.uniqueCities.toLocaleString('de-DE')} Orte</span>
-            </article>
-            <article className="analytics-kpi-card">
-              <span className="kpi-label">Offener Backlog</span>
-              <strong className="kpi-value">{data.totals.openBacklog.toLocaleString('de-DE')}</strong>
-              <span className="kpi-note">Status offen/zugewiesen/in Bearbeitung</span>
-            </article>
-          </section>
-
-          <section className="analytics-trend-grid">
-            <article className={`analytics-trend-card trend-${trendTone(data.trend.created.percentChange)}`}>
-              <div className="trend-title">Neu eingegangene Tickets</div>
-              <div className="trend-value">{data.trend.created.current.toLocaleString('de-DE')}</div>
-              <div className="trend-comparison">
-                Vorperiode: {data.trend.created.previous.toLocaleString('de-DE')} · {formatPercent(data.trend.created.percentChange)}
-              </div>
-            </article>
-            <article className={`analytics-trend-card trend-${trendTone(data.trend.closed.percentChange)}`}>
-              <div className="trend-title">Erledigte Tickets</div>
-              <div className="trend-value">{data.trend.closed.current.toLocaleString('de-DE')}</div>
-              <div className="trend-comparison">
-                Vorperiode: {data.trend.closed.previous.toLocaleString('de-DE')} · {formatPercent(data.trend.closed.percentChange)}
-              </div>
-            </article>
-            <article className={`analytics-trend-card trend-${trendTone(data.trend.resolutionHours.percentChange, true)}`}>
-              <div className="trend-title">Bearbeitungszeit (Ø)</div>
-              <div className="trend-value">{formatHours(data.trend.resolutionHours.current)}</div>
-              <div className="trend-comparison">
-                Vorperiode: {formatHours(data.trend.resolutionHours.previous)} · {formatPercent(data.trend.resolutionHours.percentChange)}
-              </div>
-            </article>
-          </section>
-
-          <section className="analytics-grid">
-            <article className="analytics-panel">
-              <div className="panel-head">
-                <h3>Kategorien</h3>
-                <span>Top 10 im Zeitraum</span>
-              </div>
-              <SmartTable<CategoryAnalyticsTableRow>
-                tableId="analytics-categories"
-                userId={token}
-                title="Kategorien"
-                rows={categoryRows}
-                columns={categoryColumns}
-                loading={loading}
-                onRefresh={() => {
-                  void fetchAnalytics();
-                }}
-                defaultPageSize={10}
-                pageSizeOptions={[5, 10, 20]}
-                disableRowSelectionOnClick
-              />
-            </article>
-
-            <article className="analytics-panel">
-              <div className="panel-head">
-                <h3>Orte</h3>
-                <span>Top 10 nach Meldungsmenge</span>
-              </div>
-              <SmartTable<CityAnalyticsTableRow>
-                tableId="analytics-cities"
-                userId={token}
-                title="Orte"
-                rows={cityRows}
-                columns={cityColumns}
-                loading={loading}
-                onRefresh={() => {
-                  void fetchAnalytics();
-                }}
-                defaultPageSize={10}
-                pageSizeOptions={[5, 10, 20]}
-                disableRowSelectionOnClick
-              />
-            </article>
-          </section>
-
-          <section className="analytics-grid">
-            <article className="analytics-panel">
-              <div className="panel-head">
-                <h3>Statusverteilung</h3>
-                <span>Nur Tickets aus dem gewählten Zeitraum</span>
-              </div>
-              <SmartTable<StatusAnalyticsTableRow>
-                tableId="analytics-status"
-                userId={token}
-                title="Statusverteilung"
-                rows={statusRows}
-                columns={statusColumns}
-                loading={loading}
-                onRefresh={() => {
-                  void fetchAnalytics();
-                }}
-                defaultPageSize={10}
-                pageSizeOptions={[5, 10, 20]}
-                disableRowSelectionOnClick
-              />
-            </article>
-
-            <article className="analytics-panel">
-              <div className="panel-head">
-                <h3>Backlog-Alter</h3>
-                <span>Alle aktuell offenen Tickets</span>
-              </div>
-              <SmartTable<BacklogAgeTableRow>
-                tableId="analytics-backlog-age"
-                userId={token}
-                title="Backlog-Alter"
-                rows={backlogRows}
-                columns={backlogColumns}
-                loading={loading}
-                onRefresh={() => {
-                  void fetchAnalytics();
-                }}
-                defaultPageSize={10}
-                pageSizeOptions={[5, 10, 20]}
-                disableRowSelectionOnClick
-              />
-            </article>
-          </section>
-
-          <section className="analytics-panel">
-            <div className="panel-head">
-              <h3>Zeitverlauf</h3>
-              <span>Neue vs. erledigte Tickets pro Tag</span>
-            </div>
-            <div className="timeline-chart">
-              {timeline.map((entry) => (
-                <div key={entry.day} className="timeline-col" title={`${formatShortDate(entry.day)} · Neu ${entry.createdCount} / Erledigt ${entry.closedCount}`}>
-                  <div className="timeline-bars">
-                    <div
-                      className="timeline-bar created"
-                      style={{ height: entry.createdCount === 0 ? '0%' : `${Math.max(2, (entry.createdCount / maxTimeline) * 100)}%` }}
-                    />
-                    <div
-                      className="timeline-bar closed"
-                      style={{ height: entry.closedCount === 0 ? '0%' : `${Math.max(2, (entry.closedCount / maxTimeline) * 100)}%` }}
-                    />
-                  </div>
-                  <span className="timeline-label">{formatShortDate(entry.day)}</span>
-                </div>
-              ))}
-            </div>
-            <div className="timeline-legend">
-              <span><i className="fa-solid fa-square legend-created" /> Neu</span>
-              <span><i className="fa-solid fa-square legend-closed" /> Erledigt</span>
-            </div>
-          </section>
-
-          <section className="analytics-grid">
-            <article className="analytics-panel">
-              <div className="panel-head">
-                <h3>Meldetage</h3>
-                <span>Wochentagsmuster</span>
-              </div>
-              <div className="mini-chart-row">
-                {data.byWeekday.map((entry) => (
-                  <div key={entry.weekday} className="mini-chart-col" title={`${entry.label}: ${entry.count} Tickets`}>
-                    <div className="mini-chart-track">
-                      <div
-                        className="mini-chart-fill weekday"
-                        style={{ height: entry.count === 0 ? '0%' : `${Math.max(2, (entry.count / maxWeekday) * 100)}%` }}
-                      />
-                    </div>
-                    <span>{entry.label}</span>
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="analytics-panel">
-              <div className="panel-head">
-                <h3>Meldezeiten</h3>
-                <span>Stündliche Verteilung</span>
-              </div>
-              <div className="hour-chart">
-                {data.byHour.map((entry) => (
-                  <div key={entry.hour} className="hour-row" title={`${String(entry.hour).padStart(2, '0')}:00 · ${entry.count} Tickets`}>
-                    <span className="hour-label">{String(entry.hour).padStart(2, '0')}</span>
-                    <div className="hour-track">
-                      <div
-                        className="hour-fill"
-                        style={{ width: entry.count === 0 ? '0%' : `${Math.max(2, (entry.count / maxHour) * 100)}%` }}
-                      />
-                    </div>
-                    <span className="hour-count">{entry.count}</span>
-                  </div>
-                ))}
-              </div>
-            </article>
-          </section>
-
-          <section className="analytics-grid">
-            <article className="analytics-panel">
-              <div className="panel-head">
-                <h3>Hotspots</h3>
-                <span>Koordinaten-Cluster (Top 12)</span>
-              </div>
-              <SmartTable<HotspotTableRow>
-                tableId="analytics-hotspots"
-                userId={token}
-                title="Hotspots"
-                rows={hotspotRows}
-                columns={hotspotColumns}
-                loading={loading}
-                onRefresh={() => {
-                  void fetchAnalytics();
-                }}
-                defaultPageSize={12}
-                pageSizeOptions={[6, 12, 24]}
-                disableRowSelectionOnClick
-              />
-            </article>
-
-            <article className="analytics-panel">
-              <div className="panel-head">
-                <h3>Insights</h3>
-                <span>Kurzinterpretation der Daten</span>
-              </div>
-              <div className="insight-list">
-                {insights.length > 0 ? (
-                  insights.map((insight) => (
-                    <p key={insight}>
-                      <i className="fa-solid fa-lightbulb" /> {insight}
-                    </p>
-                  ))
-                ) : (
-                  <p><i className="fa-solid fa-lightbulb" /> Für den gewählten Zeitraum liegen noch zu wenige Daten vor.</p>
-                )}
-              </div>
-            </article>
-          </section>
-        </>
+        <AdminSurfaceCard title="Trendvergleich" subtitle="Vergleich zum vorherigen Zeitraum für Eingang, Abschluss und Bearbeitungszeit.">
+          <Box
+            sx={{
+              display: 'grid',
+              gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' },
+              gap: 1.5,
+            }}
+          >
+            {[
+              {
+                id: 'created',
+                title: 'Neu eingegangene Tickets',
+                metric: data.trend.created,
+                value: data.trend.created.current.toLocaleString('de-DE'),
+                previous: data.trend.created.previous.toLocaleString('de-DE'),
+                inverse: false,
+              },
+              {
+                id: 'closed',
+                title: 'Erledigte Tickets',
+                metric: data.trend.closed,
+                value: data.trend.closed.current.toLocaleString('de-DE'),
+                previous: data.trend.closed.previous.toLocaleString('de-DE'),
+                inverse: false,
+              },
+              {
+                id: 'resolution',
+                title: 'Bearbeitungszeit (Ø)',
+                metric: data.trend.resolutionHours,
+                value: formatHours(data.trend.resolutionHours.current),
+                previous: formatHours(data.trend.resolutionHours.previous),
+                inverse: true,
+              },
+            ].map((item) => {
+              const visual = trendStyle(trendTone(item.metric.percentChange, item.inverse));
+              return (
+                <Box
+                  key={item.id}
+                  sx={{
+                    border: '1px solid',
+                    borderColor: visual.borderColor,
+                    borderRadius: 2,
+                    p: 1.5,
+                    bgcolor: visual.bg,
+                  }}
+                >
+                  <Typography variant="caption" color="text.secondary">
+                    {item.title}
+                  </Typography>
+                  <Typography variant="h6" sx={{ color: visual.color, fontWeight: 700, mt: 0.3 }}>
+                    {item.value}
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    Vorperiode: {item.previous} · {formatPercent(item.metric.percentChange)}
+                  </Typography>
+                </Box>
+              );
+            })}
+          </Box>
+        </AdminSurfaceCard>
       ) : null}
-    </div>
+
+      {data ? (
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: '1fr 1fr' }, gap: 2.5 }}>
+          <AdminSurfaceCard title="Kategorien" subtitle="Top 10 im Zeitraum">
+            <SmartTable<CategoryAnalyticsTableRow>
+              tableId="analytics-categories"
+              userId={token}
+              title="Kategorien"
+              rows={categoryRows}
+              columns={categoryColumns}
+              loading={loading}
+              onRefresh={() => {
+                void fetchAnalytics();
+              }}
+              defaultPageSize={10}
+              pageSizeOptions={[5, 10, 20]}
+              disableRowSelectionOnClick
+            />
+          </AdminSurfaceCard>
+
+          <AdminSurfaceCard title="Orte" subtitle="Top 10 nach Meldungsmenge">
+            <SmartTable<CityAnalyticsTableRow>
+              tableId="analytics-cities"
+              userId={token}
+              title="Orte"
+              rows={cityRows}
+              columns={cityColumns}
+              loading={loading}
+              onRefresh={() => {
+                void fetchAnalytics();
+              }}
+              defaultPageSize={10}
+              pageSizeOptions={[5, 10, 20]}
+              disableRowSelectionOnClick
+            />
+          </AdminSurfaceCard>
+        </Box>
+      ) : null}
+
+      {data ? (
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: '1fr 1fr' }, gap: 2.5 }}>
+          <AdminSurfaceCard title="Statusverteilung" subtitle="Nur Tickets aus dem gewählten Zeitraum">
+            <SmartTable<StatusAnalyticsTableRow>
+              tableId="analytics-status"
+              userId={token}
+              title="Statusverteilung"
+              rows={statusRows}
+              columns={statusColumns}
+              loading={loading}
+              onRefresh={() => {
+                void fetchAnalytics();
+              }}
+              defaultPageSize={10}
+              pageSizeOptions={[5, 10, 20]}
+              disableRowSelectionOnClick
+            />
+          </AdminSurfaceCard>
+
+          <AdminSurfaceCard title="Backlog-Alter" subtitle="Alle aktuell offenen Tickets">
+            <SmartTable<BacklogAgeTableRow>
+              tableId="analytics-backlog-age"
+              userId={token}
+              title="Backlog-Alter"
+              rows={backlogRows}
+              columns={backlogColumns}
+              loading={loading}
+              onRefresh={() => {
+                void fetchAnalytics();
+              }}
+              defaultPageSize={10}
+              pageSizeOptions={[5, 10, 20]}
+              disableRowSelectionOnClick
+            />
+          </AdminSurfaceCard>
+        </Box>
+      ) : null}
+
+      {data ? (
+        <AdminSurfaceCard title="Zeitverlauf" subtitle="Neue vs. erledigte Tickets pro Tag (kompakt).">
+          <Stack spacing={1.2}>
+            <Box
+              sx={{
+                display: 'flex',
+                alignItems: 'flex-end',
+                gap: 0.55,
+                minHeight: 150,
+                overflowX: 'auto',
+                pb: 0.5,
+              }}
+            >
+              {timeline.map((entry) => (
+                <Box
+                  key={entry.day}
+                  title={`${formatShortDate(entry.day)} · Neu ${entry.createdCount} / Erledigt ${entry.closedCount}`}
+                  sx={{
+                    minWidth: 18,
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    gap: 0.5,
+                  }}
+                >
+                  <Box sx={{ display: 'flex', gap: 0.35, alignItems: 'flex-end', height: 110 }}>
+                    <Box
+                      sx={{
+                        width: 6,
+                        borderRadius: 0.8,
+                        bgcolor: 'primary.main',
+                        height: `${entry.createdCount === 0 ? 0 : Math.max(2, (entry.createdCount / maxTimeline) * 100)}%`,
+                      }}
+                    />
+                    <Box
+                      sx={{
+                        width: 6,
+                        borderRadius: 0.8,
+                        bgcolor: 'success.main',
+                        height: `${entry.closedCount === 0 ? 0 : Math.max(2, (entry.closedCount / maxTimeline) * 100)}%`,
+                      }}
+                    />
+                  </Box>
+                  <Typography variant="caption" color="text.secondary">
+                    {formatShortDate(entry.day)}
+                  </Typography>
+                </Box>
+              ))}
+            </Box>
+
+            <Stack direction="row" spacing={2} alignItems="center">
+              <Chip size="small" label="Neu" color="primary" variant="outlined" />
+              <Chip size="small" label="Erledigt" color="success" variant="outlined" />
+            </Stack>
+          </Stack>
+        </AdminSurfaceCard>
+      ) : null}
+
+      {data ? (
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: '1fr 1fr' }, gap: 2.5 }}>
+          <AdminSurfaceCard title="Meldetage" subtitle="Wochentagsmuster">
+            <Stack spacing={1}>
+              {data.byWeekday.map((entry) => {
+                const percent = entry.count === 0 ? 0 : Math.max(2, (entry.count / maxWeekday) * 100);
+                return (
+                  <Box key={entry.weekday}>
+                    <Stack direction="row" justifyContent="space-between" alignItems="center">
+                      <Typography variant="body2">{entry.label}</Typography>
+                      <Typography variant="caption" color="text.secondary">
+                        {entry.count}
+                      </Typography>
+                    </Stack>
+                    <LinearProgress
+                      variant="determinate"
+                      value={percent}
+                      sx={{ height: 8, borderRadius: 999, mt: 0.3 }}
+                    />
+                  </Box>
+                );
+              })}
+            </Stack>
+          </AdminSurfaceCard>
+
+          <AdminSurfaceCard title="Meldezeiten" subtitle="Stündliche Verteilung">
+            <Stack spacing={0.9}>
+              {data.byHour.map((entry) => {
+                const percent = entry.count === 0 ? 0 : Math.max(2, (entry.count / maxHour) * 100);
+                return (
+                  <Stack key={entry.hour} direction="row" spacing={1.1} alignItems="center">
+                    <Typography variant="caption" color="text.secondary" sx={{ width: 32 }}>
+                      {String(entry.hour).padStart(2, '0')}
+                    </Typography>
+                    <LinearProgress
+                      variant="determinate"
+                      value={percent}
+                      sx={{ flex: 1, height: 8, borderRadius: 999 }}
+                    />
+                    <Typography variant="caption" sx={{ width: 30, textAlign: 'right' }}>
+                      {entry.count}
+                    </Typography>
+                  </Stack>
+                );
+              })}
+            </Stack>
+          </AdminSurfaceCard>
+        </Box>
+      ) : null}
+
+      {data ? (
+        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: '1fr 1fr' }, gap: 2.5 }}>
+          <AdminSurfaceCard title="Hotspots" subtitle="Koordinaten-Cluster (Top 12)">
+            <SmartTable<HotspotTableRow>
+              tableId="analytics-hotspots"
+              userId={token}
+              title="Hotspots"
+              rows={hotspotRows}
+              columns={hotspotColumns}
+              loading={loading}
+              onRefresh={() => {
+                void fetchAnalytics();
+              }}
+              defaultPageSize={12}
+              pageSizeOptions={[6, 12, 24]}
+              disableRowSelectionOnClick
+            />
+          </AdminSurfaceCard>
+
+          <AdminSurfaceCard title="Insights" subtitle="Kurzinterpretation der Datenlage">
+            <Stack spacing={1}>
+              {insights.length > 0 ? (
+                insights.map((insight) => (
+                  <Alert key={insight} severity="info" variant="outlined">
+                    {insight}
+                  </Alert>
+                ))
+              ) : (
+                <Alert severity="info" variant="outlined">
+                  Für den gewählten Zeitraum liegen noch zu wenige Daten vor.
+                </Alert>
+              )}
+            </Stack>
+          </AdminSurfaceCard>
+        </Box>
+      ) : null}
+    </Stack>
   );
 };
 
