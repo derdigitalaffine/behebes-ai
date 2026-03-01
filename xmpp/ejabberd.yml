@@ -4,11 +4,6 @@
 
 loglevel: 4
 
-define_macro:
-  HOST: localhost
-  ADMIN_JID: "xmppadmin@@HOST@"
-  MUC_SERVICE: "conference.@HOST@"
-
 hosts:
   - HOST
 
@@ -19,7 +14,7 @@ default_db: mnesia
 acl:
   admin:
     user:
-      - ADMIN_JID
+      - "xmppadmin@HOST"
 
 api_permissions:
   "xmpp admin api":
@@ -73,7 +68,7 @@ modules:
   mod_mam:
     default: always
   mod_muc:
-    host: MUC_SERVICE
+    host: "conference.@HOST@"
     access:
       - allow
     default_room_options:
