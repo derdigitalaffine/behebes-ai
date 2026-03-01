@@ -247,7 +247,6 @@ export const openApiSpec: Record<string, any> = {
       },
       OpsDashboardSummary: {
         type: 'object',
-        additionalProperties: true,
         properties: {
           generatedAt: { type: 'string', format: 'date-time' },
           role: { type: 'string' },
@@ -259,37 +258,155 @@ export const openApiSpec: Record<string, any> = {
               timeRange: { type: 'string', enum: ['24h', '7d', '30d'] },
             },
           },
-          me: { type: 'object', additionalProperties: true },
-          team: { type: 'object', additionalProperties: true },
-          recent: { type: 'object', additionalProperties: true },
+          me: {
+            type: 'object',
+            properties: {
+              openTickets: { type: 'integer' },
+              overdueTickets: { type: 'integer' },
+              openTasks: { type: 'integer' },
+              unreadChatCount: { type: 'integer' },
+              openNotifications: { type: 'integer' },
+            },
+          },
+          team: {
+            type: 'object',
+            properties: {
+              openTickets: { type: 'integer' },
+              processingTickets: { type: 'integer' },
+            },
+          },
+          recent: {
+            type: 'object',
+            properties: {
+              tickets: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              workflowHotspots: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              tasks: { type: 'array', items: { type: 'object', additionalProperties: true } },
+            },
+          },
+        },
+      },
+      ChatPresenceSettings: {
+        type: 'object',
+        properties: {
+          status: { type: 'string', enum: ['online', 'away', 'dnd', 'offline', 'custom'] },
+          label: { type: 'string' },
+          color: { type: 'string', nullable: true },
+          emoji: { type: 'string', nullable: true },
+          expiresAt: { type: 'string', format: 'date-time', nullable: true },
+          updatedAt: { type: 'string', format: 'date-time', nullable: true },
+          source: { type: 'string', enum: ['xmpp', 'fallback'], nullable: true },
+          lastSeenAt: { type: 'string', format: 'date-time', nullable: true },
+        },
+      },
+      ChatPresenceSnapshotEntry: {
+        type: 'object',
+        properties: {
+          userId: { type: 'string' },
+          status: { type: 'string', enum: ['online', 'away', 'dnd', 'offline', 'custom'] },
+          label: { type: 'string' },
+          color: { type: 'string' },
+          emoji: { type: 'string', nullable: true },
+          source: { type: 'string', enum: ['xmpp', 'fallback'] },
+          lastSeenAt: { type: 'string', format: 'date-time', nullable: true },
+          resources: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                resource: { type: 'string' },
+                transport: { type: 'string', enum: ['xmpp', 'sse', 'poll', 'hybrid'] },
+                appKind: { type: 'string', enum: ['admin', 'ops'] },
+                lastSeenAt: { type: 'string', format: 'date-time', nullable: true },
+              },
+            },
+          },
+        },
+      },
+      ChatCallSessionState: {
+        type: 'object',
+        properties: {
+          callId: { type: 'string' },
+          won: { type: 'boolean', nullable: true },
+          state: {
+            type: 'string',
+            enum: ['proposed', 'ringing', 'claimed', 'connecting', 'active', 'ended', 'failed', 'cancelled', 'timeout', 'rejected'],
+          },
+          claimedByUserId: { type: 'string', nullable: true },
+          claimedByResource: { type: 'string', nullable: true },
+          callerUserId: { type: 'string', nullable: true },
+          calleeUserId: { type: 'string', nullable: true },
+          expiresAt: { type: 'string', format: 'date-time', nullable: true },
+          endedAt: { type: 'string', format: 'date-time', nullable: true },
+          updatedAt: { type: 'string', format: 'date-time', nullable: true },
+          routingMode: { type: 'string', example: 'parallel_first_accept' },
+          reason: { type: 'string', nullable: true },
+          resource: { type: 'string', nullable: true },
         },
       },
       ChatBootstrapResponse: {
         type: 'object',
-        additionalProperties: true,
         properties: {
-          me: { type: 'object', additionalProperties: true },
-          roster: { type: 'array', items: { type: 'object', additionalProperties: true } },
-          groups: { type: 'array', items: { type: 'object', additionalProperties: true } },
-          messages: { type: 'array', items: { type: 'object', additionalProperties: true } },
+          enabled: { type: 'boolean' },
+          features: {
+            type: 'object',
+            properties: {
+              multiClientSync: { type: 'boolean' },
+              firstCatchRouting: { type: 'boolean' },
+              presenceHybrid: { type: 'boolean' },
+            },
+          },
           xmpp: {
             type: 'object',
-            additionalProperties: true,
             properties: {
-              enabled: { type: 'boolean' },
-              websocketUrl: { type: 'string' },
               domain: { type: 'string' },
+              mucService: { type: 'string' },
+              websocketUrl: { type: 'string' },
+              jid: { type: 'string' },
+              username: { type: 'string' },
+              password: { type: 'string' },
+              resource: { type: 'string' },
               rtc: {
                 type: 'object',
                 properties: {
-                  turnUrls: { type: 'array', items: { type: 'string' } },
-                  turnUsername: { type: 'string' },
-                  turnCredential: { type: 'string' },
+                  iceServers: { type: 'array', items: { type: 'object', additionalProperties: true } },
                   bestEffortOnly: { type: 'boolean' },
                   turnConfigured: { type: 'boolean' },
                   reliabilityHints: { type: 'array', items: { type: 'string' } },
                 },
               },
+            },
+          },
+          me: { type: 'object', additionalProperties: true },
+          settings: {
+            type: 'object',
+            properties: {
+              emailNotificationsDefault: { type: 'boolean' },
+              presence: { $ref: '#/components/schemas/ChatPresenceSettings' },
+            },
+          },
+          calls: {
+            type: 'object',
+            properties: {
+              enabled: { type: 'boolean' },
+              routingMode: { type: 'string', example: 'parallel_first_accept' },
+              policyReason: { type: 'string' },
+            },
+          },
+          assistant: { type: 'object', additionalProperties: true },
+          systemUser: { type: 'object', additionalProperties: true },
+          contacts: { type: 'array', items: { type: 'object', additionalProperties: true } },
+          directory: {
+            type: 'object',
+            properties: {
+              orgUnits: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              contactScopes: { type: 'object', additionalProperties: true },
+            },
+          },
+          groups: {
+            type: 'object',
+            properties: {
+              org: { type: 'array', items: { type: 'object', additionalProperties: true } },
+              custom: { type: 'array', items: { type: 'object', additionalProperties: true } },
             },
           },
         },
@@ -1635,6 +1752,261 @@ export const openApiSpec: Record<string, any> = {
           },
           '401': { $ref: '#/components/responses/UnauthorizedError' },
           '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+    },
+    '/api/admin/chat/presence/self': {
+      get: {
+        tags: ['Admin Chat'],
+        operationId: 'getAdminChatPresenceSelf',
+        summary: 'Lädt den eigenen Presence-Status inklusive Hybrid-Quelle.',
+        security: securedAdmin,
+        responses: {
+          '200': {
+            description: 'Presence-Status geladen.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    presence: { $ref: '#/components/schemas/ChatPresenceSettings' },
+                  },
+                },
+              },
+            },
+          },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+        },
+      },
+      patch: {
+        tags: ['Admin Chat'],
+        operationId: 'updateAdminChatPresenceSelf',
+        summary: 'Aktualisiert den eigenen Presence-Status.',
+        security: securedAdmin,
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['status'],
+                properties: {
+                  status: { type: 'string', enum: ['online', 'away', 'dnd', 'offline', 'custom'] },
+                  label: { type: 'string' },
+                  color: { type: 'string' },
+                  emoji: { type: 'string' },
+                  expiresAt: { type: 'string', format: 'date-time' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Presence-Status gespeichert.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    message: { type: 'string' },
+                    presence: { $ref: '#/components/schemas/ChatPresenceSettings' },
+                  },
+                },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+        },
+      },
+    },
+    '/api/admin/chat/presence/heartbeat': {
+      post: {
+        tags: ['Admin Chat'],
+        operationId: 'createAdminChatPresenceHeartbeat',
+        summary: 'Schreibt einen resource-spezifischen Presence-Heartbeat für Hybrid-Resync.',
+        security: securedAdmin,
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['resource'],
+                properties: {
+                  resource: { type: 'string', example: 'ops-iphone14pro' },
+                  transport: { type: 'string', enum: ['xmpp', 'sse', 'poll', 'hybrid'] },
+                  appKind: { type: 'string', enum: ['admin', 'ops'] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Heartbeat gespeichert.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    ok: { type: 'boolean' },
+                    resource: { type: 'string' },
+                    transport: { type: 'string' },
+                    appKind: { type: 'string' },
+                    source: { type: 'string', enum: ['xmpp', 'fallback'] },
+                    lastSeenAt: { type: 'string', format: 'date-time', nullable: true },
+                  },
+                },
+              },
+            },
+          },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+        },
+      },
+    },
+    '/api/admin/chat/presence/snapshot': {
+      get: {
+        tags: ['Admin Chat'],
+        operationId: 'getAdminChatPresenceSnapshot',
+        summary: 'Lädt einen konsolidierten Presence-Snapshot pro Kontakt.',
+        security: securedAdmin,
+        parameters: [
+          {
+            in: 'query',
+            name: 'contactIds',
+            required: false,
+            description: 'Kommagetrennte Liste von Admin-User-IDs. Ohne Angabe wird ein globaler Snapshot geliefert.',
+            schema: { type: 'string', example: 'admin_1,admin_2,admin_3' },
+          },
+        ],
+        responses: {
+          '200': {
+            description: 'Snapshot geladen.',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'object',
+                  properties: {
+                    items: {
+                      type: 'array',
+                      items: { $ref: '#/components/schemas/ChatPresenceSnapshotEntry' },
+                    },
+                    byUserId: {
+                      type: 'object',
+                      additionalProperties: { $ref: '#/components/schemas/ChatPresenceSnapshotEntry' },
+                    },
+                    generatedAt: { type: 'string', format: 'date-time' },
+                    ttlMs: { type: 'integer' },
+                  },
+                },
+              },
+            },
+          },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+        },
+      },
+    },
+    '/api/admin/chat/calls/{callId}/claim': {
+      post: {
+        tags: ['Admin Chat'],
+        operationId: 'claimAdminChatCall',
+        summary: 'Versucht den atomaren Claim einer parallel klingelnden Call-Session (first-accept-wins).',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'callId', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  callerUserId: { type: 'string' },
+                  resource: { type: 'string' },
+                  appKind: { type: 'string', enum: ['admin', 'ops'] },
+                  transport: { type: 'string', enum: ['xmpp', 'sse', 'poll', 'hybrid'] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Claim bewertet.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ChatCallSessionState' },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+    },
+    '/api/admin/chat/calls/{callId}/release': {
+      post: {
+        tags: ['Admin Chat'],
+        operationId: 'releaseAdminChatCall',
+        summary: 'Beendet/Freigibt eine Call-Session und signalisiert das Ergebnis an alle Clients.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'callId', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  state: {
+                    type: 'string',
+                    enum: ['ended', 'failed', 'cancelled', 'timeout', 'rejected'],
+                    default: 'ended',
+                  },
+                  reason: { type: 'string' },
+                  resource: { type: 'string' },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Call-Session freigegeben.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ChatCallSessionState' },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/api/admin/chat/calls/{callId}/state': {
+      get: {
+        tags: ['Admin Chat'],
+        operationId: 'getAdminChatCallState',
+        summary: 'Liefert den aktuellen Status einer Call-Session für Resync/Diagnose.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'callId', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'Call-State geladen.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ChatCallSessionState' },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
         },
       },
     },
@@ -3177,7 +3549,7 @@ export const openApiSpec: Record<string, any> = {
         summary: 'SSE-Stream für Admin-Live-Updates.',
         security: securedAdmin,
         description:
-          'Server-Sent Events. Unterstützte Eventtypen: `ready`, `update`, `ping`. Themen sind `tickets,workflows,ai_queue,email_queue`.',
+          'Server-Sent Events. Unterstützte Eventtypen: `ready`, `update`, `ping`. Themen sind `tickets,workflows,ai_queue,email_queue,chat_presence,chat_calls`.',
         parameters: [
           {
             in: 'query',
@@ -3186,7 +3558,7 @@ export const openApiSpec: Record<string, any> = {
             description: 'Kommagetrennte Themenliste. Ohne Angabe werden alle Themen abonniert.',
             schema: {
               type: 'string',
-              example: 'tickets,ai_queue',
+              example: 'tickets,chat_presence,chat_calls',
             },
           },
         ],
@@ -3200,7 +3572,7 @@ export const openApiSpec: Record<string, any> = {
                   ready: {
                     summary: 'Beispiel Start-Event',
                     value:
-                      'event: ready\ndata: {"connectedAt":"2026-02-27T19:45:00.000Z","topics":["tickets","ai_queue"]}\n\n',
+                      'event: ready\ndata: {"connectedAt":"2026-03-01T09:45:00.000Z","topics":["tickets","chat_presence","chat_calls"]}\n\n',
                   },
                 },
               },

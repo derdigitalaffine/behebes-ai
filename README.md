@@ -141,6 +141,7 @@ npm --prefix ops run build
 - Versioning and system updates: `docs/versioning-and-updates.md`
 - Git governance and release workflow: `docs/git-governance.md`
 - RLP import/responsibility/internal-task package: `docs/rlp-imports-responsibility-internal-tasks.md`
+- Chat presence/call stability and realtime model: `docs/chat-presence-calls.md`
 
 ## Release and Governance Baseline | Release- und Governance-Basis
 
@@ -163,6 +164,7 @@ Recommended references:
 ## Operations and Updates | Betrieb und Updates
 
 - Update and release process: [`docs/versioning-and-updates.md`](docs/versioning-and-updates.md)
+- Chat stability model (presence heartbeat, first-catch routing): [`docs/chat-presence-calls.md`](docs/chat-presence-calls.md)
 - Admin update advisor endpoints:
   - `GET /api/admin/system/update/status`
   - `POST /api/admin/system/update/preflight`
