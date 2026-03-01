@@ -63,6 +63,7 @@ import VolumeOffIcon from '@mui/icons-material/VolumeOff';
 import PhoneInTalkIcon from '@mui/icons-material/PhoneInTalk';
 import SettingsSuggestIcon from '@mui/icons-material/SettingsSuggest';
 import BugReportIcon from '@mui/icons-material/BugReport';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 
 interface AdminChatOverlayProps {
   token: string;
@@ -132,6 +133,11 @@ interface ChatDirectoryContactScope {
 
 interface ChatBootstrap {
   enabled: boolean;
+  features?: {
+    multiClientSync?: boolean;
+    firstCatchRouting?: boolean;
+    presenceHybrid?: boolean;
+  };
   xmpp: {
     domain: string;
     mucService: string;
@@ -150,6 +156,11 @@ interface ChatBootstrap {
       turnConfigured?: boolean;
       reliabilityHints?: string[];
     };
+  };
+  calls?: {
+    enabled?: boolean;
+    routingMode?: 'parallel_first_accept' | string;
+    policyReason?: string;
   };
   me: {
     id: string;
@@ -274,6 +285,8 @@ interface PendingIncomingCall {
   conversationId: string;
   fromJid: string;
   fromLabel: string;
+  fromAdminUserId?: string;
+  fromResource?: string;
   createdAt: number;
 }
 
@@ -294,11 +307,17 @@ const CHAT_FLOAT_POS_KEY = 'admin.chat.floatPos.v1';
 const CHAT_BROWSER_NOTIFY_KEY = 'admin.chat.browserNotify.v1';
 const CHAT_LIST_PANEL_OPEN_KEY = 'admin.chat.listPanelOpen.v1';
 const CHAT_DIRECT_VIEW_MODE_KEY = 'admin.chat.directViewMode.v1';
+const CHAT_CLIENT_ID_STORAGE_KEY = 'admin.chat.clientId.v1';
 const CHAT_DIRECTORY_ROOT_KEY = '__root__';
 const DEFAULT_AUDIO_OUTPUT_DEVICE_ID = 'default';
 const CHAT_REFRESH_VISIBLE_MS = 5000;
 const CHAT_REFRESH_HIDDEN_MS = 15000;
 const CHAT_READ_SYNC_MIN_INTERVAL_MS = 1800;
+const CHAT_PRESENCE_HEARTBEAT_VISIBLE_MS = 25000;
+const CHAT_PRESENCE_HEARTBEAT_HIDDEN_MS = 70000;
+const CHAT_PRESENCE_SNAPSHOT_VISIBLE_MS = 20000;
+const CHAT_PRESENCE_SNAPSHOT_HIDDEN_MS = 90000;
+const CHAT_SCROLL_BOTTOM_THRESHOLD_PX = 84;
 const COMMON_CHAT_EMOJIS = ['👍', '❤️', '😂', '😮', '🎉', '🙏', '👀', '✅', '🚀', '🔥'];
 const XMPP_NS_RECEIPTS = 'urn:xmpp:receipts';
 const XMPP_NS_CHAT_MARKERS = 'urn:xmpp:chat-markers:0';
@@ -318,6 +337,20 @@ const CALL_DEBUG_MAX_ENTRIES = 80;
 
 function normalizeText(value: unknown): string {
   return String(value || '').trim();
+}
+
+function ensureChatClientId(storageKey: string): string {
+  try {
+    const existing = normalizeText(window.sessionStorage.getItem(storageKey))
+      .replace(/[^a-zA-Z0-9._-]/g, '')
+      .slice(0, 40);
+    if (existing) return existing;
+    const next = `c${Math.random().toString(36).slice(2, 12)}`;
+    window.sessionStorage.setItem(storageKey, next);
+    return next;
+  } catch {
+    return `c${Math.random().toString(36).slice(2, 12)}`;
+  }
 }
 
 function resolveXmppServiceUrl(value: unknown): string {
@@ -585,6 +618,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
   const navigate = useNavigate();
   const isNarrowScreen = useMediaQuery('(max-width: 920px)');
   const initialUrl = useMemo(() => new URL(window.location.href), []);
+  const chatClientId = useMemo(() => ensureChatClientId(CHAT_CLIENT_ID_STORAGE_KEY), []);
   const detachedView = initialUrl.searchParams.get('chatWindow') === '1';
 
   const [open, setOpen] = useState(detachedView || embedded);
@@ -660,6 +694,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
   const [callNeedsAudioUnlock, setCallNeedsAudioUnlock] = useState(false);
   const [callDebugDialogOpen, setCallDebugDialogOpen] = useState(false);
   const [callDebugEntries, setCallDebugEntries] = useState<CallDebugEntry[]>([]);
+  const [showScrollToBottom, setShowScrollToBottom] = useState(false);
 
   const xmppRef = useRef<any | null>(null);
   const joinedRoomsRef = useRef<Set<string>>(new Set());
@@ -690,6 +725,8 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
   const previousCallStateRef = useRef<string>('');
   const previousCallStatusRef = useRef<string>('');
   const wasEmbeddedRef = useRef<boolean>(embedded);
+  const shouldStickToBottomRef = useRef<boolean>(true);
+  const lastAutoScrollConversationRef = useRef<string>('');
 
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
@@ -761,7 +798,18 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
 
   useEffect(() => {
     if (!messageListRef.current) return;
-    messageListRef.current.scrollTop = messageListRef.current.scrollHeight;
+    const container = messageListRef.current;
+    const conversationChanged = lastAutoScrollConversationRef.current !== activeConversationId;
+    const distanceToBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+    const nearBottom = distanceToBottom <= CHAT_SCROLL_BOTTOM_THRESHOLD_PX;
+    if (conversationChanged || shouldStickToBottomRef.current || nearBottom) {
+      container.scrollTop = container.scrollHeight;
+      shouldStickToBottomRef.current = true;
+      setShowScrollToBottom(false);
+    } else {
+      setShowScrollToBottom(true);
+    }
+    lastAutoScrollConversationRef.current = activeConversationId;
   }, [activeConversationId, messagesByConversation]);
 
   useEffect(() => {
@@ -1628,13 +1676,132 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
     ]
   );
 
+  const callsEnabled = useMemo(() => bootstrap?.calls?.enabled !== false, [bootstrap?.calls?.enabled]);
+
+  const sendPresenceHeartbeat = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!bootstrap) return;
+      try {
+        await axios.post(
+          '/api/admin/chat/presence/heartbeat',
+          {
+            resource: normalizeText(bootstrap?.xmpp?.resource) || 'admin',
+            transport: connectionState === 'online' ? 'xmpp' : 'hybrid',
+            appKind: 'admin',
+          },
+          {
+            headers,
+            params: { _ts: Date.now() },
+          }
+        );
+      } catch (error: any) {
+        if (!options?.silent) {
+          const msg = normalizeText(error?.response?.data?.message || error?.message);
+          if (msg) setErrorMessage(msg);
+        }
+      }
+    },
+    [bootstrap, connectionState, headers]
+  );
+
+  const refreshPresenceSnapshot = useCallback(
+    async (options?: { silent?: boolean }) => {
+      if (!bootstrap) return;
+      try {
+        const response = await axios.get('/api/admin/chat/presence/snapshot', {
+          headers,
+          params: {
+            _ts: Date.now(),
+          },
+        });
+        const items = Array.isArray(response.data?.items) ? response.data.items : [];
+        if (items.length === 0) return;
+        setPresenceByUserId((prev) => {
+          const next = { ...prev };
+          for (const item of items) {
+            const userId = normalizeText(item?.userId);
+            if (!userId) continue;
+            const statusRaw = normalizeText(item?.status).toLowerCase();
+            const status: PresenceState =
+              statusRaw === 'online' || statusRaw === 'away' || statusRaw === 'dnd' ? (statusRaw as PresenceState) : 'offline';
+            next[userId] = status;
+          }
+          return next;
+        });
+      } catch (error: any) {
+        if (!options?.silent) {
+          const msg = normalizeText(error?.response?.data?.message || error?.message);
+          if (msg) setErrorMessage(msg);
+        }
+      }
+    },
+    [bootstrap, headers]
+  );
+
+  const claimIncomingCall = useCallback(
+    async (pendingCall: PendingIncomingCall): Promise<boolean> => {
+      if (!bootstrap) return false;
+      try {
+        const response = await axios.post(
+          `/api/admin/chat/calls/${encodeURIComponent(pendingCall.callId)}/claim`,
+          {
+            callerUserId: pendingCall.fromAdminUserId || null,
+            resource: normalizeText(bootstrap?.xmpp?.resource) || 'admin',
+            transport: connectionState === 'online' ? 'xmpp' : 'hybrid',
+            appKind: 'admin',
+          },
+          { headers }
+        );
+        const won = response?.data?.won === true;
+        if (!won) {
+          setCallStatusText('Anruf bereits auf einem anderen Gerät angenommen');
+        }
+        return won;
+      } catch (error: any) {
+        const message = normalizeText(error?.response?.data?.message || error?.message);
+        if (message) setErrorMessage(message);
+        return false;
+      }
+    },
+    [bootstrap, connectionState, headers]
+  );
+
+  const releaseCallClaim = useCallback(
+    async (callId: string, state: 'ended' | 'failed' | 'cancelled' | 'rejected' = 'ended') => {
+      const normalizedCallId = normalizeText(callId);
+      if (!normalizedCallId || !bootstrap) return;
+      try {
+        await axios.post(
+          `/api/admin/chat/calls/${encodeURIComponent(normalizedCallId)}/release`,
+          {
+            state,
+            resource: normalizeText(bootstrap?.xmpp?.resource) || 'admin',
+          },
+          { headers }
+        );
+      } catch {
+        // best effort
+      }
+    },
+    [bootstrap, headers]
+  );
+
+  const handleMessageListScroll = useCallback(() => {
+    const container = messageListRef.current;
+    if (!container) return;
+    const distance = container.scrollHeight - container.scrollTop - container.clientHeight;
+    const nearBottom = distance <= CHAT_SCROLL_BOTTOM_THRESHOLD_PX;
+    shouldStickToBottomRef.current = nearBottom;
+    setShowScrollToBottom(!nearBottom);
+  }, []);
+
   const loadBootstrap = useCallback(async () => {
     setLoadingBootstrap(true);
     setErrorMessage('');
     try {
       const response = await axios.get<ChatBootstrap>('/api/admin/chat/bootstrap', {
         headers,
-        params: { _ts: Date.now() },
+        params: { _ts: Date.now(), appKind: 'admin', clientId: chatClientId },
       });
       const payload = response.data;
       const normalizedPayload: ChatBootstrap = {
@@ -1663,6 +1830,12 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
         initialPresence[contact.id] = 'offline';
       }
       setPresenceByUserId(initialPresence);
+      shouldStickToBottomRef.current = true;
+      setShowScrollToBottom(false);
+
+      if (normalizedPayload?.calls?.enabled === false) {
+        appendCallDebugEntry('event', 'Sprachanrufe sind für diesen Kontext deaktiviert.');
+      }
 
       if (!activeConversationId) {
         const firstId =
@@ -1684,12 +1857,14 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
           );
         }
       }
+      void sendPresenceHeartbeat({ silent: true });
+      void refreshPresenceSnapshot({ silent: true });
     } catch (error: any) {
       setErrorMessage(error?.response?.data?.message || 'Chat-Bootstrap konnte nicht geladen werden.');
     } finally {
       setLoadingBootstrap(false);
     }
-  }, [appendCallDebugEntry, headers, activeConversationId]);
+  }, [appendCallDebugEntry, headers, activeConversationId, sendPresenceHeartbeat, refreshPresenceSnapshot, chatClientId]);
 
   const ensureRoomJoined = useCallback(
     async (roomJid: string) => {
@@ -2109,15 +2284,22 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
         if (proposedCall) {
           const callId = normalizeText(proposedCall.attrs?.id);
           if (!callId) return;
+          if (!callsEnabled) {
+            void sendXmppCallMessage(contact.jid, xml('reject', { xmlns: XMPP_NS_JMI, id: callId }));
+            return;
+          }
           if (callSessionRef.current && callSessionRef.current.state !== 'ended' && callSessionRef.current.state !== 'failed') {
             void sendXmppCallMessage(contact.jid, xml('reject', { xmlns: XMPP_NS_JMI, id: callId }));
             return;
           }
+          const fromResource = normalizeText(from.includes('/') ? from.split('/')[1] : '');
           setIncomingCall({
             callId,
             conversationId,
             fromJid: bareFrom,
             fromLabel: contact.displayName || contact.username || 'Kontakt',
+            fromAdminUserId: contact.id,
+            fromResource,
             createdAt: Date.now(),
           });
           setCallStatusText(`Eingehender Anruf von ${contact.displayName || contact.username || 'Kontakt'}`);
@@ -2136,6 +2318,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
             cleanupCallMedia();
             setCallStatusText('Anruf abgelehnt');
             setCallSession({ ...session, state: 'failed' });
+            void releaseCallClaim(callId, 'failed');
           }
           return;
         }
@@ -2147,6 +2330,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
             cleanupCallMedia();
             setCallStatusText('Anruf beendet');
             setCallSession({ ...session, state: 'ended' });
+            void releaseCallClaim(callId, 'ended');
           }
           if (incomingCallRef.current && incomingCallRef.current.callId === callId) {
             setIncomingCall(null);
@@ -2177,6 +2361,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
               setCallSession((current) =>
                 current && current.callId === session.callId ? { ...current, state: 'failed' } : current
               );
+              void releaseCallClaim(session.callId, 'failed');
               const errorMessage = normalizeText(error?.message);
               if (errorMessage) setErrorMessage(errorMessage);
             }
@@ -2259,6 +2444,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
                 current && current.callId === callId ? { ...current, state: 'failed' } : current
               );
               setCallStatusText('Anrufverbindung fehlgeschlagen');
+              void releaseCallClaim(callId, 'failed');
               const errorMessage = normalizeText(error?.message);
               if (errorMessage) {
                 setErrorMessage(errorMessage);
@@ -2397,6 +2583,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
     applySelfPresenceToXmpp,
     appendMessages,
     bootstrap,
+    callsEnabled,
     cleanupCallMedia,
     createPeerConnectionForSession,
     ensureLocalAudioStream,
@@ -2405,6 +2592,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
     open,
     sendWebRtcSignal,
     sendXmppCallMessage,
+    releaseCallClaim,
     showBrowserNotification,
   ]);
 
@@ -2426,12 +2614,16 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
       pending.reject(new Error('XMPP getrennt'));
     }
     pendingIqRequestsRef.current.clear();
+    const activeCall = callSessionRef.current;
+    if (activeCall?.callId) {
+      void releaseCallClaim(activeCall.callId, 'cancelled');
+    }
     cleanupCallMedia();
     setIncomingCall(null);
     setCallSession(null);
     setCallStatusText('');
     setConnectionState('offline');
-  }, [cleanupCallMedia, clearPingTimer, clearReconnectTimer]);
+  }, [cleanupCallMedia, clearPingTimer, clearReconnectTimer, releaseCallClaim]);
 
   const loadMessages = useCallback(
     async (conversationId: string, options?: { silent?: boolean }) => {
@@ -2540,6 +2732,40 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
     if (connectionState !== 'online') return;
     void applySelfPresenceToXmpp();
   }, [applySelfPresenceToXmpp, connectionState, selfPresence]);
+
+  useEffect(() => {
+    if (!bootstrap) return;
+    let cancelled = false;
+    const tick = () => {
+      if (cancelled) return;
+      void sendPresenceHeartbeat({ silent: true });
+    };
+    tick();
+    const visible = document.visibilityState === 'visible';
+    const intervalMs = visible ? CHAT_PRESENCE_HEARTBEAT_VISIBLE_MS : CHAT_PRESENCE_HEARTBEAT_HIDDEN_MS;
+    const timer = window.setInterval(tick, intervalMs);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [bootstrap, sendPresenceHeartbeat, connectionState]);
+
+  useEffect(() => {
+    if (!bootstrap) return;
+    let cancelled = false;
+    const tick = () => {
+      if (cancelled) return;
+      void refreshPresenceSnapshot({ silent: true });
+    };
+    tick();
+    const visible = document.visibilityState === 'visible';
+    const intervalMs = visible ? CHAT_PRESENCE_SNAPSHOT_VISIBLE_MS : CHAT_PRESENCE_SNAPSHOT_HIDDEN_MS;
+    const timer = window.setInterval(tick, intervalMs);
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+    };
+  }, [bootstrap, refreshPresenceSnapshot]);
 
   useEffect(() => {
     if (connectionState !== 'online') {
@@ -2682,11 +2908,12 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
       setCallSession((current) =>
         current && current.callId === callId ? { ...current, state: 'failed' } : current
       );
+      void releaseCallClaim(callId, 'failed');
     }, CALL_REMOTE_TRACK_TIMEOUT_MS);
     return () => {
       clearRemoteTrackTimeout();
     };
-  }, [appendCallDebugEntry, callSession, cleanupCallMedia, clearRemoteTrackTimeout]);
+  }, [appendCallDebugEntry, callSession, cleanupCallMedia, clearRemoteTrackTimeout, releaseCallClaim]);
 
   const endCurrentCall = useCallback(
     async (reason: 'finish' | 'reject' = 'finish', notifyPeer = true) => {
@@ -2706,8 +2933,11 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
       setCallSession((current) => (current ? { ...current, state: 'ended' } : null));
       setIncomingCall(null);
       setCallStatusText('Anruf beendet');
+      if (active?.callId) {
+        void releaseCallClaim(active.callId, reason === 'reject' ? 'rejected' : 'ended');
+      }
     },
-    [appendCallDebugEntry, cleanupCallMedia, sendXmppCallMessage]
+    [appendCallDebugEntry, cleanupCallMedia, sendXmppCallMessage, releaseCallClaim]
   );
 
   useEffect(() => {
@@ -2832,10 +3062,12 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
     if (!open || !activeConversationId) return;
 
     let cancelled = false;
+    const degraded = connectionState !== 'online';
     const tick = () => {
       if (cancelled) return;
       const isVisible = document.visibilityState === 'visible';
-      if (!isVisible && !detachedView) return;
+      if (!isVisible && !detachedView && degraded) return;
+      if (!degraded && !isVisible) return;
       void loadMessages(activeConversationId, { silent: true });
       if (isVisible) {
         void markConversationRead(activeConversationId);
@@ -2843,13 +3075,19 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
     };
 
     const isVisibleNow = document.visibilityState === 'visible';
-    const intervalMs = isVisibleNow ? CHAT_REFRESH_VISIBLE_MS : CHAT_REFRESH_HIDDEN_MS;
+    const intervalMs = degraded
+      ? isVisibleNow
+        ? CHAT_REFRESH_VISIBLE_MS
+        : CHAT_REFRESH_HIDDEN_MS
+      : isVisibleNow
+      ? 22000
+      : 90000;
     const timer = window.setInterval(tick, intervalMs);
     return () => {
       cancelled = true;
       window.clearInterval(timer);
     };
-  }, [open, activeConversationId, detachedView, loadMessages, markConversationRead]);
+  }, [open, activeConversationId, detachedView, loadMessages, markConversationRead, connectionState]);
 
   useEffect(() => {
     if (!open || !activeConversationId) return;
@@ -3300,6 +3538,10 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
 
   const startVoiceCall = useCallback(async () => {
     if (!activeConversation || activeConversation.type !== 'direct') return;
+    if (!callsEnabled) {
+      setErrorMessage('Sprachanrufe sind in diesem Kontext deaktiviert.');
+      return;
+    }
     if (callSessionRef.current && callSessionRef.current.state !== 'ended' && callSessionRef.current.state !== 'failed') {
       setErrorMessage('Es läuft bereits ein aktiver Anruf.');
       return;
@@ -3339,15 +3581,24 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
       setCallStatusText('Anruf konnte nicht gestartet werden');
       setErrorMessage(normalizeText(error?.message) || 'Anruf konnte nicht gestartet werden.');
     }
-  }, [activeConversation, appendCallDebugEntry, connectionState, refreshAudioOutputDevices, sendXmppCallMessage]);
+  }, [activeConversation, appendCallDebugEntry, callsEnabled, connectionState, refreshAudioOutputDevices, sendXmppCallMessage]);
 
   const acceptIncomingVoiceCall = useCallback(async () => {
     const pendingCall = incomingCallRef.current;
     if (!pendingCall) return;
     const direct = directConversations.find((entry) => entry.id === pendingCall.conversationId);
     if (!direct) return;
+    if (!callsEnabled) {
+      setErrorMessage('Sprachanrufe sind in diesem Kontext deaktiviert.');
+      return;
+    }
 
     try {
+      const claimed = await claimIncomingCall(pendingCall);
+      if (!claimed) {
+        setIncomingCall(null);
+        return;
+      }
       setOpen(true);
       setActiveConversationId(pendingCall.conversationId);
       const stream = await ensureLocalAudioStream();
@@ -3385,8 +3636,18 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
       cleanupCallMedia();
       setCallSession(null);
       setIncomingCall(null);
+      void releaseCallClaim(pendingCall.callId, 'failed');
     }
-  }, [appendCallDebugEntry, createPeerConnectionForSession, directConversations, ensureLocalAudioStream, sendXmppCallMessage]);
+  }, [
+    appendCallDebugEntry,
+    claimIncomingCall,
+    createPeerConnectionForSession,
+    directConversations,
+    ensureLocalAudioStream,
+    sendXmppCallMessage,
+    callsEnabled,
+    releaseCallClaim,
+  ]);
 
   const rejectIncomingVoiceCall = useCallback(async () => {
     const pendingCall = incomingCallRef.current;
@@ -3403,7 +3664,8 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
     setIncomingCall(null);
     setCallStatusText('Anruf abgelehnt');
     appendCallDebugEntry('event', `Eingehender Call abgelehnt (${pendingCall.callId.slice(-6)})`);
-  }, [appendCallDebugEntry, directConversations, sendXmppCallMessage]);
+    void releaseCallClaim(pendingCall.callId, 'rejected');
+  }, [appendCallDebugEntry, directConversations, sendXmppCallMessage, releaseCallClaim]);
 
   const toggleBrowserNotifications = async () => {
     const next = !browserNotifyEnabled;
@@ -4106,10 +4368,11 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
                               </Tooltip>
                             </>
                           ) : (
-                            <Tooltip title="Sprachanruf starten">
+                            <Tooltip title={callsEnabled ? 'Sprachanruf starten' : 'Sprachanrufe sind deaktiviert'}>
                               <IconButton
                                 size="small"
                                 onClick={() => void startVoiceCall()}
+                                disabled={!callsEnabled}
                                 sx={{
                                   ...actionButtonSx,
                                   bgcolor: '#16a34a',
@@ -4185,6 +4448,7 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
 
                 <Box
                   ref={messageListRef}
+                  onScroll={handleMessageListScroll}
                   sx={{
                     flex: 1,
                     overflowY: 'auto',
@@ -4363,6 +4627,26 @@ const AdminChatOverlay: React.FC<AdminChatOverlayProps> = ({ token, embedded = f
                     </Stack>
                   )}
                 </Box>
+
+                {showScrollToBottom ? (
+                  <Box sx={{ px: 2, py: 0.6, bgcolor: '#f8fbff', borderTop: '1px solid #d8e3f3' }}>
+                    <Button
+                      size="small"
+                      variant="contained"
+                      startIcon={<ArrowDownwardIcon sx={{ fontSize: 15 }} />}
+                      onClick={() => {
+                        const container = messageListRef.current;
+                        if (!container) return;
+                        container.scrollTop = container.scrollHeight;
+                        shouldStickToBottomRef.current = true;
+                        setShowScrollToBottom(false);
+                      }}
+                      sx={{ borderRadius: 999 }}
+                    >
+                      Neue Nachrichten
+                    </Button>
+                  </Box>
+                ) : null}
 
                 <Divider />
                 <Box sx={{ px: 2, py: 1.2, bgcolor: '#f8fafc' }}>

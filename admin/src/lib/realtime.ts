@@ -1,4 +1,10 @@
-export type AdminRealtimeTopic = 'tickets' | 'workflows' | 'ai_queue' | 'email_queue';
+export type AdminRealtimeTopic =
+  | 'tickets'
+  | 'workflows'
+  | 'ai_queue'
+  | 'email_queue'
+  | 'chat_presence'
+  | 'chat_calls';
 
 export interface AdminRealtimeUpdate {
   id: number;
@@ -9,6 +15,8 @@ export interface AdminRealtimeUpdate {
   workflowId?: string;
   aiQueueId?: string;
   emailQueueId?: string;
+  chatUserId?: string;
+  callId?: string;
 }
 
 interface SubscribeOptions {
