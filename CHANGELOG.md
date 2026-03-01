@@ -8,6 +8,12 @@ Das Format orientiert sich an Keep a Changelog und folgt Semantic Versioning.
 
 ## [Unreleased] / [Unveroeffentlicht]
 
+### Changed / Geaendert
+- DE: Laufende Weiterentwicklung fuer Messenger-Stabilitaet, Mobile-UX und Admin-Konsistenz.
+  EN: Ongoing development for messenger stability, mobile UX, and admin consistency.
+
+## [v1.0.3] - 2026-03-01
+
 ### Added / Hinzugefuegt
 - DE: OpenAPI/Swagger um Chat-Presence-, Heartbeat- und Call-Session-Endpunkte erweitert.
   EN: Extended OpenAPI/Swagger with chat presence, heartbeat, and call-session endpoints.
@@ -81,7 +87,8 @@ Das Format orientiert sich an Keep a Changelog und folgt Semantic Versioning.
 ---
 
 ## Links
-- [Unreleased]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.2a...HEAD
+- [Unreleased]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.3...HEAD
+- [v1.0.3]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.2a...v1.0.3
 - [v1.0.2a]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.2...v1.0.2a
 - [v1.0.2]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.1...v1.0.2
 - [v1.0.1]: https://github.com/derdigitalaffine/behebes-ai/compare/v1.0.0...v1.0.1
