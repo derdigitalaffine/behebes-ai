@@ -12,6 +12,7 @@ import { loadAdminAccessContext } from '../services/rbac.js';
 import { normalizeRole } from '../utils/roles.js';
 import { getDatabase } from '../database.js';
 import { disableAdminTotpFactor } from '../services/admin-security.js';
+import { issueUserInvite } from '../services/user-invites.js';
 
 const router = express.Router();
 
@@ -77,6 +78,39 @@ function serializeAssignmentKeywords(raw: unknown): string | null {
   const normalized = normalizeAssignmentKeywords(raw);
   if (normalized.length === 0) return null;
   return JSON.stringify(normalized);
+}
+
+function sanitizeProfileData(raw: unknown): Record<string, any> {
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
+  const out: Record<string, any> = {};
+  for (const [key, value] of Object.entries(raw as Record<string, any>)) {
+    const normalizedKey = normalizeText(key).slice(0, 120);
+    if (!normalizedKey) continue;
+    if (value === undefined) continue;
+    if (typeof value === 'string') {
+      out[normalizedKey] = value.slice(0, 2000);
+    } else if (typeof value === 'number' || typeof value === 'boolean' || value === null) {
+      out[normalizedKey] = value;
+    } else {
+      out[normalizedKey] = String(value).slice(0, 2000);
+    }
+  }
+  return out;
+}
+
+function parseProfileDataFromDb(raw: unknown): Record<string, any> {
+  if (!raw) return {};
+  if (typeof raw === 'object' && !Array.isArray(raw)) return raw as Record<string, any>;
+  if (typeof raw !== 'string') return {};
+  const trimmed = raw.trim();
+  if (!trimmed) return {};
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return {};
+    return parsed as Record<string, any>;
+  } catch {
+    return {};
+  }
 }
 
 function createId(prefix: string): string {
@@ -352,6 +386,12 @@ function enrichUser(
     role: normalizeRole(user?.role) || 'SACHBEARBEITER',
     active: !!user?.active,
     isGlobalAdmin: Number(user?.is_global_admin || user?.isGlobalAdmin || 0) === 1,
+    firstName: normalizeText(user?.first_name || user?.firstName) || null,
+    lastName: normalizeText(user?.last_name || user?.lastName) || null,
+    jobTitle: normalizeText(user?.job_title || user?.jobTitle) || null,
+    workPhone: normalizeText(user?.work_phone || user?.workPhone) || null,
+    externalPersonId: normalizeText(user?.external_person_id || user?.externalPersonId) || null,
+    profileData: parseProfileDataFromDb(user?.profile_data_json),
     assignmentKeywords: parseAssignmentKeywordsFromDb(user?.assignment_keywords_json),
     tenantScopes: tenantByUser.get(userId) || [],
     orgScopes: orgByUser.get(userId) || [],
@@ -392,6 +432,8 @@ router.get('/', async (req: Request, res: Response) => {
         last_name,
         job_title,
         work_phone,
+        external_person_id,
+        profile_data_json,
         role,
         active,
         assignment_keywords_json,
@@ -438,6 +480,12 @@ router.get('/:userId', async (req: Request, res: Response) => {
         id,
         username,
         email,
+        first_name,
+        last_name,
+        job_title,
+        work_phone,
+        external_person_id,
+        profile_data_json,
         role,
         active,
         assignment_keywords_json,
@@ -484,6 +532,12 @@ router.post('/', async (req: Request, res: Response) => {
       password,
       role = 'SACHBEARBEITER',
       email,
+      firstName,
+      lastName,
+      jobTitle,
+      workPhone,
+      profileData,
+      externalPersonId,
       assignmentKeywords: assignmentKeywordsRaw,
       isGlobalAdmin,
       tenantScopes: tenantScopesRaw,
@@ -525,17 +579,29 @@ router.post('/', async (req: Request, res: Response) => {
     const userId = createId('user');
     const passwordHash = await bcryptjs.hash(password, 10);
 
+    const hasEmail = normalizeText(email).length > 0;
+    const active = hasEmail ? 1 : 0;
     await db.run(
-      `INSERT INTO admin_users (id, username, password_hash, role, active, email, assignment_keywords_json, is_global_admin)
-       VALUES (?, ?, ?, ?, 1, ?, ?, ?)`,
+      `INSERT INTO admin_users (
+         id, username, password_hash, role, active, email, first_name, last_name, job_title, work_phone,
+         assignment_keywords_json, is_global_admin, profile_data_json, external_person_id
+       )
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       [
         userId,
         username,
         passwordHash,
         normalizedRole,
-        email || null,
+        active,
+        hasEmail ? email : null,
+        normalizeText(firstName) || null,
+        normalizeText(lastName) || null,
+        normalizeText(jobTitle) || null,
+        normalizeText(workPhone) || null,
         assignmentKeywordsJson,
         nextIsGlobalAdmin ? 1 : 0,
+        JSON.stringify(sanitizeProfileData(profileData)),
+        normalizeText(externalPersonId) || null,
       ]
     );
 
@@ -547,6 +613,12 @@ router.post('/', async (req: Request, res: Response) => {
         id,
         username,
         email,
+        first_name,
+        last_name,
+        job_title,
+        work_phone,
+        external_person_id,
+        profile_data_json,
         role,
         active,
         assignment_keywords_json,
@@ -579,6 +651,12 @@ router.patch('/:userId', async (req: Request, res: Response) => {
       role,
       active,
       email,
+      firstName,
+      lastName,
+      jobTitle,
+      workPhone,
+      profileData,
+      externalPersonId,
       assignmentKeywords: assignmentKeywordsRaw,
       isGlobalAdmin,
       tenantScopes: tenantScopesRaw,
@@ -647,7 +725,40 @@ router.patch('/:userId', async (req: Request, res: Response) => {
 
     if (email !== undefined) {
       updates.push('email = ?');
-      params.push(email || null);
+      const normalizedEmail = normalizeText(email);
+      params.push(normalizedEmail || null);
+      updates.push('active = ?');
+      params.push(normalizedEmail ? 1 : 0);
+    }
+
+    if (firstName !== undefined) {
+      updates.push('first_name = ?');
+      params.push(normalizeText(firstName) || null);
+    }
+
+    if (lastName !== undefined) {
+      updates.push('last_name = ?');
+      params.push(normalizeText(lastName) || null);
+    }
+
+    if (jobTitle !== undefined) {
+      updates.push('job_title = ?');
+      params.push(normalizeText(jobTitle) || null);
+    }
+
+    if (workPhone !== undefined) {
+      updates.push('work_phone = ?');
+      params.push(normalizeText(workPhone) || null);
+    }
+
+    if (externalPersonId !== undefined) {
+      updates.push('external_person_id = ?');
+      params.push(normalizeText(externalPersonId) || null);
+    }
+
+    if (profileData !== undefined) {
+      updates.push('profile_data_json = ?');
+      params.push(JSON.stringify(sanitizeProfileData(profileData)));
     }
 
     const hasAssignmentKeywords =
@@ -713,6 +824,12 @@ router.patch('/:userId', async (req: Request, res: Response) => {
         id,
         username,
         email,
+        first_name,
+        last_name,
+        job_title,
+        work_phone,
+        external_person_id,
+        profile_data_json,
         role,
         active,
         assignment_keywords_json,
@@ -849,6 +966,122 @@ router.patch('/:userId/password', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error changing password:', error);
     res.status(Number(error?.status || 500)).json({ message: error?.message || 'Fehler beim Aktualisieren des Passworts' });
+  }
+});
+
+/**
+ * POST /api/admin/users/:userId/invite
+ * Erstellt Einladungslink + optional Mailversand zum Passwort-Setzen
+ */
+router.post('/:userId/invite', async (req: Request, res: Response) => {
+  try {
+    const access = await loadRequesterAccess(req);
+    assertUserManagementAllowed(access);
+    const userId = normalizeText(req.params.userId);
+    if (!userId) {
+      return res.status(400).json({ message: 'userId fehlt' });
+    }
+    const db = getDatabase();
+    const user = await db.get<any>(
+      `SELECT id, COALESCE(is_global_admin, 0) AS is_global_admin
+       FROM admin_users
+       WHERE id = ?`,
+      [userId]
+    );
+    if (!user?.id) {
+      return res.status(404).json({ message: 'Benutzer nicht gefunden' });
+    }
+
+    if (!access.isGlobalAdmin) {
+      const { tenantByUser, orgByUser } = await loadScopeMaps([userId]);
+      const enriched = enrichUser(user, tenantByUser, orgByUser);
+      const managedTenantIdSet = new Set((access.tenantAdminTenantIds || []).map((entry) => normalizeText(entry)));
+      const requesterUserId = normalizeText(req.userId);
+      if (!isUserInManagedTenants(enriched, managedTenantIdSet, requesterUserId)) {
+        return res.status(403).json({ message: 'Kein Zugriff auf diesen Benutzer' });
+      }
+    }
+
+    const sendEmailNow = req.body?.sendEmail !== false;
+    const invite = await issueUserInvite({
+      adminUserId: userId,
+      sentByAdminId: normalizeText(req.userId) || null,
+      metadata: {
+        source: 'users.invite.single',
+      },
+      sendEmailNow,
+    });
+    return res.json({
+      message: sendEmailNow ? 'Einladung wurde versendet.' : 'Einladungslink erstellt.',
+      invite,
+    });
+  } catch (error: any) {
+    return res.status(Number(error?.status || 500)).json({ message: error?.message || 'Einladung fehlgeschlagen.' });
+  }
+});
+
+/**
+ * POST /api/admin/users/invite/batch
+ * Batch-Einladungen per User-ID-Liste
+ */
+router.post('/invite/batch', async (req: Request, res: Response) => {
+  try {
+    const access = await loadRequesterAccess(req);
+    assertUserManagementAllowed(access);
+    const userIds = Array.isArray(req.body?.userIds)
+      ? req.body.userIds.map((entry: unknown) => normalizeText(entry)).filter(Boolean)
+      : [];
+    if (userIds.length === 0) {
+      return res.status(400).json({ message: 'userIds fehlt oder leer.' });
+    }
+    const sendEmailNow = req.body?.sendEmail !== false;
+    const managedTenantIdSet = new Set((access.tenantAdminTenantIds || []).map((entry) => normalizeText(entry)));
+    const requesterUserId = normalizeText(req.userId);
+    const results: Array<{ userId: string; ok: boolean; message: string; invite?: any }> = [];
+
+    for (const userId of userIds.slice(0, 300)) {
+      try {
+        if (!access.isGlobalAdmin) {
+          const db = getDatabase();
+          const row = await db.get<any>(
+            `SELECT id, COALESCE(is_global_admin, 0) AS is_global_admin
+             FROM admin_users
+             WHERE id = ?`,
+            [userId]
+          );
+          if (!row?.id) {
+            results.push({ userId, ok: false, message: 'Benutzer nicht gefunden' });
+            continue;
+          }
+          const { tenantByUser, orgByUser } = await loadScopeMaps([userId]);
+          const enriched = enrichUser(row, tenantByUser, orgByUser);
+          if (!isUserInManagedTenants(enriched, managedTenantIdSet, requesterUserId)) {
+            results.push({ userId, ok: false, message: 'Kein Zugriff auf Benutzer' });
+            continue;
+          }
+        }
+
+        const invite = await issueUserInvite({
+          adminUserId: userId,
+          sentByAdminId: normalizeText(req.userId) || null,
+          metadata: { source: 'users.invite.batch' },
+          sendEmailNow,
+        });
+        results.push({ userId, ok: true, message: 'OK', invite });
+      } catch (error: any) {
+        results.push({ userId, ok: false, message: error?.message || 'Einladung fehlgeschlagen' });
+      }
+    }
+
+    const successCount = results.filter((entry) => entry.ok).length;
+    return res.json({
+      message: `${successCount}/${results.length} Einladungen erfolgreich.`,
+      successCount,
+      total: results.length,
+      results,
+    });
+  } catch (error: any) {
+    return res.status(Number(error?.status || 500)).json({ message: error?.message || 'Batch-Einladung fehlgeschlagen.' });
   }
 });
 

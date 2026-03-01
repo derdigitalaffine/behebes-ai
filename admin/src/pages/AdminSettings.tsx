@@ -14,6 +14,7 @@ import SystemInfos from './SystemInfos';
 import MunicipalContactsSettings from './MunicipalContactsSettings';
 import OrganizationSettings from './OrganizationSettings';
 import PlatformBlog from './PlatformBlog';
+import Imports from './Imports';
 import { useAdminScopeContext } from '../lib/adminScopeContext';
 import './AdminSettings.css';
 
@@ -26,6 +27,7 @@ type SettingsSection =
   | 'general-operations'
   | 'general-maintenance'
   | 'systeminfos'
+  | 'imports'
   | 'tenants'
   | 'organization'
   | 'weather-api'
@@ -93,14 +95,19 @@ const SECTION_LABELS: Record<SettingsSection, { title: string; subtitle: string;
     subtitle: 'Sessions, Tokens, DB-Struktur, Backend- und Build-Historie',
     icon: 'fa-server',
   },
+  imports: {
+    title: 'Importe',
+    subtitle: 'CSV-Import für Benutzer und Organisationsstruktur mit Vorschau und Konfliktprüfung',
+    icon: 'fa-file-import',
+  },
   tenants: {
     title: 'Mandanten',
     subtitle: 'Mandantenstamm und Mandanten-Profile zentral verwalten',
     icon: 'fa-building',
   },
   organization: {
-    title: 'Organisation',
-    subtitle: 'Organisationstypen, Hierarchie und Gruppenzuordnung im Mandanten',
+    title: 'Organisationsstruktur',
+    subtitle: 'Organisationstypen, Hierarchie, Gruppenzuordnung und Zuständigkeits-Schlagworte im Mandanten',
     icon: 'fa-sitemap',
   },
   'weather-api': {
@@ -185,6 +192,7 @@ const SECTION_COMPONENTS: Record<SettingsSection, React.FC> = {
   'general-operations': GeneralOperationsSettings,
   'general-maintenance': GeneralMaintenanceSettings,
   systeminfos: SystemInfos,
+  imports: Imports,
   tenants: TenantSettings,
   organization: OrganizationStructureSettings,
   'weather-api': WeatherApiSettings,
@@ -209,6 +217,7 @@ const SECTION_CAPABILITY_REQUIREMENTS: Partial<Record<SettingsSection, string[]>
   'general-operations': ['settings.global.manage'],
   'general-maintenance': ['maintenance.manage'],
   systeminfos: ['settings.system.manage'],
+  imports: ['users.manage', 'settings.organization.global.manage', 'settings.organization.tenant.manage'],
   tenants: ['settings.organization.global.manage'],
   organization: ['settings.organization.global.manage', 'settings.organization.tenant.manage'],
   'weather-api': ['settings.weather.manage'],

@@ -6,9 +6,11 @@ import {
   Button,
   Card,
   CardContent,
+  Checkbox,
   Chip,
   CircularProgress,
   Divider,
+  FormControlLabel,
   MenuItem,
   Stack,
   TextField,
@@ -36,9 +38,95 @@ interface TicketDetailPageProps {
   scope: AdminScopeSelection;
 }
 
+type InternalTaskFormFieldType = 'text' | 'textarea' | 'boolean' | 'select' | 'date' | 'number';
+
+interface InternalTaskFormFieldOption {
+  value: string;
+  label?: string;
+}
+
+interface InternalTaskFormField {
+  key: string;
+  label: string;
+  type: InternalTaskFormFieldType;
+  required: boolean;
+  helpText?: string;
+  placeholder?: string;
+  options?: InternalTaskFormFieldOption[];
+}
+
 function looksOfflineError(error: any): boolean {
   if (!navigator.onLine) return true;
   return !error?.response;
+}
+
+function normalizeInternalTaskFormFields(schema: any): InternalTaskFormField[] {
+  const source = Array.isArray(schema?.fields) ? schema.fields : [];
+  const fields: InternalTaskFormField[] = [];
+  for (const entry of source) {
+    const key = String(entry?.key || '').trim();
+    if (!key) continue;
+    const typeRaw = String(entry?.type || 'text').trim().toLowerCase();
+    const type: InternalTaskFormFieldType =
+      typeRaw === 'textarea' ||
+      typeRaw === 'boolean' ||
+      typeRaw === 'select' ||
+      typeRaw === 'date' ||
+      typeRaw === 'number'
+        ? (typeRaw as InternalTaskFormFieldType)
+        : 'text';
+    const label = String(entry?.label || key).trim() || key;
+    const required = !!entry?.required;
+    const helpText = String(entry?.helpText || '').trim() || undefined;
+    const placeholder = String(entry?.placeholder || '').trim() || undefined;
+    const options = Array.isArray(entry?.options)
+      ? entry.options
+          .map((option: any) => ({
+            value: String(option?.value || '').trim(),
+            label: String(option?.label || option?.value || '').trim() || undefined,
+          }))
+          .filter((option: InternalTaskFormFieldOption) => !!option.value)
+      : undefined;
+    fields.push({ key, label, type, required, helpText, placeholder, options });
+  }
+  return fields;
+}
+
+function buildInternalTaskResponsePayload(task: any, formValues: Record<string, any>): {
+  ok: boolean;
+  payload: Record<string, any>;
+  error?: string;
+} {
+  const fields = normalizeInternalTaskFormFields(task?.formSchema);
+  const payload: Record<string, any> = {};
+  for (const field of fields) {
+    const raw = formValues[field.key];
+    if (field.type === 'boolean') {
+      const value = raw === true;
+      if (field.required && value !== true) {
+        return { ok: false, payload: {}, error: `Pflichtfeld "${field.label}" ist nicht erfüllt.` };
+      }
+      payload[field.key] = value;
+      continue;
+    }
+    const text = String(raw ?? '').trim();
+    if (!text) {
+      if (field.required) {
+        return { ok: false, payload: {}, error: `Pflichtfeld "${field.label}" ist leer.` };
+      }
+      continue;
+    }
+    if (field.type === 'number') {
+      const num = Number(text);
+      if (!Number.isFinite(num)) {
+        return { ok: false, payload: {}, error: `Feld "${field.label}" erwartet eine Zahl.` };
+      }
+      payload[field.key] = num;
+      continue;
+    }
+    payload[field.key] = text;
+  }
+  return { ok: true, payload };
 }
 
 export default function TicketDetailPage({ token, scope }: TicketDetailPageProps) {
@@ -47,6 +135,8 @@ export default function TicketDetailPage({ token, scope }: TicketDetailPageProps
   const [statusValue, setStatusValue] = useState('');
   const [commentText, setCommentText] = useState('');
   const [taskReason, setTaskReason] = useState('');
+  const [internalTaskNotes, setInternalTaskNotes] = useState<Record<string, string>>({});
+  const [internalTaskFormValues, setInternalTaskFormValues] = useState<Record<string, Record<string, any>>>({});
   const [queueCount, setQueueCount] = useState(0);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
@@ -112,6 +202,8 @@ export default function TicketDetailPage({ token, scope }: TicketDetailPageProps
     },
     enabled: !!ticketId,
     staleTime: 15_000,
+    refetchInterval: 15_000,
+    refetchIntervalInBackground: true,
   });
 
   useEffect(() => {
@@ -207,13 +299,41 @@ export default function TicketDetailPage({ token, scope }: TicketDetailPageProps
     });
   };
 
-  const handleInternalTaskAction = async (taskId: string, action: 'start' | 'complete' | 'reject') => {
+  const handleInternalTaskAction = async (task: any, action: 'start' | 'complete' | 'reject') => {
+    const taskId = String(task?.id || '').trim();
+    if (!taskId) return;
+    const formValues = internalTaskFormValues[taskId] || {};
+    const note = String(internalTaskNotes[taskId] || '').trim();
+    let body: Record<string, any> = {};
+    if (action === 'complete' || action === 'reject') {
+      const result = buildInternalTaskResponsePayload(task, formValues);
+      if (!result.ok) {
+        setError(result.error || 'Aufgabenformular ist unvollständig.');
+        return;
+      }
+      body = {
+        response: result.payload,
+        ...(note ? { note } : {}),
+      };
+    } else if (note) {
+      body = { note };
+    }
     await runWithOfflineQueue({
       method: 'POST',
       url: `/admin/internal-tasks/${encodeURIComponent(taskId)}/${action}`,
-      body: taskReason.trim() ? { note: taskReason.trim() } : {},
+      body,
       successMessage: `Interne Aufgabe ${action} ausgeführt.`,
       onSuccess: async () => {
+        setInternalTaskNotes((prev) => {
+          const next = { ...prev };
+          delete next[taskId];
+          return next;
+        });
+        setInternalTaskFormValues((prev) => {
+          const next = { ...prev };
+          delete next[taskId];
+          return next;
+        });
         await internalTasksQuery.refetch();
       },
     });
@@ -495,8 +615,11 @@ export default function TicketDetailPage({ token, scope }: TicketDetailPageProps
                 const status = String(task?.status || '').toLowerCase();
                 const canStart = status === 'pending';
                 const canComplete = status === 'in_progress';
-                const canReject = status === 'pending' || status === 'in_progress';
+                const canReject = (status === 'pending' || status === 'in_progress') && task?.allowReject !== false;
                 const taskIdValue = String(task?.id || '').trim();
+                const formFields = normalizeInternalTaskFormFields(task?.formSchema);
+                const formValues = internalTaskFormValues[taskIdValue] || {};
+                const noteValue = internalTaskNotes[taskIdValue] || '';
                 return (
                   <Card key={taskIdValue || `task-${index}`} variant="outlined" sx={{ borderRadius: 2 }}>
                     <CardContent>
@@ -505,15 +628,111 @@ export default function TicketDetailPage({ token, scope }: TicketDetailPageProps
                         <Typography variant="body2" color="text.secondary">
                           {task?.taskType || task?.type || 'internal_task'} · {status || 'unbekannt'}
                           {task?.dueAt || task?.due_at ? ` · Fällig: ${task?.dueAt || task?.due_at}` : ''}
+                          {` · Zyklus ${Number(task?.cycleIndex || 1)}/${Number(task?.maxCycles || 1)}`}
                         </Typography>
                         {task?.description ? (
                           <Typography variant="body2">{String(task.description)}</Typography>
                         ) : null}
+                        {formFields.length > 0 ? (
+                          <Stack spacing={1} sx={{ pt: 0.6 }}>
+                            <Typography variant="caption" color="text.secondary">
+                              Aufgabenformular
+                            </Typography>
+                            {formFields.map((field) => {
+                              const value = formValues[field.key];
+                              if (field.type === 'boolean') {
+                                return (
+                                  <FormControlLabel
+                                    key={`${taskIdValue}-${field.key}`}
+                                    control={
+                                      <Checkbox
+                                        checked={value === true}
+                                        onChange={(event) =>
+                                          setInternalTaskFormValues((prev) => ({
+                                            ...prev,
+                                            [taskIdValue]: {
+                                              ...(prev[taskIdValue] || {}),
+                                              [field.key]: event.target.checked,
+                                            },
+                                          }))
+                                        }
+                                      />
+                                    }
+                                    label={field.required ? `${field.label} *` : field.label}
+                                  />
+                                );
+                              }
+                              if (field.type === 'select') {
+                                return (
+                                  <TextField
+                                    key={`${taskIdValue}-${field.key}`}
+                                    label={field.required ? `${field.label} *` : field.label}
+                                    size="small"
+                                    select
+                                    value={String(value ?? '')}
+                                    onChange={(event) =>
+                                      setInternalTaskFormValues((prev) => ({
+                                        ...prev,
+                                        [taskIdValue]: {
+                                          ...(prev[taskIdValue] || {}),
+                                          [field.key]: event.target.value,
+                                        },
+                                      }))
+                                    }
+                                    helperText={field.helpText || undefined}
+                                  >
+                                    <MenuItem value="">Bitte wählen</MenuItem>
+                                    {(field.options || []).map((option) => (
+                                      <MenuItem key={`${taskIdValue}-${field.key}-${option.value}`} value={option.value}>
+                                        {option.label || option.value}
+                                      </MenuItem>
+                                    ))}
+                                  </TextField>
+                                );
+                              }
+                              const multiline = field.type === 'textarea';
+                              const inputType = field.type === 'number' ? 'number' : field.type === 'date' ? 'date' : 'text';
+                              return (
+                                <TextField
+                                  key={`${taskIdValue}-${field.key}`}
+                                  label={field.required ? `${field.label} *` : field.label}
+                                  size="small"
+                                  type={inputType}
+                                  value={String(value ?? '')}
+                                  multiline={multiline}
+                                  minRows={multiline ? 2 : undefined}
+                                  onChange={(event) =>
+                                    setInternalTaskFormValues((prev) => ({
+                                      ...prev,
+                                      [taskIdValue]: {
+                                        ...(prev[taskIdValue] || {}),
+                                        [field.key]: event.target.value,
+                                      },
+                                    }))
+                                  }
+                                  placeholder={field.placeholder || undefined}
+                                  helperText={field.helpText || undefined}
+                                />
+                              );
+                            })}
+                          </Stack>
+                        ) : null}
+                        <TextField
+                          size="small"
+                          label="Notiz (optional)"
+                          value={noteValue}
+                          onChange={(event) =>
+                            setInternalTaskNotes((prev) => ({
+                              ...prev,
+                              [taskIdValue]: event.target.value,
+                            }))
+                          }
+                        />
                         <Stack direction="row" spacing={0.8} flexWrap="wrap">
                           <Button
                             size="small"
                             variant="contained"
-                            onClick={() => void handleInternalTaskAction(taskIdValue, 'start')}
+                            onClick={() => void handleInternalTaskAction(task, 'start')}
                             disabled={busy || !canStart || !taskIdValue}
                           >
                             Start
@@ -522,7 +741,7 @@ export default function TicketDetailPage({ token, scope }: TicketDetailPageProps
                             size="small"
                             variant="contained"
                             color="success"
-                            onClick={() => void handleInternalTaskAction(taskIdValue, 'complete')}
+                            onClick={() => void handleInternalTaskAction(task, 'complete')}
                             disabled={busy || !canComplete || !taskIdValue}
                           >
                             Abschließen
@@ -531,12 +750,17 @@ export default function TicketDetailPage({ token, scope }: TicketDetailPageProps
                             size="small"
                             variant="outlined"
                             color="warning"
-                            onClick={() => void handleInternalTaskAction(taskIdValue, 'reject')}
+                            onClick={() => void handleInternalTaskAction(task, 'reject')}
                             disabled={busy || !canReject || !taskIdValue}
                           >
                             Zurückweisen
                           </Button>
                         </Stack>
+                        {!canReject && task?.allowReject === false ? (
+                          <Typography variant="caption" color="text.secondary">
+                            Ablehnung ist für diese Aufgabe deaktiviert.
+                          </Typography>
+                        ) : null}
                       </Stack>
                     </CardContent>
                   </Card>

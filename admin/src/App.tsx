@@ -64,8 +64,9 @@ const SETTINGS_ITEMS: NavItem[] = [
   { id: 'settings-general-operations', label: 'Allgemein · Betriebsalarme', icon: 'fa-bell', to: '/admin-settings/general-operations' },
   { id: 'settings-general-maintenance', label: 'Allgemein · Daten & Wartung', icon: 'fa-database', to: '/admin-settings/general-maintenance' },
   { id: 'settings-systeminfos', label: 'Systeminfos', icon: 'fa-server', to: '/admin-settings/systeminfos' },
+  { id: 'settings-imports', label: 'Importe', icon: 'fa-file-import', to: '/admin-settings/imports' },
   { id: 'settings-tenants', label: 'Mandanten', icon: 'fa-building', to: '/admin-settings/tenants' },
-  { id: 'settings-organization', label: 'Organisation', icon: 'fa-sitemap', to: '/admin-settings/organization' },
+  { id: 'settings-organization', label: 'Organisationsstruktur', icon: 'fa-sitemap', to: '/admin-settings/organization' },
   { id: 'settings-weather-api', label: 'Wetter API', icon: 'fa-cloud-sun-rain', to: '/admin-settings/weather-api' },
   { id: 'settings-categories', label: 'Kategorien', icon: 'fa-tags', to: '/admin-settings/categories' },
   { id: 'settings-ai', label: 'KI-Einstellungen', icon: 'fa-bolt', to: '/admin-settings/ai' },
@@ -118,7 +119,7 @@ const NAVIGATION_TREE: NavGroup[] = [
     groups: [
       {
         id: 'administration-organisation',
-        label: 'Organisation',
+        label: 'Organisationsstruktur',
         icon: 'fa-users',
         items: [
           { id: 'users', label: 'Benutzer', icon: 'fa-users', to: '/users' },
@@ -161,6 +162,7 @@ const NAV_ITEM_CAPABILITY_REQUIREMENTS: Record<string, string[]> = {
   'settings-general-operations': ['settings.global.manage'],
   'settings-general-maintenance': ['maintenance.manage'],
   'settings-systeminfos': ['settings.system.manage'],
+  'settings-imports': ['users.manage', 'settings.organization.global.manage', 'settings.organization.tenant.manage'],
   'settings-tenants': ['settings.organization.global.manage'],
   'settings-organization': ['settings.organization.global.manage', 'settings.organization.tenant.manage'],
   'settings-weather-api': ['settings.weather.manage'],

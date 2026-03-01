@@ -863,7 +863,11 @@ const OrganizationSettings: React.FC<OrganizationSettingsProps> = ({ mode = 'all
   const showTenantManagement = mode === 'all' || mode === 'tenants';
   const showOrganizationManagement = mode === 'all' || mode === 'organization';
   const pageTitle =
-    mode === 'tenants' ? 'Mandanten' : mode === 'organization' ? 'Organisation' : 'Organisation & Mandanten';
+    mode === 'tenants'
+      ? 'Mandanten'
+      : mode === 'organization'
+      ? 'Organisationsstruktur'
+      : 'Organisationsstruktur & Mandanten';
 
   return (
     <div className="space-y-6">
@@ -1252,6 +1256,9 @@ const OrganizationSettings: React.FC<OrganizationSettingsProps> = ({ mode = 'all
         <p className="text-sm text-slate-500">
           Organisationstypen und Einheiten werden im aktuell gewählten Mandanten bearbeitet.
         </p>
+        <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700">
+          Kommunale Ansprechpartner werden künftig direkt über Organisationseinheiten und deren Zuständigkeits-Schlagworte gepflegt.
+        </div>
       </div>
       ) : null}
 

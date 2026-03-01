@@ -56,6 +56,8 @@ export const openApiSpec: Record<string, any> = {
     { name: 'AI Queue', description: 'KI-Queue, Monitoring und Testläufe' },
     { name: 'Admin Push', description: 'WebPush für Staff-Clients (Ops/Admin)' },
     { name: 'Ops Mobile', description: 'Mobile-First Dashboard-Aggregationen für das Ops-Frontend' },
+    { name: 'Admin Imports', description: 'CSV-Importjobs für Benutzer und Organisationsstruktur' },
+    { name: 'Responsibility', description: 'Verwaltungs-Zuständigkeitsprüfung und Konfiguration' },
   ],
   components: {
     securitySchemes: {
@@ -379,6 +381,46 @@ export const openApiSpec: Record<string, any> = {
           username: { type: 'string', nullable: true },
           createdAt: { type: 'string', format: 'date-time', nullable: true },
           report: { $ref: '#/components/schemas/SystemUpdatePreflightReport' },
+        },
+      },
+      ImportJob: {
+        type: 'object',
+        additionalProperties: true,
+        properties: {
+          id: { type: 'string' },
+          tenantId: { type: 'string', nullable: true },
+          kind: { type: 'string', enum: ['users', 'org_units'] },
+          status: {
+            type: 'string',
+            enum: ['draft', 'uploaded', 'preview_ready', 'running', 'completed', 'failed', 'cancelled'],
+          },
+          processedRows: { type: 'integer' },
+          totalRows: { type: 'integer' },
+          preview: { type: 'object', additionalProperties: true },
+          report: { type: 'object', additionalProperties: true },
+          events: { type: 'array', items: { type: 'object', additionalProperties: true } },
+        },
+      },
+      ResponsibilityCandidate: {
+        type: 'object',
+        properties: {
+          type: { type: 'string', enum: ['org_unit', 'user'] },
+          id: { type: 'string' },
+          name: { type: 'string' },
+          confidence: { type: 'number' },
+          reasoning: { type: 'string' },
+          matchedKeywords: { type: 'array', items: { type: 'string' } },
+        },
+      },
+      ResponsibilityDecision: {
+        type: 'object',
+        additionalProperties: true,
+        properties: {
+          query: { type: 'string' },
+          tenantId: { type: 'string', nullable: true },
+          candidates: { type: 'array', items: { $ref: '#/components/schemas/ResponsibilityCandidate' } },
+          fallbackUsed: { type: 'boolean' },
+          source: { type: 'string' },
         },
       },
       TicketSummary: {
@@ -1773,6 +1815,376 @@ export const openApiSpec: Record<string, any> = {
               },
             },
           },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+    },
+    '/api/admin/imports': {
+      post: {
+        tags: ['Admin Imports'],
+        operationId: 'createImportJob',
+        summary: 'Erstellt einen neuen Importjob für Benutzer oder Organisationsstruktur.',
+        security: securedAdmin,
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['kind'],
+                properties: {
+                  kind: { type: 'string', enum: ['users', 'org_units'] },
+                  tenantId: { type: 'string' },
+                  options: { type: 'object', additionalProperties: true },
+                  mapping: { type: 'object', additionalProperties: true },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '201': {
+            description: 'Importjob angelegt.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ImportJob' },
+              },
+            },
+          },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+    },
+    '/api/admin/imports/{id}': {
+      get: {
+        tags: ['Admin Imports'],
+        operationId: 'getImportJob',
+        summary: 'Lädt den Importjob inklusive Fortschritt, Vorschau und Ereignissen.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'Importjob geladen.',
+            content: {
+              'application/json': {
+                schema: { $ref: '#/components/schemas/ImportJob' },
+              },
+            },
+          },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/api/admin/imports/{id}/upload': {
+      post: {
+        tags: ['Admin Imports'],
+        operationId: 'uploadImportFile',
+        summary: 'Lädt eine CSV-Datei zu einem Importjob hoch.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: true,
+          content: {
+            'multipart/form-data': {
+              schema: {
+                type: 'object',
+                required: ['file'],
+                properties: {
+                  file: { type: 'string', format: 'binary' },
+                  encoding: { type: 'string', enum: ['utf-8', 'windows-1252'] },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Datei hochgeladen und geparst.',
+            content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+          },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+    },
+    '/api/admin/imports/{id}/preview': {
+      post: {
+        tags: ['Admin Imports'],
+        operationId: 'previewImportJob',
+        summary: 'Erzeugt eine Importvorschau inklusive Konflikten.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'Importvorschau erstellt.',
+            content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+          },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/api/admin/imports/{id}/execute': {
+      post: {
+        tags: ['Admin Imports'],
+        operationId: 'executeImportJob',
+        summary: 'Startet den asynchronen Importlauf.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        responses: {
+          '202': {
+            description: 'Importausführung gestartet.',
+            content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+          },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/api/admin/imports/{id}/report': {
+      get: {
+        tags: ['Admin Imports'],
+        operationId: 'getImportJobReport',
+        summary: 'Lädt den Abschlussbericht eines Importjobs.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'Importreport geladen.',
+            content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+          },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/api/admin/imports/{id}/cancel': {
+      post: {
+        tags: ['Admin Imports'],
+        operationId: 'cancelImportJob',
+        summary: 'Bricht einen laufenden Importjob ab.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'Importjob abgebrochen.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/MessageResponse' } } },
+          },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/api/admin/imports/{id}/assist/mapping': {
+      post: {
+        tags: ['Admin Imports'],
+        operationId: 'assistImportMapping',
+        summary: 'Regel- bzw. KI-Assistenz für Feldmapping.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'Mapping-Vorschlag erzeugt.',
+            content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+          },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+    },
+    '/api/admin/imports/{id}/assist/keywords': {
+      post: {
+        tags: ['Admin Imports'],
+        operationId: 'assistImportKeywords',
+        summary: 'Regel- bzw. KI-Assistenz für Schlagwortableitung.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'Schlagwortvorschlag erzeugt.',
+            content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+          },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+    },
+    '/api/admin/imports/{id}/assist/scope-assignment': {
+      post: {
+        tags: ['Admin Imports'],
+        operationId: 'assistImportScopeAssignment',
+        summary: 'Regel- bzw. KI-Assistenz für Scope-/Zuordnungslogik.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'id', required: true, schema: { type: 'string' } }],
+        responses: {
+          '200': {
+            description: 'Scope-Vorschlag erzeugt.',
+            content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+          },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+    },
+    '/api/admin/responsibility/config': {
+      get: {
+        tags: ['Responsibility'],
+        operationId: 'getResponsibilityConfig',
+        summary: 'Lädt die Konfiguration der Verwaltungs-Zuständigkeitsprüfung.',
+        security: securedAdmin,
+        responses: {
+          '200': {
+            description: 'Konfiguration geladen.',
+            content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+          },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+      patch: {
+        tags: ['Responsibility'],
+        operationId: 'patchResponsibilityConfig',
+        summary: 'Aktualisiert die Konfiguration der Verwaltungs-Zuständigkeitsprüfung.',
+        security: securedAdmin,
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+        },
+        responses: {
+          '200': {
+            description: 'Konfiguration aktualisiert.',
+            content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+          },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+    },
+    '/api/admin/responsibility/query': {
+      post: {
+        tags: ['Responsibility'],
+        operationId: 'queryResponsibility',
+        summary: 'Ermittelt zuständige Kandidaten mit Konfidenz.',
+        security: securedAdmin,
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['query'],
+                properties: {
+                  query: { type: 'string' },
+                  tenantId: { type: 'string' },
+                  includeUsers: { type: 'boolean' },
+                  limit: { type: 'integer', minimum: 1, maximum: 20 },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Zuständigkeitskandidaten berechnet.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ResponsibilityDecision' } } },
+          },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+    },
+    '/api/admin/responsibility/simulate': {
+      post: {
+        tags: ['Responsibility'],
+        operationId: 'simulateResponsibility',
+        summary: 'Simuliert Zuständigkeit ohne Persistenz.',
+        security: securedAdmin,
+        requestBody: {
+          required: true,
+          content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+        },
+        responses: {
+          '200': {
+            description: 'Simulation durchgeführt.',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/ResponsibilityDecision' } } },
+          },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+        },
+      },
+    },
+    '/api/admin/users/{userId}/invite': {
+      post: {
+        tags: ['Admin Auth'],
+        operationId: 'inviteAdminUser',
+        summary: 'Erstellt einen Einladungslink für einen Admin-User und versendet optional eine E-Mail.',
+        security: securedAdmin,
+        parameters: [{ in: 'path', name: 'userId', required: true, schema: { type: 'string' } }],
+        requestBody: {
+          required: false,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                properties: {
+                  sendEmail: { type: 'boolean', default: true },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Einladung erstellt.',
+            content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+          },
+          '400': { $ref: '#/components/responses/ValidationError' },
+          '401': { $ref: '#/components/responses/UnauthorizedError' },
+          '403': { $ref: '#/components/responses/ForbiddenError' },
+          '404': { $ref: '#/components/responses/NotFoundError' },
+        },
+      },
+    },
+    '/api/admin/users/invite/batch': {
+      post: {
+        tags: ['Admin Auth'],
+        operationId: 'inviteAdminUsersBatch',
+        summary: 'Erstellt Einladungen für mehrere Admin-User.',
+        security: securedAdmin,
+        requestBody: {
+          required: true,
+          content: {
+            'application/json': {
+              schema: {
+                type: 'object',
+                required: ['userIds'],
+                properties: {
+                  userIds: { type: 'array', items: { type: 'string' } },
+                  sendEmail: { type: 'boolean', default: true },
+                },
+              },
+            },
+          },
+        },
+        responses: {
+          '200': {
+            description: 'Batch-Verarbeitung abgeschlossen.',
+            content: { 'application/json': { schema: { type: 'object', additionalProperties: true } } },
+          },
+          '400': { $ref: '#/components/responses/ValidationError' },
           '401': { $ref: '#/components/responses/UnauthorizedError' },
           '403': { $ref: '#/components/responses/ForbiddenError' },
         },
