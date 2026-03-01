@@ -133,7 +133,7 @@ function OpsShell(props: {
         }}
       >
         <Toolbar sx={{ gap: 1.2, px: { xs: 1.2, md: 2 } }}>
-          <Box component="img" src="/ops/logo.png" alt="behebes" sx={{ width: 70, height: 28, objectFit: 'contain' }} />
+          <Box component="img" src="/ops/logo-ops.png" alt="behebes Ops Logo" sx={{ width: 70, height: 28, objectFit: 'contain' }} />
           <Stack spacing={0} sx={{ flexGrow: 1, minWidth: 0 }}>
             <Typography fontWeight={800} sx={{ lineHeight: 1.1 }}>Ops</Typography>
             <Typography variant="caption" color="text.secondary" sx={{ lineHeight: 1.1 }}>

@@ -644,7 +644,7 @@ const Login: React.FC<LoginProps> = ({ onLogin }) => {
       <div className="login-shell">
         <aside className="login-intro" aria-label="Portal-Informationen">
           <div className="login-brand">
-            <img src="/logo.png" alt="Verbandsgemeinde Otterbach-Otterberg" className="login-logo" />
+            <img src="/logo-admin.png" alt="behebes Admin Logo" className="login-logo" />
             <div>
               <p className="login-kicker">behebes.AI</p>
               <h1>Admin Portal</h1>

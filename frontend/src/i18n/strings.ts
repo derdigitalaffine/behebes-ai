@@ -160,6 +160,87 @@ export const STRINGS: Record<string, string> = {
   platform_v2_story_point_2: 'Entwickelt aus kommunaler Praxis für kommunale Praxis: kurze Wege, klare Entscheidungen.',
   platform_v2_story_point_3: 'Heute offen, modular und updatefähig mit einem transparenten technischen Fundament.',
   platform_v2_blog_title: 'Produkt-Updates',
+  platform_v3_badge: 'State-of-the-Art Verwaltungsplattform',
+  platform_v3_nav_aria: 'Navigationsbereiche des Plattformportals',
+  platform_v3_nav_home: 'Start',
+  platform_v3_nav_opensource: 'Open Source',
+  platform_v3_nav_product: 'Produkt',
+  platform_v3_nav_news: 'News',
+  platform_v3_kicker: 'behebes Plattform',
+  platform_v3_title: 'behebes bewirbt kommunale Digitalisierung mit messbarem Betrieb statt Folienversprechen.',
+  platform_v3_subtitle:
+    'Eine Plattform für Bürgerfrontend, Adminsteuerung und Ops-Einsatz: schnell, robust, modular und auf reale Verwaltungsarbeit ausgelegt.',
+  platform_v3_cta_citizen: 'Bürgerfrontend öffnen',
+  platform_v3_cta_ops: 'Ops App öffnen',
+  platform_v3_cta_swagger: 'Swagger UI / API Docs',
+  platform_v3_cta_github: 'GitHub Repository',
+  platform_v3_signal_1: 'Privacy-first',
+  platform_v3_signal_2: 'Mandantenfähig',
+  platform_v3_signal_3: 'Open Source',
+  platform_v3_signal_4: 'Workflow-Automation',
+  platform_v3_signal_5: 'Realtime-Betrieb',
+  platform_v3_pitch_title: 'Warum behebes jetzt klar besser ist',
+  platform_v3_pitch_text:
+    'Nach dem harten Neustart wurde behebes konsequent auf Stabilität, Wartbarkeit und produktive Nutzung ausgerichtet. Nicht als Demo, sondern als kommunales Betriebssystem für tägliche Abläufe.',
+  platform_v3_links_title: 'Projektkontext und Verantwortung',
+  platform_v3_link_vg_title: 'Verbandsgemeinde Otterbach-Otterberg',
+  platform_v3_link_vg_text:
+    'Die Verbandsgemeinde steht hinter dem Projekt und treibt nutzernahe, digitale Verwaltungsservices aktiv voran.',
+  platform_v3_link_vg_cta: 'Zur Verbandsgemeinde',
+  platform_v3_link_maintainer_title: 'Projektmaintainer',
+  platform_v3_link_maintainer_text:
+    'Maintained by Dominik Tröster (Digitalbeauftragter) als One-Man-Engineering mit klarem Fokus auf Qualität und Updatefähigkeit.',
+  platform_v3_link_tromu_cta: 'www.tromu.de',
+  platform_v3_logo_stack_title: 'Logo-System der drei Frontends',
+  platform_v3_logo_stack_text:
+    'Jedes Frontend hat ein eigenes Markenbild: Bürger, Admin und Ops sind visuell klar differenziert, bleiben aber Teil eines gemeinsamen Produktauftritts.',
+  platform_v3_logo_citizen_label: 'Bürgerfrontend',
+  platform_v3_logo_admin_label: 'Adminfrontend',
+  platform_v3_logo_ops_label: 'Ops App',
+  platform_v3_logo_admin_alt: 'behebes Admin Logo',
+  platform_v3_logo_ops_alt: 'behebes Ops Logo',
+  platform_v3_news_teaser_title: 'Aktuelle Produktupdates',
+  platform_v3_news_teaser_cta: 'Alle News',
+  platform_v3_open_title: 'Warum Open Source im Verwaltungsumfeld',
+  platform_v3_open_intro:
+    'behebes ist offen, weil digitale Infrastruktur der öffentlichen Hand transparent, wiederverwendbar und gemeinschaftlich finanzierbar sein sollte.',
+  platform_v3_open_point_1_title: 'Steuergeld gehört den Bürgern',
+  platform_v3_open_point_1_text:
+    'Wenn öffentliche Mittel Software finanzieren, muss Nutzen dauerhaft bei der Allgemeinheit bleiben und nicht in geschlossenen Silos verschwinden.',
+  platform_v3_open_point_2_title: 'Einer für alle statt Inseln',
+  platform_v3_open_point_2_text:
+    'Gemeinsame Open-Source-Bausteine reduzieren Doppelentwicklungen und schaffen wiederverwendbare Standards für mehrere Verwaltungen.',
+  platform_v3_open_point_3_title: 'Souverän statt abhängig',
+  platform_v3_open_point_3_text:
+    'Offener Quellcode verhindert harte Herstellerabhängigkeit, stärkt Verhandlungsmacht und sichert langfristige Handlungsfähigkeit.',
+  platform_v3_open_point_4_title: 'Nachvollziehbar und auditierbar',
+  platform_v3_open_point_4_text:
+    'Architektur, Schnittstellen und Sicherheitsentscheidungen können transparent geprüft, verbessert und gemeinschaftlich weiterentwickelt werden.',
+  platform_v3_open_license:
+    'behebes steht unter Apache-2.0 und folgt dem Prinzip: öffentlich finanziert, öffentlich nachvollziehbar, öffentlich nutzbar.',
+  platform_v3_product_title: 'Produktversprechen für den Echtbetrieb',
+  platform_v3_product_intro:
+    'behebes verbindet Benutzerfreundlichkeit, Betriebsstabilität und modulare Erweiterbarkeit, damit kommunale Teams schneller liefern können.',
+  platform_v3_product_card_1_title: 'Drei Frontends, ein System',
+  platform_v3_product_card_1_text:
+    'Bürgerfrontend, Admin-Backend und Ops-App greifen ohne Medienbruch ineinander und teilen dieselbe Prozesslogik.',
+  platform_v3_product_card_2_title: 'Datenschutz im Kern',
+  platform_v3_product_card_2_text:
+    'Pseudonymisierung und Vorfilterung vor KI-Einsatz sorgen für kontrollierte Datenflüsse und vertrauenswürdige Automatisierung.',
+  platform_v3_product_card_3_title: 'API-first und integrationsstark',
+  platform_v3_product_card_3_text:
+    'Offene Schnittstellen und dokumentierte Endpunkte ermöglichen kontrollierte Anbindung an bestehende Fachverfahren.',
+  platform_v3_product_card_4_title: 'Updatefähig in Produktion',
+  platform_v3_product_card_4_text:
+    'Versionierung, Migrationsläufe und Release-Disziplin halten laufende Systeme planbar und wartbar.',
+  platform_v3_product_flow_title: 'Typischer Ablauf mit behebes',
+  platform_v3_product_flow_step_1: 'Bürger meldet Anliegen digital und strukturiert.',
+  platform_v3_product_flow_step_2: 'Verwaltung steuert Zuständigkeit, Workflow und Rückfragen im Adminbereich.',
+  platform_v3_product_flow_step_3: 'Ops-Team bearbeitet mobil, synchron und mit Live-Kommunikation.',
+  platform_v3_product_flow_step_4: 'Status, Auswertung und kontinuierliche Verbesserung bleiben transparent nachvollziehbar.',
+  platform_v3_news_title: 'News & Entwicklungsverlauf',
+  platform_v3_news_intro:
+    'Alle relevanten Fortschritte, Releases und Architekturverbesserungen im Überblick – kompakt und nachvollziehbar.',
 
   language_label: 'Sprache',
   language_translating: 'Übersetzung läuft...',

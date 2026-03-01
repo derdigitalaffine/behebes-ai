@@ -738,7 +738,7 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ auth, healthStatus, healthTim
               <i className="fa-solid fa-bars" />
             </button>
             <div className="sidebar-brand">
-              <img src="/logo.png" alt="Verbandsgemeinde Otterbach-Otterberg" className="admin-logo" />
+              <img src="/logo-admin.png" alt="behebes Admin Logo" className="admin-logo" />
               <div className="sidebar-brand-copy">
                 <p className="admin-kicker">Verbandsgemeinde</p>
                 <h1>Admin Portal</h1>

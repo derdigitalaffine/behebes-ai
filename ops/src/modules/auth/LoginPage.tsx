@@ -200,7 +200,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         <CardContent sx={{ p: 3 }}>
           <Stack spacing={2.2}>
             <Stack direction="row" spacing={1.2} alignItems="center">
-              <Box component="img" src="/ops/logo.png" alt="behebes" sx={{ width: 70, height: 28, objectFit: 'contain' }} />
+              <Box component="img" src="/ops/logo-ops.png" alt="behebes Ops Logo" sx={{ width: 70, height: 28, objectFit: 'contain' }} />
               <Stack spacing={0}>
                 <Typography variant="h6" fontWeight={800}>Ops Login</Typography>
                 <Typography variant="caption" color="text.secondary">Sicherer Zugang für Einsatzteams</Typography>
