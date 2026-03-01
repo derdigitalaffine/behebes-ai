@@ -1,7 +1,29 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
-import './MailboxClient.css';
+import {
+  Alert,
+  Box,
+  Button,
+  Chip,
+  CircularProgress,
+  Stack,
+  Tab,
+  Tabs,
+  TextField,
+  Typography,
+} from '@mui/material';
+import RefreshRoundedIcon from '@mui/icons-material/RefreshRounded';
+import SyncRoundedIcon from '@mui/icons-material/SyncRounded';
+import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded';
+import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded';
+import {
+  SmartTable,
+  SmartTableRowActionButton,
+  SmartTableRowActions,
+  type SmartTableColumnDef,
+} from '../modules/smart-table';
+import { AdminKpiStrip, AdminPageHero, AdminSurfaceCard } from '../components/admin-ui';
 
 interface MailboxAttachment {
   id: string;
@@ -62,6 +84,28 @@ interface MailboxClientProps {
   token: string;
 }
 
+const formatDate = (value?: string | null): string => {
+  if (!value) return '–';
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return '–';
+  return parsed.toLocaleString('de-DE', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+  });
+};
+
+const formatBytes = (value?: number | null): string => {
+  const amount = Number(value || 0);
+  if (!Number.isFinite(amount) || amount <= 0) return '0 B';
+  if (amount < 1024) return `${Math.floor(amount)} B`;
+  if (amount < 1024 * 1024) return `${(amount / 1024).toFixed(1)} KB`;
+  return `${(amount / (1024 * 1024)).toFixed(1)} MB`;
+};
+
 const MailboxClient: React.FC<MailboxClientProps> = ({ token }) => {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<MailboxMessageSummary[]>([]);
@@ -73,33 +117,12 @@ const MailboxClient: React.FC<MailboxClientProps> = ({ token }) => {
   const [loading, setLoading] = useState(true);
   const [detailLoading, setDetailLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [bodyMode, setBodyMode] = useState<'text' | 'html'>('text');
 
   const headers = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
-
-  const formatDate = (value?: string | null): string => {
-    if (!value) return '–';
-    const parsed = new Date(value);
-    if (Number.isNaN(parsed.getTime())) return '–';
-    return parsed.toLocaleString('de-DE', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-  };
-
-  const formatBytes = (value?: number | null): string => {
-    const amount = Number(value || 0);
-    if (!Number.isFinite(amount) || amount <= 0) return '0 B';
-    if (amount < 1024) return `${Math.floor(amount)} B`;
-    if (amount < 1024 * 1024) return `${(amount / 1024).toFixed(1)} KB`;
-    return `${(amount / (1024 * 1024)).toFixed(1)} MB`;
-  };
 
   const loadStats = async () => {
     try {
@@ -111,7 +134,7 @@ const MailboxClient: React.FC<MailboxClientProps> = ({ token }) => {
         totalAttachments: Number(payload.totalAttachments || 0),
       });
     } catch {
-      // stats are optional
+      // optional
     }
   };
 
@@ -126,8 +149,9 @@ const MailboxClient: React.FC<MailboxClientProps> = ({ token }) => {
       const response = await axios.get(`/api/admin/mailbox/messages/${encodeURIComponent(normalizedId)}`, {
         headers,
       });
-      setSelectedMessage(response.data as MailboxMessageDetail);
-      setBodyMode((response.data as MailboxMessageDetail)?.textBody ? 'text' : 'html');
+      const detail = response.data as MailboxMessageDetail;
+      setSelectedMessage(detail);
+      setBodyMode(detail?.textBody ? 'text' : 'html');
       setError('');
     } catch (err: any) {
       setSelectedMessage(null);
@@ -139,6 +163,7 @@ const MailboxClient: React.FC<MailboxClientProps> = ({ token }) => {
 
   const loadMessages = async (options?: { silent?: boolean }) => {
     const silent = options?.silent === true;
+    if (silent) setRefreshing(true);
     if (!silent) setLoading(true);
     try {
       const response = await axios.get('/api/admin/mailbox/messages', {
@@ -165,13 +190,12 @@ const MailboxClient: React.FC<MailboxClientProps> = ({ token }) => {
       } else if (!activeId) {
         setSelectedMessageId('');
         setSelectedMessage(null);
-      } else if (selectedMessageId) {
-        void loadDetail(selectedMessageId);
       }
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Postfach konnte nicht geladen werden.');
     } finally {
       if (!silent) setLoading(false);
+      if (silent) setRefreshing(false);
     }
   };
 
@@ -230,224 +254,327 @@ const MailboxClient: React.FC<MailboxClientProps> = ({ token }) => {
     return () => window.clearInterval(timer);
   }, []);
 
+  const columns = useMemo<SmartTableColumnDef<MailboxMessageSummary>[]>(
+    () => [
+      {
+        field: 'subject',
+        headerName: 'Betreff',
+        minWidth: 260,
+        flex: 1.2,
+        renderCell: ({ row }) => (
+          <Stack spacing={0.5} sx={{ py: 0.25 }}>
+            <Typography variant="body2" fontWeight={700}>
+              {row.subject || '(ohne Betreff)'}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', maxWidth: 560, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {row.preview || 'Keine Vorschau verfügbar.'}
+            </Typography>
+          </Stack>
+        ),
+      },
+      {
+        field: 'fromEmail',
+        headerName: 'Absender',
+        minWidth: 210,
+        flex: 0.9,
+        valueGetter: (_value, row) => row.fromEmail || row.fromName || 'Unbekannt',
+      },
+      {
+        field: 'ticketId',
+        headerName: 'Ticket',
+        minWidth: 160,
+        flex: 0.55,
+        renderCell: ({ row }) =>
+          row.ticketId ? (
+            <Chip size="small" label={`Ticket ${row.ticketId.slice(0, 8)}`} color="success" variant="outlined" />
+          ) : (
+            <Chip size="small" label="Nicht zugeordnet" variant="outlined" />
+          ),
+      },
+      {
+        field: 'attachmentCount',
+        headerName: 'Anhänge',
+        minWidth: 100,
+        flex: 0.35,
+        type: 'number',
+      },
+      {
+        field: 'receivedAt',
+        headerName: 'Empfangen',
+        minWidth: 180,
+        flex: 0.62,
+        valueFormatter: (value) => formatDate(value as string),
+      },
+      {
+        field: 'mailboxUid',
+        headerName: 'UID',
+        minWidth: 90,
+        flex: 0.25,
+      },
+      {
+        field: 'actions',
+        headerName: '',
+        sortable: false,
+        filterable: false,
+        width: 84,
+        align: 'center',
+        headerAlign: 'center',
+        renderCell: ({ row }) => (
+          <SmartTableRowActions>
+            <SmartTableRowActionButton
+              icon="fa-regular fa-eye"
+              tooltip="Nachricht öffnen"
+              onClick={() => {
+                setSelectedMessageId(row.id);
+                void loadDetail(row.id);
+              }}
+            />
+            {row.ticketId ? (
+              <SmartTableRowActionButton
+                icon="fa-solid fa-ticket"
+                tooltip="Ticket öffnen"
+                onClick={() => navigate(`/tickets/${row.ticketId}`)}
+              />
+            ) : null}
+          </SmartTableRowActions>
+        ),
+      },
+    ],
+    [navigate]
+  );
+
+  const selectedIdArray = selectedMessageId ? [selectedMessageId] : [];
+
   return (
-    <div className="mailbox-client-page">
-      <div className="mailbox-client-header">
-        <div>
-          <h2>Ticket-Postfach (IMAP)</h2>
-          <p>Antwortmails werden hier angezeigt und automatisch den Tickets zugeordnet.</p>
-        </div>
-        <div className="mailbox-client-actions">
-          <button type="button" className="btn-refresh" onClick={() => void loadMessages()} disabled={loading}>
-            <i className="fa-solid fa-rotate" /> Aktualisieren
-          </button>
-          <button type="button" className="btn-sync" onClick={triggerSync} disabled={syncing}>
-            {syncing ? (
-              <>
-                <i className="fa-solid fa-spinner fa-spin" /> Synchronisiere...
-              </>
-            ) : (
-              <>
-                <i className="fa-solid fa-cloud-arrow-down" /> IMAP synchronisieren
-              </>
-            )}
-          </button>
-        </div>
-      </div>
+    <div className="space-y-6">
+      <AdminPageHero
+        title="E-Mail Postfach (IMAP)"
+        subtitle="Importierte Nachrichten, Ticket-Zuordnung und Detailprüfung im SmartTable-Layout."
+        badges={[
+          { label: syncing ? 'Sync läuft' : 'Sync bereit', tone: syncing ? 'warning' : 'success' },
+          { label: refreshing ? 'Live-Refresh' : 'Idle', tone: refreshing ? 'info' : 'default' },
+        ]}
+        actions={(
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+            <Button
+              variant="outlined"
+              startIcon={<RefreshRoundedIcon />}
+              onClick={() => void loadMessages()}
+              disabled={loading}
+            >
+              Aktualisieren
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={syncing ? <CircularProgress size={16} color="inherit" /> : <SyncRoundedIcon />}
+              onClick={() => void triggerSync()}
+              disabled={syncing}
+            >
+              IMAP synchronisieren
+            </Button>
+          </Stack>
+        )}
+      />
 
-      <div className="mailbox-filters">
-        <label>
-          Suche
-          <input
-            type="text"
-            value={query}
-            onChange={(event) => setQuery(event.target.value)}
-            placeholder="Betreff, Absender, Vorschau"
-          />
-        </label>
-        <label>
-          Ticket-ID
-          <input
-            type="text"
-            value={ticketFilter}
-            onChange={(event) => setTicketFilter(event.target.value)}
-            placeholder="z. B. 0eb6707f-..."
-          />
-        </label>
-        <button type="button" onClick={() => void loadMessages()} disabled={loading}>
-          Filter anwenden
-        </button>
-      </div>
+      {error ? <Alert severity="error">{error}</Alert> : null}
+      {success ? <Alert severity="success">{success}</Alert> : null}
 
-      {stats && (
-        <div className="mailbox-stats">
-          <article>
-            <span>Importierte Nachrichten</span>
-            <strong>{stats.totalMessages}</strong>
-          </article>
-          <article>
-            <span>Ticket-Zuordnungen</span>
-            <strong>{stats.linkedMessages}</strong>
-          </article>
-          <article>
-            <span>Gespeicherte Anhänge</span>
-            <strong>{stats.totalAttachments}</strong>
-          </article>
-        </div>
-      )}
+      {stats ? (
+        <AdminKpiStrip
+          items={[
+            { label: 'Nachrichten', value: stats.totalMessages },
+            { label: 'Ticket-Zuordnungen', value: stats.linkedMessages, tone: 'success' },
+            { label: 'Anhänge', value: stats.totalAttachments, tone: 'info' },
+          ]}
+        />
+      ) : null}
 
-      {error ? <div className="error-message">{error}</div> : null}
-      {success ? <div className="success-message">{success}</div> : null}
+      <AdminSurfaceCard
+        title="Nachrichtenliste"
+        subtitle="Filter, Auswahl und Ticketbezug der importierten IMAP-Nachrichten."
+        actions={(
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25} sx={{ minWidth: { sm: 420 } }}>
+            <TextField
+              size="small"
+              label="Suche"
+              value={query}
+              onChange={(event) => setQuery(event.target.value)}
+              placeholder="Betreff, Absender, Vorschau"
+            />
+            <TextField
+              size="small"
+              label="Ticket-ID"
+              value={ticketFilter}
+              onChange={(event) => setTicketFilter(event.target.value)}
+              placeholder="0eb6707f-..."
+            />
+            <Button variant="outlined" onClick={() => void loadMessages()} disabled={loading}>
+              Anwenden
+            </Button>
+          </Stack>
+        )}
+      >
+        <SmartTable<MailboxMessageSummary>
+          tableId="mailbox-client-messages"
+          title="Postfach"
+          rows={messages}
+          columns={columns}
+          loading={loading}
+          error={error}
+          defaultPageSize={25}
+          pageSizeOptions={[10, 25, 50, 100]}
+          selectionModel={selectedIdArray}
+          onSelectionModelChange={(ids) => {
+            const nextId = ids[0] || '';
+            setSelectedMessageId(nextId);
+            if (nextId) {
+              void loadDetail(nextId);
+            } else {
+              setSelectedMessage(null);
+            }
+          }}
+          onRowClick={(row) => {
+            setSelectedMessageId(row.id);
+            void loadDetail(row.id);
+          }}
+          onRefresh={async () => {
+            await loadMessages({ silent: true });
+            await loadStats();
+          }}
+          isRefreshing={refreshing}
+        />
+      </AdminSurfaceCard>
 
-      <div className="mailbox-client-shell">
-        <aside className="mailbox-list-panel">
-          <header>
-            <h3>Nachrichten</h3>
-            <span>{messages.length}</span>
-          </header>
-          {loading ? (
-            <div className="mailbox-empty">
-              <i className="fa-solid fa-spinner fa-spin" /> Lade...
-            </div>
-          ) : messages.length === 0 ? (
-            <div className="mailbox-empty">Keine Nachrichten gefunden.</div>
-          ) : (
-            <div className="mailbox-list">
-              {messages.map((message) => {
-                const isActive = message.id === selectedMessageId;
-                return (
-                  <button
-                    key={message.id}
-                    type="button"
-                    className={`mailbox-list-item ${isActive ? 'active' : ''}`}
-                    onClick={() => {
-                      setSelectedMessageId(message.id);
-                      void loadDetail(message.id);
-                    }}
-                  >
-                    <div className="mailbox-list-item-head">
-                      <strong>{message.subject || '(ohne Betreff)'}</strong>
-                      <span>{formatDate(message.receivedAt || message.createdAt)}</span>
-                    </div>
-                    <div className="mailbox-list-item-meta">
-                      <span>{message.fromEmail || message.fromName || 'Unbekannt'}</span>
-                      <span>
-                        <i className="fa-solid fa-paperclip" /> {message.attachmentCount}
-                      </span>
-                    </div>
-                    <p>{message.preview || 'Keine Vorschau verfügbar.'}</p>
-                    <div className="mailbox-list-item-tags">
-                      {message.ticketId ? (
-                        <span className="tag-linked">Ticket {message.ticketId.slice(0, 8)}</span>
-                      ) : (
-                        <span className="tag-unlinked">Nicht zugeordnet</span>
-                      )}
-                      <span className="tag-uid">UID {message.mailboxUid}</span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </aside>
+      <AdminSurfaceCard
+        title="Nachrichtendetails"
+        subtitle={selectedMessage ? `Mailbox ${selectedMessage.mailboxName} · UID ${selectedMessage.mailboxUid}` : 'Bitte Nachricht auswählen'}
+        actions={
+          selectedMessage?.ticketId ? (
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<OpenInNewRoundedIcon />}
+              onClick={() => navigate(`/tickets/${selectedMessage.ticketId}`)}
+            >
+              Ticket öffnen
+            </Button>
+          ) : null
+        }
+      >
+        {detailLoading ? (
+          <Box display="flex" justifyContent="center" alignItems="center" minHeight={220}>
+            <CircularProgress size={28} />
+          </Box>
+        ) : !selectedMessage ? (
+          <Alert severity="info">Bitte links eine Nachricht auswählen.</Alert>
+        ) : (
+          <Stack spacing={2}>
+            <Stack spacing={0.4}>
+              <Typography variant="h6">{selectedMessage.subject || '(ohne Betreff)'}</Typography>
+              <Typography variant="body2" color="text.secondary">
+                Von: {selectedMessage.fromName ? `${selectedMessage.fromName} ` : ''}
+                {selectedMessage.fromEmail || 'Unbekannt'}
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                An: {selectedMessage.toEmails || '–'}
+              </Typography>
+              {selectedMessage.ccEmails ? (
+                <Typography variant="body2" color="text.secondary">
+                  CC: {selectedMessage.ccEmails}
+                </Typography>
+              ) : null}
+              <Typography variant="caption" color="text.secondary">
+                Empfangen: {formatDate(selectedMessage.receivedAt || selectedMessage.createdAt)}
+              </Typography>
+            </Stack>
 
-        <section className="mailbox-detail-panel">
-          {detailLoading ? (
-            <div className="mailbox-empty">
-              <i className="fa-solid fa-spinner fa-spin" /> Nachricht wird geladen...
-            </div>
-          ) : !selectedMessage ? (
-            <div className="mailbox-empty">Bitte links eine Nachricht auswählen.</div>
-          ) : (
-            <div className="mailbox-detail-content">
-              <header className="mailbox-detail-header">
-                <div>
-                  <h3>{selectedMessage.subject || '(ohne Betreff)'}</h3>
-                  <p>
-                    Von: {selectedMessage.fromName ? `${selectedMessage.fromName} ` : ''}
-                    {selectedMessage.fromEmail || 'Unbekannt'}
-                  </p>
-                  <p>An: {selectedMessage.toEmails || '–'}</p>
-                  {selectedMessage.ccEmails ? <p>CC: {selectedMessage.ccEmails}</p> : null}
-                </div>
-                <div className="mailbox-detail-header-right">
-                  <span>Empfangen: {formatDate(selectedMessage.receivedAt || selectedMessage.createdAt)}</span>
-                  <span>Mailbox: {selectedMessage.mailboxName} · UID {selectedMessage.mailboxUid}</span>
-                  {selectedMessage.ticketId ? (
-                    <button
-                      type="button"
-                      className="btn-open-ticket"
-                      onClick={() => navigate(`/tickets/${selectedMessage.ticketId}`)}
+            <Box>
+              <Typography variant="subtitle2" gutterBottom>
+                Anhänge ({selectedMessage.attachments.length})
+              </Typography>
+              {selectedMessage.attachments.length === 0 ? (
+                <Typography variant="body2" color="text.secondary">
+                  Keine Anhänge vorhanden.
+                </Typography>
+              ) : (
+                <Stack spacing={1}>
+                  {selectedMessage.attachments.map((attachment) => (
+                    <Stack
+                      key={attachment.id}
+                      direction={{ xs: 'column', sm: 'row' }}
+                      spacing={1}
+                      justifyContent="space-between"
+                      alignItems={{ xs: 'flex-start', sm: 'center' }}
+                      sx={{ border: '1px solid #e2e8f0', borderRadius: 1.25, p: 1.25 }}
                     >
-                      <i className="fa-solid fa-ticket" /> Ticket öffnen
-                    </button>
-                  ) : (
-                    <span className="not-linked">Keiner Ticket-ID zugeordnet</span>
-                  )}
-                </div>
-              </header>
+                      <Stack spacing={0.2}>
+                        <Typography variant="body2" fontWeight={600}>
+                          {attachment.fileName}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {attachment.mimeType} · {formatBytes(attachment.byteSize)}
+                        </Typography>
+                      </Stack>
+                      <Button
+                        size="small"
+                        variant="outlined"
+                        startIcon={<DownloadRoundedIcon />}
+                        onClick={() => void downloadAttachment(selectedMessage.id, attachment)}
+                      >
+                        Download
+                      </Button>
+                    </Stack>
+                  ))}
+                </Stack>
+              )}
+            </Box>
 
-              <section className="mailbox-attachments">
-                <h4>
-                  <i className="fa-solid fa-paperclip" /> Anhänge ({selectedMessage.attachments.length})
-                </h4>
-                {selectedMessage.attachments.length === 0 ? (
-                  <p>Keine Anhänge vorhanden.</p>
-                ) : (
-                  <ul>
-                    {selectedMessage.attachments.map((attachment) => (
-                      <li key={attachment.id}>
-                        <div>
-                          <strong>{attachment.fileName}</strong>
-                          <span>{attachment.mimeType}</span>
-                          <span>{formatBytes(attachment.byteSize)}</span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => void downloadAttachment(selectedMessage.id, attachment)}
-                        >
-                          <i className="fa-solid fa-download" /> Download
-                        </button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </section>
-
-              <section className="mailbox-body">
-                <div className="mailbox-body-tabs">
-                  <button
-                    type="button"
-                    className={bodyMode === 'text' ? 'active' : ''}
-                    onClick={() => setBodyMode('text')}
-                    disabled={!selectedMessage.textBody}
-                  >
-                    Textansicht
-                  </button>
-                  <button
-                    type="button"
-                    className={bodyMode === 'html' ? 'active' : ''}
-                    onClick={() => setBodyMode('html')}
-                    disabled={!selectedMessage.htmlBody}
-                  >
-                    HTML-Ansicht
-                  </button>
-                </div>
+            <Box>
+              <Tabs
+                value={bodyMode}
+                onChange={(_event, value: 'text' | 'html') => setBodyMode(value)}
+                sx={{ minHeight: 42 }}
+              >
+                <Tab value="text" label="Textansicht" disabled={!selectedMessage.textBody} />
+                <Tab value="html" label="HTML-Ansicht" disabled={!selectedMessage.htmlBody} />
+              </Tabs>
+              <Box sx={{ mt: 1.5 }}>
                 {bodyMode === 'html' && selectedMessage.htmlBody ? (
                   <iframe
-                    className="mailbox-html-preview"
                     title={`mail-${selectedMessage.id}`}
                     sandbox=""
                     srcDoc={selectedMessage.htmlBody}
+                    style={{
+                      width: '100%',
+                      minHeight: 480,
+                      border: '1px solid #cbd5e1',
+                      borderRadius: 8,
+                      background: '#fff',
+                    }}
                   />
                 ) : (
-                  <pre className="mailbox-text-preview">{selectedMessage.textBody || 'Keine Textinhalte vorhanden.'}</pre>
+                  <Box
+                    component="pre"
+                    sx={{
+                      m: 0,
+                      p: 1.5,
+                      minHeight: 320,
+                      border: '1px solid #cbd5e1',
+                      borderRadius: 1,
+                      backgroundColor: '#f8fafc',
+                      whiteSpace: 'pre-wrap',
+                      fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                      fontSize: 13,
+                    }}
+                  >
+                    {selectedMessage.textBody || 'Keine Textinhalte vorhanden.'}
+                  </Box>
                 )}
-              </section>
-            </div>
-          )}
-        </section>
-      </div>
+              </Box>
+            </Box>
+          </Stack>
+        )}
+      </AdminSurfaceCard>
     </div>
   );
 };

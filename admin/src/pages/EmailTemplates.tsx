@@ -1,5 +1,40 @@
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import {
+  Alert,
+  Box,
+  Button,
+  Checkbox,
+  Chip,
+  CircularProgress,
+  FormControl,
+  FormControlLabel,
+  IconButton,
+  InputLabel,
+  MenuItem,
+  Select,
+  Stack,
+  Switch,
+  TextField,
+  Tooltip,
+  Typography,
+} from '@mui/material';
+import FormatBoldRoundedIcon from '@mui/icons-material/FormatBoldRounded';
+import FormatItalicRoundedIcon from '@mui/icons-material/FormatItalicRounded';
+import FormatUnderlinedRoundedIcon from '@mui/icons-material/FormatUnderlinedRounded';
+import FormatListBulletedRoundedIcon from '@mui/icons-material/FormatListBulletedRounded';
+import FormatListNumberedRoundedIcon from '@mui/icons-material/FormatListNumberedRounded';
+import TitleRoundedIcon from '@mui/icons-material/TitleRounded';
+import SubjectRoundedIcon from '@mui/icons-material/SubjectRounded';
+import LinkRoundedIcon from '@mui/icons-material/LinkRounded';
+import LinkOffRoundedIcon from '@mui/icons-material/LinkOffRounded';
+import CodeRoundedIcon from '@mui/icons-material/CodeRounded';
+import EditRoundedIcon from '@mui/icons-material/EditRounded';
+import {
+  SmartTable,
+  type SmartTableColumnDef,
+} from '../modules/smart-table';
+import { AdminPageHero, AdminSurfaceCard } from '../components/admin-ui';
 import { getAdminToken } from '../lib/auth';
 import { useAdminScopeContext } from '../lib/adminScopeContext';
 
@@ -224,134 +259,139 @@ const HtmlTemplateEditor: React.FC<HtmlTemplateEditorProps> = ({
     applyChange();
   };
 
+  const sourceMinRows = Math.max(8, Math.round(editorHeight / 24));
+  const toolbarButtons = [
+    {
+      title: 'Fett',
+      icon: <FormatBoldRoundedIcon fontSize="small" />,
+      onClick: () => runCommand('bold'),
+    },
+    {
+      title: 'Kursiv',
+      icon: <FormatItalicRoundedIcon fontSize="small" />,
+      onClick: () => runCommand('italic'),
+    },
+    {
+      title: 'Unterstrichen',
+      icon: <FormatUnderlinedRoundedIcon fontSize="small" />,
+      onClick: () => runCommand('underline'),
+    },
+    {
+      title: 'Liste',
+      icon: <FormatListBulletedRoundedIcon fontSize="small" />,
+      onClick: () => runCommand('insertUnorderedList'),
+    },
+    {
+      title: 'Nummerierte Liste',
+      icon: <FormatListNumberedRoundedIcon fontSize="small" />,
+      onClick: () => runCommand('insertOrderedList'),
+    },
+    {
+      title: 'Überschrift',
+      icon: <TitleRoundedIcon fontSize="small" />,
+      onClick: () => runCommand('formatBlock', 'h3'),
+    },
+    {
+      title: 'Absatz',
+      icon: <SubjectRoundedIcon fontSize="small" />,
+      onClick: () => runCommand('formatBlock', 'p'),
+    },
+    {
+      title: 'Link',
+      icon: <LinkRoundedIcon fontSize="small" />,
+      onClick: () => {
+        if (disabled) return;
+        const url = window.prompt('Link-URL', 'https://');
+        if (!url) return;
+        runCommand('createLink', url.trim());
+      },
+    },
+    {
+      title: 'Link entfernen',
+      icon: <LinkOffRoundedIcon fontSize="small" />,
+      onClick: () => runCommand('unlink'),
+    },
+  ];
+
   return (
-    <div>
-      <div className="flex flex-wrap items-center justify-between gap-2 mb-2">
-        <span className="block text-sm font-medium">{label}</span>
-        <div className="flex flex-wrap gap-1">
-          {!sourceMode && (
-            <>
-              <button
-                type="button"
-                onClick={() => runCommand('bold')}
-                disabled={disabled}
-                className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 text-xs disabled:bg-slate-100 disabled:text-slate-400"
-                title="Fett"
-              >
-                <i className="fa-solid fa-bold" />
-              </button>
-              <button
-                type="button"
-                onClick={() => runCommand('italic')}
-                disabled={disabled}
-                className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 text-xs disabled:bg-slate-100 disabled:text-slate-400"
-                title="Kursiv"
-              >
-                <i className="fa-solid fa-italic" />
-              </button>
-              <button
-                type="button"
-                onClick={() => runCommand('underline')}
-                disabled={disabled}
-                className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 text-xs disabled:bg-slate-100 disabled:text-slate-400"
-                title="Unterstrichen"
-              >
-                <i className="fa-solid fa-underline" />
-              </button>
-              <button
-                type="button"
-                onClick={() => runCommand('insertUnorderedList')}
-                disabled={disabled}
-                className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 text-xs disabled:bg-slate-100 disabled:text-slate-400"
-                title="Liste"
-              >
-                <i className="fa-solid fa-list-ul" />
-              </button>
-              <button
-                type="button"
-                onClick={() => runCommand('insertOrderedList')}
-                disabled={disabled}
-                className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 text-xs disabled:bg-slate-100 disabled:text-slate-400"
-                title="Nummerierte Liste"
-              >
-                <i className="fa-solid fa-list-ol" />
-              </button>
-              <button
-                type="button"
-                onClick={() => runCommand('formatBlock', 'h3')}
-                disabled={disabled}
-                className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 text-xs disabled:bg-slate-100 disabled:text-slate-400"
-                title="Überschrift"
-              >
-                H3
-              </button>
-              <button
-                type="button"
-                onClick={() => runCommand('formatBlock', 'p')}
-                disabled={disabled}
-                className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 text-xs disabled:bg-slate-100 disabled:text-slate-400"
-                title="Absatz"
-              >
-                P
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (disabled) return;
-                  const url = window.prompt('Link-URL', 'https://');
-                  if (!url) return;
-                  runCommand('createLink', url.trim());
-                }}
-                disabled={disabled}
-                className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 text-xs disabled:bg-slate-100 disabled:text-slate-400"
-                title="Link"
-              >
-                <i className="fa-solid fa-link" />
-              </button>
-              <button
-                type="button"
-                onClick={() => runCommand('unlink')}
-                disabled={disabled}
-                className="px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100 text-xs disabled:bg-slate-100 disabled:text-slate-400"
-                title="Link entfernen"
-              >
-                <i className="fa-solid fa-link-slash" />
-              </button>
-            </>
-          )}
-          <button
-            type="button"
+    <Box>
+      <Stack
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={1}
+        justifyContent="space-between"
+        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        sx={{ mb: 1 }}
+      >
+        <Typography variant="body2" fontWeight={600}>
+          {label}
+        </Typography>
+        <Stack direction="row" spacing={0.5} flexWrap="wrap">
+          {!sourceMode ? (
+            toolbarButtons.map((button) => (
+              <Tooltip key={button.title} title={button.title}>
+                <span>
+                  <IconButton
+                    size="small"
+                    onClick={button.onClick}
+                    disabled={disabled}
+                    sx={{ border: '1px solid #cbd5e1', borderRadius: 1 }}
+                  >
+                    {button.icon}
+                  </IconButton>
+                </span>
+              </Tooltip>
+            ))
+          ) : null}
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={sourceMode ? <EditRoundedIcon fontSize="small" /> : <CodeRoundedIcon fontSize="small" />}
             onClick={() => setSourceMode((prev) => !prev)}
-            className="px-2 py-1 rounded border border-slate-300 bg-slate-50 hover:bg-slate-100 text-xs"
           >
             {sourceMode ? 'WYSIWYG' : 'HTML'}
-          </button>
-        </div>
-      </div>
+          </Button>
+        </Stack>
+      </Stack>
       {sourceMode ? (
-        <textarea
+        <TextField
+          fullWidth
+          multiline
+          minRows={sourceMinRows}
           value={value}
           onChange={(event) => onChange(event.target.value)}
           disabled={disabled}
-          className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm ${
-            disabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-          }`}
-          style={{ minHeight: `${editorHeight}px` }}
+          sx={{
+            '& .MuiInputBase-root': {
+              fontFamily:
+                'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+            },
+          }}
         />
       ) : (
-        <div
+        <Box
           ref={editorRef}
           contentEditable={!disabled}
           suppressContentEditableWarning
           onInput={applyChange}
           onBlur={applyChange}
-          className={`w-full px-3 py-2 border border-gray-300 rounded-lg bg-white focus-within:ring-2 focus-within:ring-blue-500 overflow-auto ${
-            disabled ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-          }`}
-          style={{ minHeight: `${editorHeight}px` }}
+          sx={{
+            minHeight: editorHeight,
+            px: 1.5,
+            py: 1.25,
+            border: '1px solid #cbd5e1',
+            borderRadius: 1,
+            bgcolor: disabled ? '#f1f5f9' : '#fff',
+            color: disabled ? '#64748b' : 'inherit',
+            overflow: 'auto',
+            outline: 'none',
+            '&:focus-within': {
+              borderColor: '#1976d2',
+              boxShadow: '0 0 0 2px rgba(25, 118, 210, 0.12)',
+            },
+          }}
         />
       )}
-    </div>
+    </Box>
   );
 };
 
@@ -544,6 +584,68 @@ const EmailTemplates: React.FC = () => {
       .map(toViewNode)
       .sort((a, b) => a.label.localeCompare(b.label, 'de', { sensitivity: 'base' }));
   }, [filteredTemplates]);
+
+  const templateColumns = useMemo<SmartTableColumnDef<Template>[]>(
+    () => [
+      {
+        field: 'name',
+        headerName: 'Vorlage',
+        minWidth: 240,
+        flex: 1.1,
+        renderCell: ({ row }) => (
+          <Stack spacing={0.25}>
+            <Typography variant="body2" fontWeight={700}>
+              {row.name || row.id}
+            </Typography>
+            <Typography variant="caption" sx={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}>
+              {row.id}
+            </Typography>
+          </Stack>
+        ),
+      },
+      {
+        field: 'scope',
+        headerName: 'Scope',
+        minWidth: 150,
+        flex: 0.4,
+        sortable: false,
+        renderCell: ({ row }) => {
+          const scopeBadge = getTemplateScopeBadgeConfig(row);
+          return <Chip size="small" label={scopeBadge.label} />;
+        },
+      },
+      {
+        field: 'lifecycle',
+        headerName: 'Lifecycle',
+        minWidth: 120,
+        flex: 0.33,
+        valueGetter: (_value, row) => normalizeTemplateLifecycle(row),
+      },
+      {
+        field: 'editable',
+        headerName: 'Typ',
+        minWidth: 110,
+        flex: 0.3,
+        valueGetter: (_value, row) => (row.editable !== false ? 'Editierbar' : 'System'),
+      },
+      {
+        field: 'issues',
+        headerName: 'Checks',
+        minWidth: 120,
+        flex: 0.35,
+        type: 'number',
+        valueGetter: (_value, row) => templateMissingPlaceholderCount(row),
+      },
+      {
+        field: 'groupPath',
+        headerName: 'Gruppe',
+        minWidth: 180,
+        flex: 0.55,
+        valueGetter: (_value, row) => normalizeTemplateGroupPath(row).join(' / '),
+      },
+    ],
+    []
+  );
 
   useEffect(() => {
     void fetchData();
@@ -1114,593 +1216,535 @@ const EmailTemplates: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <i className="fa-solid fa-spinner fa-spin text-slate-600 text-xl" />
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight={280}>
+        <CircularProgress size={30} />
+      </Box>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold">E-Mail-Templates</h2>
-          <p className="text-sm text-slate-600 mt-1">
-            Einheitliches Wording für die Verbandsgemeinde Otterbach-Otterberg und klare Platzhaltersteuerung für behebes.AI.
-          </p>
-          <div className="mt-2">
-            <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-              Aktueller Kontext: {libraryScopeParams.scope === 'tenant' ? 'Mandant' : 'Global'}
-            </span>
-          </div>
-        </div>
-        <button
-          type="button"
-          className="inline-flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg transition"
-          onClick={() => setShowCreateTemplateForm((prev) => !prev)}
-        >
-          <i className={`fa-solid ${showCreateTemplateForm ? 'fa-xmark' : 'fa-plus'}`} />
-          {showCreateTemplateForm ? 'Anlage schließen' : 'Neue Vorlage'}
-        </button>
-      </div>
+      <AdminPageHero
+        title="E-Mail-Templates"
+        subtitle="Konsolidierte Vorlagenverwaltung mit SmartTable-Navigation und strukturierten Metadaten."
+        badges={[
+          { label: `Kontext: ${libraryScopeParams.scope === 'tenant' ? 'Mandant' : 'Global'}`, tone: 'info' },
+          { label: `${filteredTemplates.length} Vorlagen`, tone: 'default' },
+        ]}
+        actions={(
+          <Button variant="contained" onClick={() => setShowCreateTemplateForm((prev) => !prev)}>
+            {showCreateTemplateForm ? 'Anlage schließen' : 'Neue Vorlage'}
+          </Button>
+        )}
+      />
 
-      {message && (
-        <div
-          className={`message-banner p-4 rounded-lg flex items-center gap-2 ${
-            messageType === 'success'
-              ? 'bg-green-100 text-green-800'
-              : 'bg-red-100 text-red-800'
-          }`}
-        >
-          {messageType === 'success' ? (
-            <i className="fa-solid fa-circle-check" />
-          ) : (
-            <i className="fa-solid fa-circle-exclamation" />
-          )}
-          {message}
-        </div>
-      )}
+      {message ? (
+        <Alert severity={messageType === 'success' ? 'success' : 'error'}>{message}</Alert>
+      ) : null}
 
       {showCreateTemplateForm && (
-        <div className="bg-white rounded-lg shadow p-6 space-y-4">
-          <h3 className="font-semibold text-lg">Neue E-Mail-Vorlage anlegen</h3>
-          <p className="text-sm text-slate-600">
-            Neue Vorlagen können anschließend direkt in Workflow-Schritten ausgewählt werden.
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <label>
-              <span className="block text-sm font-medium mb-1">Name *</span>
-              <input
-                type="text"
-                value={newTemplateName}
-                onChange={(event) => setNewTemplateName(event.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="z. B. Interne Rückmeldung"
-              />
-            </label>
-            <label>
-              <span className="block text-sm font-medium mb-1">Technische ID (optional)</span>
-              <input
-                type="text"
-                value={newTemplateId}
-                onChange={(event) => setNewTemplateId(sanitizeTemplateId(event.target.value))}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                placeholder="z. B. interne-rueckmeldung"
-              />
-            </label>
-            <label>
-              <span className="block text-sm font-medium mb-1">Betreff *</span>
-              <input
-                type="text"
-                value={newTemplateSubject}
-                onChange={(event) => setNewTemplateSubject(event.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="z. B. Rückmeldung zu Ihrer Meldung ({ticketId})"
-              />
-            </label>
-          </div>
+        <AdminSurfaceCard
+          title="Neue E-Mail-Vorlage anlegen"
+          subtitle="Neue Vorlagen können anschließend direkt in Workflow-Schritten ausgewählt werden."
+          bodyClassName="space-y-4"
+        >
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.25}>
+            <TextField
+              fullWidth
+              label="Name *"
+              value={newTemplateName}
+              onChange={(event) => setNewTemplateName(event.target.value)}
+              placeholder="z. B. Interne Rückmeldung"
+            />
+            <TextField
+              fullWidth
+              label="Technische ID (optional)"
+              value={newTemplateId}
+              onChange={(event) => setNewTemplateId(sanitizeTemplateId(event.target.value))}
+              placeholder="z. B. interne-rueckmeldung"
+            />
+            <TextField
+              fullWidth
+              label="Betreff *"
+              value={newTemplateSubject}
+              onChange={(event) => setNewTemplateSubject(event.target.value)}
+              placeholder="z. B. Rückmeldung zu Ihrer Meldung ({ticketId})"
+            />
+          </Stack>
 
-          <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <h4 className="font-semibold text-slate-900">Pflicht-Platzhalter für diese Vorlage</h4>
-              <span className="text-xs text-slate-500">
+          <Box sx={{ border: '1px solid #e2e8f0', borderRadius: 1.5, p: 1.5, bgcolor: '#f8fafc' }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+              <Typography variant="subtitle2">Pflicht-Platzhalter für diese Vorlage</Typography>
+              <Typography variant="caption" color="text.secondary">
                 {newTemplatePlaceholders.length} ausgewählt
-              </span>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="text-xs px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100"
-                onClick={() => setNewTemplatePlaceholders(allPlaceholderKeys)}
-              >
+              </Typography>
+            </Stack>
+            <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+              <Button size="small" variant="outlined" onClick={() => setNewTemplatePlaceholders(allPlaceholderKeys)}>
                 Alle auswählen
-              </button>
-              <button
-                type="button"
-                className="text-xs px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100"
-                onClick={() => setNewTemplatePlaceholders([])}
-              >
-                Keine Auswahl (alle erlaubt)
-              </button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+              </Button>
+              <Button size="small" variant="outlined" onClick={() => setNewTemplatePlaceholders([])}>
+                Keine Auswahl
+              </Button>
+            </Stack>
+            <Box
+              sx={{
+                mt: 1.25,
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' },
+                gap: 0.75,
+              }}
+            >
               {placeholderEntries.map(([placeholder, meta]) => (
-                <label
+                <Box
                   key={`create-${placeholder}`}
-                  className="rounded border border-slate-200 bg-white px-3 py-2 text-sm flex items-start gap-2"
+                  sx={{
+                    border: '1px solid #e2e8f0',
+                    borderRadius: 1,
+                    px: 1.25,
+                    py: 0.75,
+                    bgcolor: '#fff',
+                  }}
                 >
-                  <input
-                    type="checkbox"
-                    checked={newTemplatePlaceholders.includes(placeholder)}
-                    onChange={() => toggleCreatePlaceholder(placeholder)}
-                    className="mt-0.5"
+                  <FormControlLabel
+                    control={
+                      <Checkbox
+                        size="small"
+                        checked={newTemplatePlaceholders.includes(placeholder)}
+                        onChange={() => toggleCreatePlaceholder(placeholder)}
+                      />
+                    }
+                    label={
+                      <Box>
+                        <Typography variant="caption" sx={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}>
+                          {placeholder}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary" display="block">
+                          {meta.label}
+                        </Typography>
+                      </Box>
+                    }
                   />
-                  <span>
-                    <span className="font-mono text-slate-900">{placeholder}</span>
-                    <span className="block text-xs text-slate-600">{meta.label}</span>
-                  </span>
-                </label>
+                </Box>
               ))}
-            </div>
-          </div>
+            </Box>
+          </Box>
 
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' }, gap: 1.25 }}>
             <HtmlTemplateEditor
               label="HTML-Inhalt *"
               value={newTemplateHtml}
               onChange={setNewTemplateHtml}
               editorHeight={260}
             />
-            <label>
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <span className="block text-sm font-medium">Nur-Text-Fallback</span>
-                <button
-                  type="button"
-                  onClick={() => setNewTemplateText(htmlToPlainText(newTemplateHtml))}
-                  className="text-xs px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100"
-                >
+            <Box>
+              <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                <Typography variant="body2" fontWeight={600}>
+                  Nur-Text-Fallback
+                </Typography>
+                <Button size="small" variant="outlined" onClick={() => setNewTemplateText(htmlToPlainText(newTemplateHtml))}>
                   Aus HTML ableiten
-                </button>
-              </div>
-              <textarea
+                </Button>
+              </Stack>
+              <TextField
+                fullWidth
+                multiline
+                minRows={12}
                 value={newTemplateText}
                 onChange={(event) => setNewTemplateText(event.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                rows={12}
               />
-            </label>
-          </div>
+            </Box>
+          </Box>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition"
-              onClick={() => void handleCreateTemplate()}
-              disabled={creatingTemplate}
-            >
-              <i className="fa-solid fa-floppy-disk" />
-              {creatingTemplate ? 'Vorlage wird angelegt...' : 'Vorlage anlegen'}
-            </button>
-          </div>
-        </div>
+          <Button
+            type="button"
+            variant="contained"
+            onClick={() => void handleCreateTemplate()}
+            disabled={creatingTemplate}
+          >
+            {creatingTemplate ? 'Vorlage wird angelegt...' : 'Vorlage anlegen'}
+          </Button>
+        </AdminSurfaceCard>
       )}
 
       {libraryScopeParams.scope === 'platform' ? (
-        <div className="bg-white rounded-lg shadow p-6 space-y-4">
-          <h3 className="font-semibold">Globale Footer-Signatur</h3>
-          <p className="text-sm text-gray-600">
-            Diese Signatur wird automatisch an alle ausgehenden E-Mails angehängt.
-          </p>
-          <label className="inline-flex items-center gap-2 text-sm font-medium text-slate-700">
-            <input
-              type="checkbox"
-              checked={footerEnabled}
-              onChange={(event) => setFooterEnabled(event.target.checked)}
+        <AdminSurfaceCard
+          title="Globale Footer-Signatur"
+          subtitle="Diese Signatur wird automatisch an alle ausgehenden E-Mails angehängt."
+          bodyClassName="space-y-3"
+        >
+          <FormControlLabel
+            control={<Switch checked={footerEnabled} onChange={(event) => setFooterEnabled(event.target.checked)} />}
+            label="Footer-Signatur aktivieren"
+          />
+          <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' }, gap: 1.25 }}>
+            <TextField
+              fullWidth
+              multiline
+              minRows={6}
+              label="Footer HTML"
+              value={footerHtml}
+              onChange={(event) => setFooterHtml(event.target.value)}
+              placeholder="<p><strong>Verbandsgemeinde Otterbach-Otterberg</strong></p>"
             />
-            Footer-Signatur aktivieren
-          </label>
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-3">
-            <label>
-              <span className="block text-sm font-medium mb-2">Footer HTML</span>
-              <textarea
-                value={footerHtml}
-                onChange={(event) => setFooterHtml(event.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                rows={6}
-                placeholder="<p><strong>Verbandsgemeinde Otterbach-Otterberg</strong></p>"
-              />
-            </label>
-            <label>
-              <span className="block text-sm font-medium mb-2">Footer Text (Fallback)</span>
-              <textarea
-                value={footerText}
-                onChange={(event) => setFooterText(event.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                rows={6}
-                placeholder="Verbandsgemeinde Otterbach-Otterberg"
-              />
-            </label>
-          </div>
-          <div>
-            <button
-              type="button"
-              onClick={handleSaveFooterSettings}
-              disabled={savingFooter}
-              className="px-4 py-2 bg-slate-700 hover:bg-slate-800 disabled:bg-gray-400 text-white font-semibold rounded-lg transition"
-            >
-              {savingFooter ? 'Speichere Footer...' : <><i className="fa-solid fa-floppy-disk" /> Footer speichern</>}
-            </button>
-          </div>
-        </div>
+            <TextField
+              fullWidth
+              multiline
+              minRows={6}
+              label="Footer Text (Fallback)"
+              value={footerText}
+              onChange={(event) => setFooterText(event.target.value)}
+              placeholder="Verbandsgemeinde Otterbach-Otterberg"
+            />
+          </Box>
+          <Button variant="contained" onClick={handleSaveFooterSettings} disabled={savingFooter}>
+            {savingFooter ? 'Speichere Footer...' : 'Footer speichern'}
+          </Button>
+        </AdminSurfaceCard>
       ) : (
-        <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+        <Alert severity="info">
           Die globale Footer-Signatur ist nur im globalen Kontext sichtbar und bearbeitbar.
-        </div>
+        </Alert>
       )}
 
-      <div className="grid grid-cols-1 xl:grid-cols-[320px_minmax(0,1fr)] gap-6">
-        <div className="bg-white rounded-lg shadow p-4">
-          <h3 className="font-semibold mb-4">Template-Navigation</h3>
-          <div className="space-y-3 mb-4">
-            <input
-              type="search"
-              value={templateSearch}
-              onChange={(event) => setTemplateSearch(event.target.value)}
-              placeholder="Suche nach Name, ID, Tag, Gruppe..."
-              className="w-full px-3 py-2 border border-slate-300 rounded-lg"
-            />
-            <div className="grid grid-cols-1 gap-2">
-              <select
+      <div className="grid grid-cols-1 xl:grid-cols-[430px_minmax(0,1fr)] gap-6">
+        <AdminSurfaceCard
+          title="Template-Navigation"
+          subtitle="Filter- und Auswahlansicht im SmartTable-Standard."
+          bodyClassName="space-y-3"
+        >
+          <TextField
+            size="small"
+            label="Suche"
+            value={templateSearch}
+            onChange={(event) => setTemplateSearch(event.target.value)}
+            placeholder="Name, ID, Tag, Gruppe..."
+            fullWidth
+          />
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+            <FormControl size="small" fullWidth>
+              <InputLabel id="email-template-editable-filter-label">Filter</InputLabel>
+              <Select
+                labelId="email-template-editable-filter-label"
+                label="Filter"
                 value={editableFilter}
                 onChange={(event) => setEditableFilter(event.target.value as EditableFilter)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
               >
-                <option value="all">Alle Vorlagen</option>
-                <option value="editable">Nur editierbar</option>
-                <option value="system">Nur System</option>
-              </select>
-              <select
+                <MenuItem value="all">Alle Vorlagen</MenuItem>
+                <MenuItem value="editable">Nur editierbar</MenuItem>
+                <MenuItem value="system">Nur System</MenuItem>
+              </Select>
+            </FormControl>
+            <FormControl size="small" fullWidth>
+              <InputLabel id="email-template-lifecycle-filter-label">Lifecycle</InputLabel>
+              <Select
+                labelId="email-template-lifecycle-filter-label"
+                label="Lifecycle"
                 value={lifecycleFilter}
                 onChange={(event) => setLifecycleFilter(event.target.value as 'all' | TemplateLifecycle)}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg text-sm"
               >
-                <option value="all">Alle Lifecycle-Stufen</option>
-                <option value="active">Nur aktiv</option>
-                <option value="draft">Nur Draft</option>
-                <option value="deprecated">Nur veraltet</option>
-              </select>
-              <label className="inline-flex items-center gap-2 text-sm text-slate-700">
-                <input
-                  type="checkbox"
-                  checked={onlyWithIssues}
-                  onChange={(event) => setOnlyWithIssues(event.target.checked)}
-                />
-                Nur mit Qualitätswarnung
-              </label>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                className="text-xs px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100"
-                onClick={() => setAllTreeNodesExpanded(true)}
-              >
-                Alle aufklappen
-              </button>
-              <button
-                type="button"
-                className="text-xs px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100"
-                onClick={() => setAllTreeNodesExpanded(false)}
-              >
-                Alle zuklappen
-              </button>
-            </div>
-          </div>
-          <div className="space-y-2 max-h-[72vh] overflow-y-auto pr-1">
-            {templateTree.length === 0 && (
-              <p className="text-sm text-slate-500">Keine Templates für die aktuelle Filterung gefunden.</p>
-            )}
-            {templateTree.map((node) => renderTemplateTreeNode(node))}
-          </div>
-        </div>
+                <MenuItem value="all">Alle</MenuItem>
+                <MenuItem value="active">Aktiv</MenuItem>
+                <MenuItem value="draft">Draft</MenuItem>
+                <MenuItem value="deprecated">Veraltet</MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
+          <Stack direction="row" spacing={1} alignItems="center">
+            <input
+              id="template-issue-filter-toggle"
+              type="checkbox"
+              checked={onlyWithIssues}
+              onChange={(event) => setOnlyWithIssues(event.target.checked)}
+            />
+            <label htmlFor="template-issue-filter-toggle" className="text-sm text-slate-700">
+              Nur mit Qualitätswarnung
+            </label>
+          </Stack>
+          <SmartTable<Template>
+            tableId="email-template-navigation"
+            title="Vorlagen"
+            rows={filteredTemplates}
+            columns={templateColumns}
+            loading={false}
+            error=""
+            defaultPageSize={10}
+            pageSizeOptions={[10, 25, 50]}
+            selectionModel={selectedTemplate?.id ? [selectedTemplate.id] : []}
+            onSelectionModelChange={(ids) => {
+              const id = ids[0];
+              if (!id) return;
+              const match = filteredTemplates.find((entry) => entry.id === id);
+              if (match) {
+                void handleSelectTemplate(match);
+              }
+            }}
+            onRowClick={(row) => {
+              void handleSelectTemplate(row);
+            }}
+          />
+        </AdminSurfaceCard>
 
         <div>
           {selectedTemplate ? (
-            <div className="bg-white rounded-lg shadow p-6 space-y-4">
-              <div className="flex flex-col gap-2">
-                <h3 className="font-semibold text-lg">{selectedTemplate.name}</h3>
-                <p className="text-sm text-slate-600">{selectedTemplate.usageHint}</p>
-                <div className="flex flex-wrap items-center gap-2">
-                  {selectedTemplateScopeBadge ? (
-                    <span
-                      className={`text-[11px] px-2 py-0.5 rounded-full border ${selectedTemplateScopeBadge.className}`}
-                    >
-                      {selectedTemplateScopeBadge.label}
-                    </span>
-                  ) : null}
-                  {selectedTemplate.scope === 'tenant' && selectedTemplate.tenantId ? (
-                    <span className="text-[11px] px-2 py-0.5 rounded-full border border-slate-300 bg-white text-slate-600 font-mono">
-                      {selectedTemplate.tenantId}
-                    </span>
-                  ) : null}
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setShowAdvancedMeta(false)}
-                    className={`px-3 py-1.5 rounded-lg text-sm border ${
-                      !showAdvancedMeta
-                        ? 'bg-blue-50 border-blue-300 text-blue-800'
-                        : 'bg-white border-slate-300 text-slate-700'
-                    }`}
-                  >
-                    Basic
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setShowAdvancedMeta(true)}
-                    className={`px-3 py-1.5 rounded-lg text-sm border ${
-                      showAdvancedMeta
-                        ? 'bg-blue-50 border-blue-300 text-blue-800'
-                        : 'bg-white border-slate-300 text-slate-700'
-                    }`}
-                  >
-                    Advanced
-                  </button>
-                </div>
-                {!selectedTemplate.editable && (
-                  <div className="bg-blue-50 border border-blue-300 rounded p-3 text-sm text-blue-800">
-                    <i className="fa-solid fa-lock" /> Dieses System-Template ist schreibgeschützt.
-                  </div>
-                )}
-              </div>
+            <AdminSurfaceCard
+              title={selectedTemplate.name || selectedTemplate.id}
+              subtitle={selectedTemplate.usageHint || 'Template-Details'}
+              bodyClassName="space-y-4"
+            >
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems={{ xs: 'flex-start', sm: 'center' }}>
+                {selectedTemplateScopeBadge ? (
+                  <Chip size="small" label={selectedTemplateScopeBadge.label} />
+                ) : null}
+                {selectedTemplate.scope === 'tenant' && selectedTemplate.tenantId ? (
+                  <Chip size="small" variant="outlined" label={selectedTemplate.tenantId} />
+                ) : null}
+                <Button size="small" variant={showAdvancedMeta ? 'outlined' : 'contained'} onClick={() => setShowAdvancedMeta(false)}>
+                  Basic
+                </Button>
+                <Button size="small" variant={showAdvancedMeta ? 'contained' : 'outlined'} onClick={() => setShowAdvancedMeta(true)}>
+                  Advanced
+                </Button>
+              </Stack>
+
+              {!selectedTemplate.editable ? (
+                <Alert severity="info">Dieses System-Template ist schreibgeschützt.</Alert>
+              ) : null}
 
               {showAdvancedMeta && (
-                <div className="rounded-lg border border-slate-200 bg-slate-50 p-4 space-y-3">
-                  <h4 className="font-semibold text-slate-900">Metadaten & Governance</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <label>
-                      <span className="block text-sm font-medium mb-1">Gruppenpfad</span>
-                      <input
-                        type="text"
-                        value={groupPathInput}
-                        onChange={(event) => setGroupPathInput(event.target.value)}
-                        disabled={!selectedTemplate.editable}
-                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${
-                          !selectedTemplate.editable ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-                        }`}
-                        placeholder="z. B. Workflow > Datennachforderung"
-                      />
-                    </label>
-                    <label>
-                      <span className="block text-sm font-medium mb-1">Tags</span>
-                      <input
-                        type="text"
-                        value={tagsInput}
-                        onChange={(event) => setTagsInput(event.target.value)}
-                        disabled={!selectedTemplate.editable}
-                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${
-                          !selectedTemplate.editable ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-                        }`}
-                        placeholder="doi, workflow, status"
-                      />
-                    </label>
-                    <label>
-                      <span className="block text-sm font-medium mb-1">Lifecycle</span>
-                      <select
+                <Box sx={{ border: '1px solid #e2e8f0', borderRadius: 1.5, p: 1.5, bgcolor: '#f8fafc' }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Metadaten & Governance
+                  </Typography>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1.25 }}>
+                    <TextField
+                      fullWidth
+                      label="Gruppenpfad"
+                      value={groupPathInput}
+                      onChange={(event) => setGroupPathInput(event.target.value)}
+                      disabled={!selectedTemplate.editable}
+                      placeholder="z. B. Workflow > Datennachforderung"
+                    />
+                    <TextField
+                      fullWidth
+                      label="Tags"
+                      value={tagsInput}
+                      onChange={(event) => setTagsInput(event.target.value)}
+                      disabled={!selectedTemplate.editable}
+                      placeholder="doi, workflow, status"
+                    />
+                    <FormControl fullWidth disabled={!selectedTemplate.editable}>
+                      <InputLabel id="template-lifecycle-select-label">Lifecycle</InputLabel>
+                      <Select
+                        labelId="template-lifecycle-select-label"
+                        label="Lifecycle"
                         value={lifecycleValue}
                         onChange={(event) => setLifecycleValue(event.target.value as TemplateLifecycle)}
-                        disabled={!selectedTemplate.editable}
-                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${
-                          !selectedTemplate.editable ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-                        }`}
                       >
-                        <option value="active">active</option>
-                        <option value="draft">draft</option>
-                        <option value="deprecated">deprecated</option>
-                      </select>
-                    </label>
-                    <label>
-                      <span className="block text-sm font-medium mb-1">Owner-Team</span>
-                      <input
-                        type="text"
-                        value={ownerTeamValue}
-                        onChange={(event) => setOwnerTeamValue(event.target.value)}
-                        disabled={!selectedTemplate.editable}
-                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${
-                          !selectedTemplate.editable ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-                        }`}
-                        placeholder="z. B. Bürgerbüro"
-                      />
-                    </label>
-                    <label>
-                      <span className="block text-sm font-medium mb-1">Maintainer</span>
-                      <input
-                        type="text"
-                        value={maintainerValue}
-                        onChange={(event) => setMaintainerValue(event.target.value)}
-                        disabled={!selectedTemplate.editable}
-                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${
-                          !selectedTemplate.editable ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-                        }`}
-                        placeholder="z. B. templates@kommune.de"
-                      />
-                    </label>
-                    <label>
-                      <span className="block text-sm font-medium mb-1">Zuletzt geprüft am</span>
-                      <input
-                        type="text"
-                        value={lastReviewedAtValue}
-                        onChange={(event) => setLastReviewedAtValue(event.target.value)}
-                        disabled={!selectedTemplate.editable}
-                        className={`w-full px-3 py-2 border border-gray-300 rounded-lg ${
-                          !selectedTemplate.editable ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-                        }`}
-                        placeholder="z. B. 2026-02-18"
-                      />
-                    </label>
-                  </div>
-                </div>
+                        <MenuItem value="active">active</MenuItem>
+                        <MenuItem value="draft">draft</MenuItem>
+                        <MenuItem value="deprecated">deprecated</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <TextField
+                      fullWidth
+                      label="Owner-Team"
+                      value={ownerTeamValue}
+                      onChange={(event) => setOwnerTeamValue(event.target.value)}
+                      disabled={!selectedTemplate.editable}
+                      placeholder="z. B. Bürgerbüro"
+                    />
+                    <TextField
+                      fullWidth
+                      label="Maintainer"
+                      value={maintainerValue}
+                      onChange={(event) => setMaintainerValue(event.target.value)}
+                      disabled={!selectedTemplate.editable}
+                      placeholder="z. B. templates@kommune.de"
+                    />
+                    <TextField
+                      fullWidth
+                      label="Zuletzt geprüft am"
+                      value={lastReviewedAtValue}
+                      onChange={(event) => setLastReviewedAtValue(event.target.value)}
+                      disabled={!selectedTemplate.editable}
+                      placeholder="z. B. 2026-02-18"
+                    />
+                  </Box>
+                </Box>
               )}
 
-              <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
-                <div className="flex items-center justify-between gap-3 mb-3">
-                  <h4 className="font-semibold text-slate-900">Platzhalter-Auswahl für diese Vorlage</h4>
-                  <span className="text-xs text-slate-500">
+              <Box sx={{ border: '1px solid #e2e8f0', borderRadius: 1.5, p: 1.5, bgcolor: '#f8fafc' }}>
+                <Stack direction={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} spacing={1}>
+                  <Typography variant="subtitle2">Platzhalter-Auswahl für diese Vorlage</Typography>
+                  <Typography variant="caption" color="text.secondary">
                     {selectedPlaceholders.length} ausgewählt
-                  </span>
-                </div>
-                <div className="flex flex-wrap gap-2 mb-3">
-                  <button
-                    type="button"
-                    className="text-xs px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100"
+                  </Typography>
+                </Stack>
+                <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+                  <Button
+                    size="small"
+                    variant="outlined"
                     onClick={() => setSelectedPlaceholders(allPlaceholderKeys)}
                     disabled={!selectedTemplate.editable}
                   >
                     Alle auswählen
-                  </button>
-                  <button
-                    type="button"
-                    className="text-xs px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100"
+                  </Button>
+                  <Button
+                    size="small"
+                    variant="outlined"
                     onClick={() => setSelectedPlaceholders([])}
                     disabled={!selectedTemplate.editable}
                   >
-                    Keine Auswahl (alle erlaubt)
-                  </button>
-                </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                    Keine Auswahl
+                  </Button>
+                </Stack>
+                <Box
+                  sx={{
+                    mt: 1.25,
+                    display: 'grid',
+                    gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' },
+                    gap: 0.75,
+                  }}
+                >
                   {placeholderEntries.map(([placeholder, meta]) => {
                     const active =
                       selectedPlaceholders.length === 0 || selectedPlaceholders.includes(placeholder);
                     return (
-                      <label
+                      <Box
                         key={`template-${placeholder}`}
-                        className={`rounded border px-3 py-2 text-sm flex items-start justify-between gap-3 ${
-                          active ? 'border-blue-200 bg-blue-50' : 'border-slate-200 bg-white'
-                        }`}
+                        sx={{
+                          border: active ? '1px solid #93c5fd' : '1px solid #e2e8f0',
+                          borderRadius: 1,
+                          px: 1.25,
+                          py: 0.75,
+                          bgcolor: active ? '#eff6ff' : '#fff',
+                        }}
                       >
-                        <span className="flex items-start gap-2">
-                          <input
-                            type="checkbox"
-                            checked={selectedPlaceholders.includes(placeholder)}
-                            onChange={() => toggleSelectedPlaceholder(placeholder)}
-                            className="mt-0.5"
-                            disabled={!selectedTemplate.editable}
+                        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={1}>
+                          <FormControlLabel
+                            control={
+                              <Checkbox
+                                size="small"
+                                checked={selectedPlaceholders.includes(placeholder)}
+                                onChange={() => toggleSelectedPlaceholder(placeholder)}
+                                disabled={!selectedTemplate.editable}
+                              />
+                            }
+                            label={
+                              <Box>
+                                <Typography variant="caption" sx={{ fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace' }}>
+                                  {placeholder}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" display="block">
+                                  {meta.label}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" display="block">
+                                  {meta.description}
+                                </Typography>
+                              </Box>
+                            }
                           />
-                          <span>
-                            <span className="font-mono text-slate-900">{placeholder}</span>
-                            <span className="block text-xs text-slate-600">{meta.label}</span>
-                            <span className="block text-xs text-slate-500">{meta.description}</span>
-                          </span>
-                        </span>
-                        <button
-                          type="button"
-                          className="text-xs px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100"
-                          onClick={() => void copyPlaceholder(placeholder)}
-                        >
-                          Kopieren
-                        </button>
-                      </label>
+                          <Button size="small" variant="outlined" onClick={() => void copyPlaceholder(placeholder)}>
+                            Kopieren
+                          </Button>
+                        </Stack>
+                      </Box>
                     );
                   })}
-                </div>
-              </div>
+                </Box>
+              </Box>
 
-              <label>
-                <span className="block text-sm font-medium mb-2">Vorlagenname</span>
-                <input
-                  type="text"
-                  value={templateName}
-                  onChange={(e) => setTemplateName(e.target.value)}
-                  disabled={!selectedTemplate.editable}
-                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    !selectedTemplate.editable ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                  placeholder="Anzeigename der Vorlage"
-                />
-              </label>
+              <TextField
+                fullWidth
+                label="Vorlagenname"
+                value={templateName}
+                onChange={(event) => setTemplateName(event.target.value)}
+                disabled={!selectedTemplate.editable}
+                placeholder="Anzeigename der Vorlage"
+              />
 
-              <label>
-                <span className="block text-sm font-medium mb-2">E-Mail-Betreff</span>
-                <input
-                  type="text"
-                  value={subject}
-                  onChange={(e) => setSubject(e.target.value)}
-                  disabled={!selectedTemplate.editable}
-                  className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                    !selectedTemplate.editable ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-                  }`}
-                  placeholder="z. B. Ihre Meldung wurde bestätigt"
-                />
-              </label>
+              <TextField
+                fullWidth
+                label="E-Mail-Betreff"
+                value={subject}
+                onChange={(event) => setSubject(event.target.value)}
+                disabled={!selectedTemplate.editable}
+                placeholder="z. B. Ihre Meldung wurde bestätigt"
+              />
 
-              {selectedTemplate.editable && (
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 space-y-3">
-                  <h4 className="font-semibold text-slate-800">KI-Unterstützung für Textentwurf</h4>
-                  <p className="text-xs text-slate-500">
+              {selectedTemplate.editable ? (
+                <Box sx={{ border: '1px solid #e2e8f0', borderRadius: 1.5, p: 1.5, bgcolor: '#f8fafc' }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    KI-Unterstützung für Textentwurf
+                  </Typography>
+                  <Typography variant="caption" color="text.secondary" display="block" sx={{ mb: 1.5 }}>
                     Kategorien werden aus dem Bereich Kategorien übernommen. Platzhalter bleiben erhalten.
-                  </p>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <label>
-                      <span className="block text-sm font-medium mb-1">Kategorie *</span>
-                      <select
+                  </Typography>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: 'repeat(2, minmax(0, 1fr))' }, gap: 1.25 }}>
+                    <FormControl fullWidth>
+                      <InputLabel id="template-ai-category-select-label">Kategorie *</InputLabel>
+                      <Select
+                        labelId="template-ai-category-select-label"
+                        label="Kategorie *"
                         value={selectedCategoryId}
-                        onChange={(e) => setSelectedCategoryId(e.target.value)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onChange={(event) => setSelectedCategoryId(String(event.target.value))}
                       >
-                        <option value="">Kategorie wählen</option>
+                        <MenuItem value="">Kategorie wählen</MenuItem>
                         {categories.map((category) => (
-                          <option key={category.id} value={category.id}>
+                          <MenuItem key={category.id} value={category.id}>
                             {category.name}
-                          </option>
+                          </MenuItem>
                         ))}
-                      </select>
-                    </label>
-                    <label>
-                      <span className="block text-sm font-medium mb-1">Tonfall</span>
-                      <select
+                      </Select>
+                    </FormControl>
+                    <FormControl fullWidth>
+                      <InputLabel id="template-ai-tone-select-label">Tonfall</InputLabel>
+                      <Select
+                        labelId="template-ai-tone-select-label"
+                        label="Tonfall"
                         value={aiTone}
-                        onChange={(e) => setAiTone(e.target.value as typeof aiTone)}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onChange={(event) => setAiTone(event.target.value as typeof aiTone)}
                       >
-                        <option value="neutral">Neutral / sachlich</option>
-                        <option value="formal">Formal / verwaltungsnah</option>
-                        <option value="friendly">Freundlich / serviceorientiert</option>
-                        <option value="concise">Kurz / handlungsorientiert</option>
-                      </select>
-                    </label>
-                  </div>
-                  <label>
-                    <span className="block text-sm font-medium mb-1">Kategoriebeschreibung</span>
-                    <textarea
+                        <MenuItem value="neutral">Neutral / sachlich</MenuItem>
+                        <MenuItem value="formal">Formal / verwaltungsnah</MenuItem>
+                        <MenuItem value="friendly">Freundlich / serviceorientiert</MenuItem>
+                        <MenuItem value="concise">Kurz / handlungsorientiert</MenuItem>
+                      </Select>
+                    </FormControl>
+                    <TextField
+                      fullWidth
+                      multiline
+                      minRows={2}
+                      label="Kategoriebeschreibung"
                       value={selectedCategory?.description || ''}
-                      readOnly
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg bg-gray-100 text-gray-700"
-                      rows={2}
+                      InputProps={{ readOnly: true }}
+                      sx={{ gridColumn: { xs: '1 / -1', md: '1 / -1' } }}
                       placeholder="Beschreibung der Kategorie"
                     />
-                  </label>
-                  <label>
-                    <span className="block text-sm font-medium mb-1">Zusatzprompt (optional)</span>
-                    <textarea
+                    <TextField
+                      fullWidth
+                      multiline
+                      minRows={2}
+                      label="Zusatzprompt (optional)"
                       value={aiExtraPrompt}
-                      onChange={(e) => setAiExtraPrompt(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm"
-                      rows={2}
+                      onChange={(event) => setAiExtraPrompt(event.target.value)}
+                      sx={{ gridColumn: { xs: '1 / -1', md: '1 / -1' } }}
                       placeholder="z. B. sachlich, kurze Sätze, klare Handlungsaufforderung"
                     />
-                  </label>
-                  <button
+                  </Box>
+                  <Button
+                    variant="contained"
+                    sx={{ mt: 1.5 }}
                     onClick={() => void handleGenerateTemplate()}
                     disabled={generating}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-gray-400 text-white rounded-lg font-semibold transition"
                   >
-                    <i className="fa-solid fa-wand-magic-sparkles" />
                     {generating ? 'Wird generiert...' : 'Mit KI vorschlagen'}
-                  </button>
-                </div>
-              )}
+                  </Button>
+                </Box>
+              ) : null}
 
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' }, gap: 1.25 }}>
                 <HtmlTemplateEditor
                   label="HTML-Inhalt"
                   value={htmlContent}
@@ -1708,87 +1752,88 @@ const EmailTemplates: React.FC = () => {
                   disabled={!selectedTemplate.editable}
                   editorHeight={420}
                 />
-                <label>
-                  <div className="flex items-center justify-between gap-2 mb-2">
-                    <span className="block text-sm font-medium">Nur-Text-Fallback (ohne HTML)</span>
-                    {selectedTemplate.editable && (
-                      <button
-                        type="button"
-                        onClick={() => setTextContent(htmlToPlainText(htmlContent))}
-                        className="text-xs px-2 py-1 rounded border border-slate-300 bg-white hover:bg-slate-100"
-                      >
+                <Box>
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                    <Typography variant="body2" fontWeight={600}>
+                      Nur-Text-Fallback (ohne HTML)
+                    </Typography>
+                    {selectedTemplate.editable ? (
+                      <Button size="small" variant="outlined" onClick={() => setTextContent(htmlToPlainText(htmlContent))}>
                         Aus HTML ableiten
-                      </button>
-                    )}
-                  </div>
-                  <textarea
+                      </Button>
+                    ) : null}
+                  </Stack>
+                  <TextField
+                    fullWidth
+                    multiline
+                    minRows={19}
                     value={textContent}
-                    onChange={(e) => setTextContent(e.target.value)}
+                    onChange={(event) => setTextContent(event.target.value)}
                     disabled={!selectedTemplate.editable}
-                    className={`w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 font-mono text-sm ${
-                      !selectedTemplate.editable ? 'bg-gray-100 text-gray-500 cursor-not-allowed' : ''
-                    }`}
-                    rows={19}
                     placeholder="Dieser Text wird verwendet, wenn das E-Mail-Programm kein HTML unterstützt."
                   />
-                </label>
-              </div>
+                </Box>
+              </Box>
 
-              {missingPlaceholders.length > 0 && (
-                <div className="p-3 rounded border border-amber-300 bg-amber-50 text-amber-900 text-sm">
-                  <strong><i className="fa-solid fa-triangle-exclamation" /> Fehlende Pflicht-Platzhalter in Betreff/HTML:</strong>{' '}
-                  {missingPlaceholders.join(', ')}
-                </div>
-              )}
-              {textOnlyMissingPlaceholders.length > 0 && (
-                <div className="p-3 rounded border border-blue-300 bg-blue-50 text-blue-900 text-sm">
-                  <strong><i className="fa-solid fa-circle-info" /> Hinweis:</strong> Im Text-Fallback fehlen aktuell:{' '}
-                  {textOnlyMissingPlaceholders.join(', ')}
-                </div>
-              )}
+              {missingPlaceholders.length > 0 ? (
+                <Alert severity="warning">
+                  Fehlende Pflicht-Platzhalter in Betreff/HTML: {missingPlaceholders.join(', ')}
+                </Alert>
+              ) : null}
+              {textOnlyMissingPlaceholders.length > 0 ? (
+                <Alert severity="info">
+                  Im Text-Fallback fehlen aktuell: {textOnlyMissingPlaceholders.join(', ')}
+                </Alert>
+              ) : null}
 
-              <div className="flex flex-wrap gap-2">
-                <button
-                  onClick={() => void handlePreview()}
-                  className="px-4 py-2 bg-slate-600 hover:bg-slate-700 text-white font-semibold rounded-lg transition"
-                >
-                  <i className="fa-solid fa-eye" /> Vorschau
-                </button>
-                {selectedTemplate.editable && (
-                  <button
-                    onClick={() => void handleSave()}
-                    disabled={saving}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white font-semibold rounded-lg transition"
-                  >
-                    {saving ? 'Wird gespeichert...' : <><i className="fa-solid fa-floppy-disk" /> Speichern</>}
-                  </button>
-                )}
-              </div>
+              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+                <Button variant="outlined" onClick={() => void handlePreview()}>
+                  Vorschau
+                </Button>
+                {selectedTemplate.editable ? (
+                  <Button variant="contained" onClick={() => void handleSave()} disabled={saving}>
+                    {saving ? 'Wird gespeichert...' : 'Speichern'}
+                  </Button>
+                ) : null}
+              </Stack>
 
-              {showPreview && (
-                <div className="mt-2 border-t pt-4">
-                  <h4 className="font-semibold mb-3"><i className="fa-solid fa-envelope" /> Vorschau</h4>
-                  <p className="text-sm text-gray-600 mb-3">
+              {showPreview ? (
+                <Box sx={{ borderTop: '1px solid #e2e8f0', pt: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    Vorschau
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary" sx={{ mb: 1.25 }}>
                     <strong>Betreff:</strong> {subject}
-                  </p>
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                  </Typography>
+                  <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', xl: 'repeat(2, minmax(0, 1fr))' }, gap: 1.25 }}>
                     <iframe
                       title="E-Mail HTML Vorschau"
                       sandbox=""
-                      className="w-full h-[460px] rounded border border-gray-200 bg-white"
                       srcDoc={previewDoc}
+                      style={{ width: '100%', minHeight: 460, borderRadius: 8, border: '1px solid #e2e8f0', background: '#fff' }}
                     />
-                    <pre className="w-full h-[460px] overflow-auto whitespace-pre-wrap rounded border border-slate-200 bg-slate-50 p-3 text-sm text-slate-800">
+                    <Box
+                      component="pre"
+                      sx={{
+                        m: 0,
+                        minHeight: 460,
+                        overflow: 'auto',
+                        borderRadius: 1,
+                        border: '1px solid #e2e8f0',
+                        bgcolor: '#f8fafc',
+                        p: 1.25,
+                        whiteSpace: 'pre-wrap',
+                        fontSize: 13,
+                      }}
+                    >
                       {previewText}
-                    </pre>
-                  </div>
-                </div>
-              )}
-            </div>
+                    </Box>
+                  </Box>
+                </Box>
+              ) : null}
+            </AdminSurfaceCard>
           ) : (
-            <div className="bg-white rounded-lg shadow p-6 text-center text-gray-500">
-              Wählen Sie links ein Template aus.
-            </div>
+            <Alert severity="info">Wählen Sie links ein Template aus.</Alert>
           )}
         </div>
       </div>

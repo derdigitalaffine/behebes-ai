@@ -1,8 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { getAdminToken } from '../lib/auth';
+import {
+  Alert,
+  Box,
+  Button,
+  CircularProgress,
+  FormControl,
+  Grid,
+  InputLabel,
+  MenuItem,
+  Select,
+  Stack,
+  Switch,
+  TextField,
+  Typography,
+} from '@mui/material';
+import SaveRoundedIcon from '@mui/icons-material/SaveRounded';
+import SyncRoundedIcon from '@mui/icons-material/SyncRounded';
 import SourceTag from '../components/SourceTag';
 import { useAdminScopeContext } from '../lib/adminScopeContext';
+import { getAdminToken } from '../lib/auth';
+import { AdminKpiStrip, AdminPageHero, AdminSurfaceCard } from '../components/admin-ui';
 
 interface SmtpConfig {
   smtpHost: string;
@@ -72,11 +90,7 @@ const EmailSettings: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!canManageScope) {
-      setLoading(false);
-      return;
-    }
-    if (tenantMode && !activeTenantId) {
+    if (!canManageScope || (tenantMode && !activeTenantId)) {
       setLoading(false);
       return;
     }
@@ -129,42 +143,11 @@ const EmailSettings: React.FC = () => {
     }
   };
 
-  const handleSmtpChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = event.target;
+  const updateSmtp = (name: keyof SmtpConfig, value: string) => {
     setSmtpConfig((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleImapChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value, type } = event.target;
-    if (name === 'enabled') {
-      setImapConfig((prev) => ({ ...prev, enabled: value === 'true' }));
-      return;
-    }
-    if (name === 'imapSecure') {
-      setImapConfig((prev) => ({ ...prev, imapSecure: value === 'true' }));
-      return;
-    }
-    if (name === 'syncLimit') {
-      const parsed = Number(value);
-      setImapConfig((prev) => ({
-        ...prev,
-        syncLimit: Number.isFinite(parsed) ? Math.max(1, Math.min(500, Math.floor(parsed))) : prev.syncLimit,
-      }));
-      return;
-    }
-    if (name === 'syncIntervalMinutes') {
-      const parsed = Number(value);
-      setImapConfig((prev) => ({
-        ...prev,
-        syncIntervalMinutes: Number.isFinite(parsed)
-          ? Math.max(1, Math.min(1440, Math.floor(parsed)))
-          : prev.syncIntervalMinutes,
-      }));
-      return;
-    }
-    if (type === 'checkbox') {
-      return;
-    }
+  const updateImap = (name: keyof ImapConfig, value: string | number | boolean) => {
     setImapConfig((prev) => ({ ...prev, [name]: value }));
   };
 
@@ -183,7 +166,11 @@ const EmailSettings: React.FC = () => {
         axios.patch(getConfigEndpoint('imap'), imapConfig, { headers: authHeader() }),
       ]);
       setMessageType('success');
-      setMessage(tenantMode ? 'Tenant SMTP/IMAP-Konfiguration erfolgreich aktualisiert' : 'SMTP/IMAP-Konfiguration erfolgreich aktualisiert');
+      setMessage(
+        tenantMode
+          ? 'Mandanten-SMTP/IMAP-Konfiguration erfolgreich aktualisiert.'
+          : 'SMTP/IMAP-Konfiguration erfolgreich aktualisiert.'
+      );
       setTimeout(() => setMessage(''), 3200);
       await fetchConfig();
     } catch (error: any) {
@@ -224,337 +211,266 @@ const EmailSettings: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <i className="fa-solid fa-spinner fa-spin" />
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight={280}>
+        <CircularProgress size={30} />
+      </Box>
     );
   }
 
   if (!canManageScope) {
     return (
-      <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-lg p-4">
+      <Alert severity="warning">
         Für den aktuell gewählten Kontext fehlen die Berechtigungen zur SMTP/IMAP-Konfiguration.
-      </div>
+      </Alert>
     );
   }
 
   if (tenantMode && !activeTenantId) {
     return (
-      <div className="bg-slate-100 border border-slate-200 text-slate-700 rounded-lg p-4">
+      <Alert severity="info">
         Kein Mandant gewählt. Bitte zuerst einen Mandanten-Kontext auswählen.
-      </div>
+      </Alert>
     );
   }
 
   return (
     <div className="space-y-6">
-      <div className="space-y-1">
-        <h2 className="text-2xl font-semibold">E-Mail-Konfiguration (SMTP/IMAP)</h2>
-        <p className="text-sm text-slate-600">
-          Kontext: {tenantMode ? `Mandant (${activeTenantId})` : 'Plattform / Global'}
-        </p>
-      </div>
-
-      {message && (
-        <div
-          className={`message-banner p-4 rounded-lg flex items-center gap-2 ${
-            messageType === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-          }`}
-        >
-          {messageType === 'success' ? (
-            <i className="fa-solid fa-circle-check" />
-          ) : (
-            <i className="fa-solid fa-circle-exclamation" />
-          )}
-          {message}
-        </div>
-      )}
-
-      <div className="bg-white rounded-lg shadow p-6 space-y-5">
-        <h3 className="text-lg font-semibold">SMTP (ausgehend)</h3>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            SMTP-Host
-            <SourceTag source={smtpSources.smtpHost} />
-          </label>
-          <input
-            type="text"
-            name="smtpHost"
-            value={smtpConfig.smtpHost}
-            onChange={handleSmtpChange}
-            placeholder="z.B. smtp.gmail.com"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            SMTP-Port
-            <SourceTag source={smtpSources.smtpPort} />
-          </label>
-          <select
-            name="smtpPort"
-            value={smtpConfig.smtpPort}
-            onChange={handleSmtpChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="25">25 (Unverschlüsselt)</option>
-            <option value="465">465 (SSL)</option>
-            <option value="587">587 (TLS)</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Benutzername
-            <SourceTag source={smtpSources.smtpUser} />
-          </label>
-          <input
-            type="text"
-            name="smtpUser"
-            value={smtpConfig.smtpUser}
-            onChange={handleSmtpChange}
-            placeholder="z.B. info@example.com"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Passwort
-            <SourceTag source={smtpSources.smtpPassword} />
-          </label>
-          <input
-            type="password"
-            name="smtpPassword"
-            value={smtpConfig.smtpPassword}
-            onChange={handleSmtpChange}
-            placeholder={
-              smtpConfig.smtpPassword === '***'
-                ? 'Passwort ist gespeichert (neues Passwort eingeben zum Ändern)'
-                : 'Passwort eingeben'
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Absender-E-Mail
-            <SourceTag source={smtpSources.smtpFromEmail} />
-          </label>
-          <input
-            type="email"
-            name="smtpFromEmail"
-            value={smtpConfig.smtpFromEmail}
-            onChange={handleSmtpChange}
-            placeholder="z.B. noreply@example.com"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Absender-Name
-            <SourceTag source={smtpSources.smtpFromName} />
-          </label>
-          <input
-            type="text"
-            name="smtpFromName"
-            value={smtpConfig.smtpFromName}
-            onChange={handleSmtpChange}
-            placeholder="z.B. behebes.AI"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-      </div>
-
-      <div className="bg-white rounded-lg shadow p-6 space-y-5">
-        <h3 className="text-lg font-semibold">IMAP (eingehend / Ticket-Antworten)</h3>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            IMAP aktiviert
-            <SourceTag source={imapSources.enabled} />
-          </label>
-          <select
-            name="enabled"
-            value={imapConfig.enabled ? 'true' : 'false'}
-            onChange={handleImapChange}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          >
-            <option value="false">Deaktiviert</option>
-            <option value="true">Aktiviert</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            IMAP-Host
-            <SourceTag source={imapSources.imapHost} />
-          </label>
-          <input
-            type="text"
-            name="imapHost"
-            value={imapConfig.imapHost}
-            onChange={handleImapChange}
-            placeholder="z.B. imap.gmail.com"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              IMAP-Port
-              <SourceTag source={imapSources.imapPort} />
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={65535}
-              name="imapPort"
-              value={imapConfig.imapPort}
-              onChange={handleImapChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Transport
-              <SourceTag source={imapSources.imapSecure} />
-            </label>
-            <select
-              name="imapSecure"
-              value={imapConfig.imapSecure ? 'true' : 'false'}
-              onChange={handleImapChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+      <AdminPageHero
+        title="E-Mail (SMTP/IMAP)"
+        subtitle="Konsolidierte Konfiguration für ausgehende und eingehende Ticket-Kommunikation."
+        badges={[
+          { label: tenantMode ? `Mandant: ${activeTenantId}` : 'Kontext: Global', tone: tenantMode ? 'info' : 'default' },
+          { label: imapConfig.enabled ? 'IMAP aktiv' : 'IMAP inaktiv', tone: imapConfig.enabled ? 'success' : 'warning' },
+        ]}
+        actions={(
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.25}>
+            <Button
+              variant="outlined"
+              startIcon={syncing ? <CircularProgress size={16} /> : <SyncRoundedIcon />}
+              onClick={handleMailboxSync}
+              disabled={syncing}
             >
-              <option value="true">TLS/SSL (empfohlen)</option>
-              <option value="false">Klartext</option>
-            </select>
-          </div>
-        </div>
+              IMAP synchronisieren
+            </Button>
+            <Button
+              variant="contained"
+              startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveRoundedIcon />}
+              onClick={handleSave}
+              disabled={saving}
+            >
+              Speichern
+            </Button>
+          </Stack>
+        )}
+      />
 
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            IMAP-Benutzer
-            <SourceTag source={imapSources.imapUser} />
-          </label>
-          <input
-            type="text"
-            name="imapUser"
-            value={imapConfig.imapUser}
-            onChange={handleImapChange}
-            placeholder="z.B. info@example.com"
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+      {message ? (
+        <Alert severity={messageType === 'success' ? 'success' : 'error'}>{message}</Alert>
+      ) : null}
 
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            IMAP-Passwort
-            <SourceTag source={imapSources.imapPassword} />
-          </label>
-          <input
-            type="password"
-            name="imapPassword"
-            value={imapConfig.imapPassword}
-            onChange={handleImapChange}
-            placeholder={
-              imapConfig.imapPassword === '***'
-                ? 'Passwort ist gespeichert (neues Passwort eingeben zum Ändern)'
-                : 'Passwort eingeben'
-            }
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-        </div>
+      <AdminKpiStrip
+        items={[
+          {
+            label: 'SMTP-Host',
+            value: smtpConfig.smtpHost || '–',
+            hint: smtpConfig.smtpFromEmail || 'Kein Absender gesetzt',
+          },
+          {
+            label: 'IMAP-Host',
+            value: imapConfig.imapHost || '–',
+            hint: `${imapConfig.imapMailbox || 'INBOX'} · Port ${imapConfig.imapPort || '993'}`,
+          },
+          {
+            label: 'Abrufintervall',
+            value: `${imapConfig.syncIntervalMinutes} min`,
+            hint: `${imapConfig.syncLimit} Nachrichten je Lauf`,
+            tone: 'info',
+          },
+        ]}
+      />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Mailbox-Ordner
-              <SourceTag source={imapSources.imapMailbox} />
-            </label>
-            <input
-              type="text"
-              name="imapMailbox"
-              value={imapConfig.imapMailbox}
-              onChange={handleImapChange}
-              placeholder="INBOX"
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+      <AdminSurfaceCard title="SMTP (ausgehend)" subtitle="Versandkonfiguration inklusive Absender-Identität.">
+        <Grid container spacing={2}>
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label={<Stack direction="row" alignItems="center" spacing={0.5}><span>SMTP-Host</span><SourceTag source={smtpSources.smtpHost} /></Stack>}
+              value={smtpConfig.smtpHost}
+              onChange={(event) => updateSmtp('smtpHost', event.target.value)}
+              placeholder="z. B. smtp.example.org"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Sync-Limit pro Lauf
-              <SourceTag source={imapSources.syncLimit} />
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={500}
-              name="syncLimit"
-              value={imapConfig.syncLimit}
-              onChange={handleImapChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <FormControl fullWidth>
+              <InputLabel id="smtp-port-label">SMTP-Port</InputLabel>
+              <Select
+                labelId="smtp-port-label"
+                label="SMTP-Port"
+                value={smtpConfig.smtpPort}
+                onChange={(event) => updateSmtp('smtpPort', String(event.target.value))}
+              >
+                <MenuItem value="25">25 (Unverschlüsselt)</MenuItem>
+                <MenuItem value="465">465 (SSL)</MenuItem>
+                <MenuItem value="587">587 (TLS)</MenuItem>
+              </Select>
+            </FormControl>
+          </Grid>
+          <Grid item xs={12} md={3}>
+            <TextField
+              fullWidth
+              label={<Stack direction="row" alignItems="center" spacing={0.5}><span>Absender-Name</span><SourceTag source={smtpSources.smtpFromName} /></Stack>}
+              value={smtpConfig.smtpFromName}
+              onChange={(event) => updateSmtp('smtpFromName', event.target.value)}
+              placeholder="behebes.AI"
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Abrufintervall (Minuten)
-              <SourceTag source={imapSources.syncIntervalMinutes} />
-            </label>
-            <input
-              type="number"
-              min={1}
-              max={1440}
-              name="syncIntervalMinutes"
-              value={imapConfig.syncIntervalMinutes}
-              onChange={handleImapChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              label={<Stack direction="row" alignItems="center" spacing={0.5}><span>Benutzername</span><SourceTag source={smtpSources.smtpUser} /></Stack>}
+              value={smtpConfig.smtpUser}
+              onChange={(event) => updateSmtp('smtpUser', event.target.value)}
+              placeholder="mail@example.org"
             />
-          </div>
-        </div>
-      </div>
+          </Grid>
+          <Grid item xs={12} md={6}>
+            <TextField
+              fullWidth
+              type="password"
+              label={<Stack direction="row" alignItems="center" spacing={0.5}><span>Passwort</span><SourceTag source={smtpSources.smtpPassword} /></Stack>}
+              value={smtpConfig.smtpPassword}
+              onChange={(event) => updateSmtp('smtpPassword', event.target.value)}
+              placeholder={smtpConfig.smtpPassword === '***' ? 'Passwort ist gespeichert (für Änderung neu eingeben)' : 'Passwort eingeben'}
+            />
+          </Grid>
+          <Grid item xs={12}>
+            <TextField
+              fullWidth
+              type="email"
+              label={<Stack direction="row" alignItems="center" spacing={0.5}><span>Absender-E-Mail</span><SourceTag source={smtpSources.smtpFromEmail} /></Stack>}
+              value={smtpConfig.smtpFromEmail}
+              onChange={(event) => updateSmtp('smtpFromEmail', event.target.value)}
+              placeholder="noreply@example.org"
+            />
+          </Grid>
+        </Grid>
+      </AdminSurfaceCard>
 
-      <div className="flex gap-2 mt-6">
-        <button onClick={handleSave} disabled={saving} className="btn btn-primary">
-          {saving ? (
-            <span>
-              <i className="fa-solid fa-spinner fa-spin" /> Wird gespeichert...
-            </span>
-          ) : (
-            <span>
-              <i className="fa-solid fa-floppy-disk" /> Speichern
-            </span>
-          )}
-        </button>
-        <button onClick={handleMailboxSync} disabled={syncing} className="btn btn-secondary">
-          {syncing ? (
-            <span>
-              <i className="fa-solid fa-spinner fa-spin" /> Synchronisiere...
-            </span>
-          ) : (
-            <span>
-              <i className="fa-solid fa-cloud-arrow-down" /> IMAP jetzt synchronisieren
-            </span>
-          )}
-        </button>
-      </div>
+      <AdminSurfaceCard title="IMAP (eingehend / Ticket-Antworten)" subtitle="Import und Zuordnung eingehender E-Mails zu Tickets.">
+        <Stack spacing={2}>
+          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} alignItems={{ xs: 'flex-start', md: 'center' }}>
+            <FormControlLabel
+              control={
+                <Switch
+                  checked={imapConfig.enabled}
+                  onChange={(event) => updateImap('enabled', event.target.checked)}
+                />
+              }
+              label={(
+                <Stack direction="row" spacing={0.5} alignItems="center">
+                  <span>IMAP aktiviert</span>
+                  <SourceTag source={imapSources.enabled} />
+                </Stack>
+              )}
+            />
+            <FormControl fullWidth sx={{ maxWidth: 260 }}>
+              <InputLabel id="imap-secure-label">Transport</InputLabel>
+              <Select
+                labelId="imap-secure-label"
+                label="Transport"
+                value={imapConfig.imapSecure ? 'true' : 'false'}
+                onChange={(event) => updateImap('imapSecure', String(event.target.value) === 'true')}
+              >
+                <MenuItem value="true">TLS/SSL (empfohlen)</MenuItem>
+                <MenuItem value="false">Klartext</MenuItem>
+              </Select>
+            </FormControl>
+          </Stack>
 
-      <div className="bg-blue-50 border border-blue-300 rounded-lg p-4">
-        <h3 className="font-semibold text-blue-900 mb-2">
-          <i className="fa-solid fa-circle-info" /> Hinweise
-        </h3>
-        <ul className="text-sm text-blue-800 space-y-1 list-disc list-inside">
-          <li>Ausgehende E-Mails erhalten automatisch die Ticket-ID im Betreff.</li>
-          <li>Antwortmails werden per IMAP importiert und mit Ticketdetails verknüpft.</li>
-          <li>Das Postfach wird automatisch im konfigurierten Abrufintervall synchronisiert.</li>
-          <li>Die Ansicht der importierten Mails findest du unter „E-Mail Postfach“ im Hauptmenü.</li>
-        </ul>
-      </div>
+          <Grid container spacing={2}>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label={<Stack direction="row" alignItems="center" spacing={0.5}><span>IMAP-Host</span><SourceTag source={imapSources.imapHost} /></Stack>}
+                value={imapConfig.imapHost}
+                onChange={(event) => updateImap('imapHost', event.target.value)}
+                placeholder="imap.example.org"
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth
+                type="number"
+                inputProps={{ min: 1, max: 65535 }}
+                label={<Stack direction="row" alignItems="center" spacing={0.5}><span>IMAP-Port</span><SourceTag source={imapSources.imapPort} /></Stack>}
+                value={imapConfig.imapPort}
+                onChange={(event) => updateImap('imapPort', event.target.value)}
+              />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <TextField
+                fullWidth
+                label={<Stack direction="row" alignItems="center" spacing={0.5}><span>Mailbox-Ordner</span><SourceTag source={imapSources.imapMailbox} /></Stack>}
+                value={imapConfig.imapMailbox}
+                onChange={(event) => updateImap('imapMailbox', event.target.value)}
+                placeholder="INBOX"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                label={<Stack direction="row" alignItems="center" spacing={0.5}><span>IMAP-Benutzer</span><SourceTag source={imapSources.imapUser} /></Stack>}
+                value={imapConfig.imapUser}
+                onChange={(event) => updateImap('imapUser', event.target.value)}
+                placeholder="mail@example.org"
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                type="password"
+                label={<Stack direction="row" alignItems="center" spacing={0.5}><span>IMAP-Passwort</span><SourceTag source={imapSources.imapPassword} /></Stack>}
+                value={imapConfig.imapPassword}
+                onChange={(event) => updateImap('imapPassword', event.target.value)}
+                placeholder={imapConfig.imapPassword === '***' ? 'Passwort ist gespeichert (für Änderung neu eingeben)' : 'Passwort eingeben'}
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                type="number"
+                inputProps={{ min: 1, max: 500 }}
+                label={<Stack direction="row" alignItems="center" spacing={0.5}><span>Sync-Limit je Lauf</span><SourceTag source={imapSources.syncLimit} /></Stack>}
+                value={imapConfig.syncLimit}
+                onChange={(event) =>
+                  updateImap('syncLimit', Math.max(1, Math.min(500, Number(event.target.value || 1))))
+                }
+              />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <TextField
+                fullWidth
+                type="number"
+                inputProps={{ min: 1, max: 1440 }}
+                label={<Stack direction="row" alignItems="center" spacing={0.5}><span>Abrufintervall (Minuten)</span><SourceTag source={imapSources.syncIntervalMinutes} /></Stack>}
+                value={imapConfig.syncIntervalMinutes}
+                onChange={(event) =>
+                  updateImap('syncIntervalMinutes', Math.max(1, Math.min(1440, Number(event.target.value || 1))))
+                }
+              />
+            </Grid>
+          </Grid>
+        </Stack>
+      </AdminSurfaceCard>
+
+      <AdminSurfaceCard title="Hinweise" subtitle="Betrieb und Zuordnung von Ticket-Mails">
+        <Stack spacing={0.75}>
+          <Typography variant="body2">Ausgehende E-Mails enthalten automatisch die Ticket-ID im Betreff.</Typography>
+          <Typography variant="body2">Antwortmails werden per IMAP importiert und mit Ticketdetails verknüpft.</Typography>
+          <Typography variant="body2">Das Postfach wird automatisch im konfigurierten Intervall synchronisiert.</Typography>
+          <Typography variant="body2">Die importierten Nachrichten sind unter „E-Mail Postfach“ einsehbar.</Typography>
+        </Stack>
+      </AdminSurfaceCard>
     </div>
   );
 };
