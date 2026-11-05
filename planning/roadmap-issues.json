@@ -1,0 +1,883 @@
+{
+  "schemaVersion": 1,
+  "repository": "derdigitalaffine/behebes-ai",
+  "snapshot": "2026-11-05",
+  "sourceCommit": "12ae45fa697a63a4f005b8b1478e53f21f9bb333",
+  "issueState": "drafts-until-issues-enabled",
+  "principle": "Bürgeranliegen -> verantwortete Verwaltung -> OPS -> transparenter Abschluss; KI assistiert, Mensch entscheidet.",
+  "roadmapId": "ROADMAP",
+  "epics": [
+    {
+      "id": "E-F",
+      "kind": "epic",
+      "area": "F",
+      "priority": "P0",
+      "title": "Produktführung, Qualitätsbaseline und überprüfbare Architektur",
+      "goal": "Die bestehende Plattform entlang echter Bürger-, Sachbearbeitungs-, Leitungs- und OPS-Aufgaben verstehen. Qualitätsstatus und technische Entscheidungen messbar machen.",
+      "deliverables": "Erforschter Service-Blueprint, Rollen-/Journey-Matrix, testbare CI, API-/Datenverträge, Staging-Testdaten, Performance-Ist-Werte und Architekturentscheidungen.",
+      "risk": "Keine Freigabe einer Komplettmigration ohne wiederholbar grüne Baseline, UX-Kriterien und fachlichen Referenzflow."
+    },
+    {
+      "id": "E-M",
+      "kind": "epic",
+      "area": "M",
+      "priority": "P0",
+      "title": "Modulplattform, Feature Controls und Entkopplung",
+      "goal": "Aus dem gewachsenen modularen Monolithen eine nachvollziehbare Modularchitektur mit sicherer Aktivierung je Tenant schaffen, ohne laufende Vorgänge zu verlieren.",
+      "deliverables": "Bounded Contexts, Modulmanifest, Flags/Entitlements, Konfigurations-UI, Backend-Guards, Frontend-Registry, Abhängigkeitsgraph und kontrollierte Entflechtung großer Dateien.",
+      "risk": "Modul deaktivieren ist niemals identisch mit Daten löschen oder Auth ausschalten. Hintergrundjobs/Deep-Links/Berechtigungen müssen konsistent sein."
+    },
+    {
+      "id": "E-D",
+      "kind": "epic",
+      "area": "D",
+      "priority": "P1",
+      "title": "Mantine Design System und visueller UX-Polish",
+      "goal": "Eine ruhige, professionelle und barrierearme Oberfläche für alle drei Anwendungen etablieren, ohne unkontrollierte Big-Bang-Umschreibung.",
+      "deliverables": "React-/Mantine-ADR, Tokens, AppShell, Form-, Overlay-, Tabellenstandards, schrittweise Admin/OPS/Bürger-Migration, visuelle Regression und Accessibility.",
+      "risk": "React-18-/MUI-Bestand beachten. Mantine 9 benötigt React 19.2+; Alternative Mantine 8 als Brücke bewusst entscheiden, keine Version blind installieren."
+    },
+    {
+      "id": "E-B",
+      "kind": "epic",
+      "area": "B",
+      "priority": "P1",
+      "title": "Bürgererlebnis: melden, verstehen, verfolgen",
+      "goal": "Ein Anliegen in möglichst wenigen verständlichen Schritten erfassen und mit ehrlichem Status transparent verfolgen.",
+      "deliverables": "Aufgabenorientierter Intake, Medien/GIS, verständliche Statuskommunikation, mehrsprachige und zugängliche UX, Rückmeldeschleife.",
+      "risk": "Keine zusätzlichen Pflichtdaten aus Komfortgründen; Datenschutz, geringe Bandbreite und mobile Fehlerpfade sind Grundbedingungen."
+    },
+    {
+      "id": "E-A",
+      "kind": "epic",
+      "area": "A",
+      "priority": "P1",
+      "title": "Admin als task-first Arbeitsraum für Verantwortung und Entscheidungen",
+      "goal": "Für Verwaltungsmitarbeitende die nächste verantwortbare Handlung vor Konfigurations- und Tabellenkomplexität stellen.",
+      "deliverables": "Arbeitsplatz, Ticketdetail, Workflow-Editor, Einstellungsstruktur, Suche/Command Palette, Analytics und Freigabevorgänge.",
+      "risk": "Kontext, Rollen, Org-Scope und Revisionsfähigkeit dürfen durch UX-Vereinfachung nie verloren gehen."
+    },
+    {
+      "id": "E-O",
+      "kind": "epic",
+      "area": "O",
+      "priority": "P1",
+      "title": "OPS: robuste Außendienstarbeit, offline und mobil",
+      "goal": "Feldteams sollen Aufgaben verlässlich auf dem Smartphone ausführen, mit klarer Synchronisierung und sicheren Übergaben.",
+      "deliverables": "Meine-Aufgaben-Flow, Offline-Konfliktlösung, Messenger/Calls, Push/QR/Deep-Link und Kartenkontext.",
+      "risk": "Offline-Mutationen dürfen nicht still überschreiben; bei Konflikten/fehlendem Netz muss der Nutzer handlungsfähig bleiben."
+    },
+    {
+      "id": "E-R",
+      "kind": "epic",
+      "area": "R",
+      "priority": "P0",
+      "title": "Messbare Performance, Stabilität und Resilienz",
+      "goal": "Geschwindigkeit und Verfügbarkeit durch Evidenz statt Bauchgefühl verbessern: Datenbank, API, Frontend, Worker und Realtime.",
+      "deliverables": "Query-/Index-Baseline, p95-API-Optimierung, Bundle/Render-Budgets, Job-Idempotenz, SSE-Robustheit, Lasttests, Metriken/SLO.",
+      "risk": "Keine erfundenen Performance-Gewinne; jede Optimierung hat Ausgangsmessung, Testlast und Vorher/Nachher-Vergleich."
+    },
+    {
+      "id": "E-S",
+      "kind": "epic",
+      "area": "S",
+      "priority": "P0",
+      "title": "Sicherheit, Datenschutz und KI-Governance",
+      "goal": "Öffentliche Verwaltungssoftware muss datensparsam, mandantensicher und prüfbar bleiben – auch bei modularen Features und KI.",
+      "deliverables": "Tenant-/RBAC-Negativtests, Secret-Defaults, Lösch-/Exportkonzept, LLM-Gates, sichere Uploads, Dependency-/Supply-Chain-Gates.",
+      "risk": "Keine Echtdaten oder vertraulichen Sicherheitsbefunde in öffentlichen Issues. Plattformadmins bekommen keine impliziten Fachrechte."
+    },
+    {
+      "id": "E-P",
+      "kind": "epic",
+      "area": "P",
+      "priority": "P0",
+      "title": "Betrieb, Migration, Integration und Release-Exzellenz",
+      "goal": "Wiederherstellbarer, beobachtbarer und wartbarer Self-hosting-Betrieb mit getesteten Upgrade-/Rollbackpfaden.",
+      "deliverables": "Restore-/Upgrade-Drills, sichere Deployments, Runbooks, API-Integrationen, Staging-E2E und Release-Gates.",
+      "risk": "Keine automatisch produktive Migration oder externe Nachricht durch Coding-Agenten; Menschen verantworten Freigabe und Rollout."
+    }
+  ],
+  "tasks": [
+    {
+      "id": "F01",
+      "kind": "task",
+      "epic": "F",
+      "priority": "P0",
+      "title": "Service Blueprint und reale Nutzerjobs für Bürger, Admin, OPS",
+      "goal": "Das eigentliche Versprechen der Anwendung aus Nutzersicht und nicht aus Menü-/Tabellensicht spezifizieren.",
+      "scope": [
+        "Interviews/Workshops mit datenschutzkonformen synthetischen Abläufen für Bürger, Sachbearbeitung, Leitung, OPS, Tenant-Admin",
+        "End-to-End-Service-Blueprint von Meldung bis Abschluss inklusive Rechts-/Zuständigkeits- und Informationswechseln",
+        "Häufigste 3 Aufgaben je Persona, Hindernisse, Beurteilung von Kontextverlust, Wartesituationen und Rückfragen priorisieren",
+        "Terminologie, Status, Serviceversprechen und belastbare UX-Hypothesen in docs/PRODUCT_VISION.md veröffentlichen"
+      ],
+      "acceptance": [
+        "Mindestens sechs repräsentative Journey-Szenarien mit Start, Ende, Abbruch, Fehler, Rollenwechsel und Outcome beschrieben",
+        "Stakeholder validieren fachliche Statusbezeichnungen, keine ungesicherten Fristversprechen",
+        "Entscheidung für primäre und sekundäre Aktionen je Kernscreen dokumentiert",
+        "Vorher/Nachher-Aufgabenmetriken inklusive datensparsamer Messmethodik definiert"
+      ],
+      "dependsOn": [],
+      "failureCases": [
+        "Formular darf weder zusätzliche unnötige PII erheben noch Ausschluss nicht digital-affiner Personen fördern"
+      ],
+      "focus": "Produkt/UX"
+    },
+    {
+      "id": "F02",
+      "kind": "task",
+      "epic": "F",
+      "priority": "P0",
+      "title": "Vier-Workspace-CI: Build, Typen, Tests und Sicherheitsminimum",
+      "goal": "Vertrauenswürdige Build-Baseline statt bestehender npm-Skripte ohne Prüfung.",
+      "scope": [
+        "GitHub Actions mit Node >=22 und npm ci aus Lockfile; Builds für backend, frontend, admin, ops",
+        "Typecheck/Lint und Vitest/Tests im echten Run-Modus; fehlende Tests als Befund, nicht als grün",
+        "Dokumentations-/Orchestrierungscheck und optionale Compose-Config-Prüfung integrieren",
+        "Branch-Schutz-/Required-Checks-Entscheidung inklusive tatsächlicher Rechte/Status dokumentieren"
+      ],
+      "acceptance": [
+        "Jeder PR erhält reproduzierbaren Status mit verlinkten Logs",
+        "Ein absichtlich kaputter Build/Test stoppt die CI nachweislich",
+        "Flakes/fehlende Testfälle und Ausnahmen werden sichtbar inventarisiert",
+        "CI verwendet nur Test-Credentials, keinen Produktivzugang"
+      ],
+      "dependsOn": [],
+      "failureCases": [
+        "Watch-Modus hängt nicht; CI kaschiert Typefehler nicht mit continue-on-error"
+      ],
+      "focus": "Backend/Frontend + QA"
+    },
+    {
+      "id": "F03",
+      "kind": "task",
+      "epic": "F",
+      "priority": "P0",
+      "title": "API-/Datenvertrag und Fehlersemantik für drei Clients",
+      "goal": "API-Drift zwischen Routen, OpenAPI und React-Clients vor UI-Migration verhindern.",
+      "scope": [
+        "Routeninventar aus backend/src/index.ts und backend/src/routes/* zu backend/src/openapi.ts abgleichen",
+        "Konsistenter Fehlervertrag: Code, sichere Nachricht, Correlation-ID, Feldfehler, Retryability, 401/403/409/429",
+        "Verträge zu Tenant/Org/Capability/Version und Cursor-Pagination definieren",
+        "Vertrags- und Golden-Tests für Auth, Tickets, Workflows, Mail/Queue, OPS und Bürgerzugang"
+      ],
+      "acceptance": [
+        "OpenAPI beschreibt alle priorisierten Endpunkte korrekt und Beispiele lassen sich maschinell validieren",
+        "Mindestens ein Negativfall pro Rolle/Tenant pro kritischer Route",
+        "Frontend-Fehlerzustände erhalten Eingaben/Kontext und zeigen Retry-/Konfliktpfad",
+        "Breaking Changes versioniert und mit Übergangsplan dokumentiert"
+      ],
+      "dependsOn": [
+        "F02"
+      ],
+      "failureCases": [
+        "403 darf nicht als 404 aus Unachtsamkeit zu Datenleck führen; API-Clients brechen nicht bei Teilfehlern"
+      ],
+      "focus": "Architektur/Backend"
+    },
+    {
+      "id": "F04",
+      "kind": "task",
+      "epic": "F",
+      "priority": "P0",
+      "title": "Reproduzierbare Staging-Testdaten, Szenarien und E2E-Fixtures",
+      "goal": "Keine echten Bürgerdaten für Last-/Browser-/Offline-Proben benötigen.",
+      "scope": [
+        "Synthetische Mandanten/Org-Hierarchie, Rollen, Bürger, Tickets, Anhänge, Workflows und OPS-Accounts als deterministische Fixtures",
+        "Eindeutige Seed-/Reset-Kommandos ausschließlich für Testumgebungen, Guard gegen Produktions-DB",
+        "Zuständigkeit, Mehrsprachigkeit, Offline-Queue, Mail-Sandbox, AI-Provider-Fakes sowie fehlerhafte Daten abbilden",
+        "Datenisolierung und Cleanup in CI dokumentieren"
+      ],
+      "acceptance": [
+        "Zwei Mandanten mit getrennten Org-/Rechtegrenzen nachweislich vorhanden",
+        "Kern-E2E kann wiederholt ohne manuelle Testkonten laufen",
+        "Reset verweigert produktive Konfiguration",
+        "Keine PII/echten SMTP-/AI-Tokens in Artefakten"
+      ],
+      "dependsOn": [
+        "F02"
+      ],
+      "failureCases": [
+        "Seed darf nie produktive Daten überschreiben und darf keine echten ausgehenden Benachrichtigungen auslösen"
+      ],
+      "focus": "Backend/QA"
+    },
+    {
+      "id": "F05",
+      "kind": "task",
+      "epic": "F",
+      "priority": "P0",
+      "title": "UX-/Laufzeit-Baseline mit definierten Messmethoden",
+      "goal": "Geschwindigkeit und Bedienbarkeit messbar machen, bevor Rewrites priorisiert werden.",
+      "scope": [
+        "LCP, INP, CLS, JS-Bundle und Route-Wechsel je App auf Mobile/Slow-4G/Desktop messen",
+        "API p50/p95/p99, SQL-Abfrageanzahl, Queue-Wartezeit, 5xx-/Timeout-Raten in Staging erfassen",
+        "Task Completion, Klickwege und Fehlermeldungsverständnis mit synthetischen/zulässigen Nutzertests bewerten",
+        "Datenschutzfreundliche Telemetrie-/Opt-in-/Retention-Entscheidung in ADR festhalten"
+      ],
+      "acceptance": [
+        "Reproduzierbares Last- und Geräteszenario mit Rohdaten, Toolversion, Commit und Varianz veröffentlicht",
+        "Konkrete Engpässe nach Impact/Frequency/Risk gerankt",
+        "Zielbudget mit verantwortlicher Person als vorläufig vs verbindlich markiert",
+        "Kein sensibles Formularfeld wird für Analytics gesammelt"
+      ],
+      "dependsOn": [
+        "F04"
+      ],
+      "failureCases": [
+        "Messung darf nicht personenbezogene Profile oder unzulässige Session-Replays erzeugen"
+      ],
+      "focus": "Architektur/UX/Ops"
+    },
+    {
+      "id": "F06",
+      "kind": "task",
+      "epic": "F",
+      "priority": "P0",
+      "title": "Architektur-ADR: modularer Monolith, Ownership und Migrationsstrategie",
+      "goal": "Komplexität reduzieren, bevor gemeinsam an großen Hotspots gearbeitet wird.",
+      "scope": [
+        "Bounded Contexts und Schnittstellen von Tickets, Submissions, Workflows, KI, Mail, Org, Messenger, OPS definieren",
+        "Abhängigkeiten, Datenbesitz, Transaktionsgrenzen, Domain Events und Anti-Corruption-Layer kartieren",
+        "Taktik für Extraktion von backend/src/routes/workflows.ts, routes/admin.ts und WorkflowSettings.tsx definieren",
+        "Regel: modulare Fachgrenzen ohne vorschnelle Microservices und ohne DB-Big-Bang"
+      ],
+      "acceptance": [
+        "ADR vergleicht mindestens drei Optionen inkl. Kosten, Risiken, Rollback",
+        "Architektur-Checks/Importgrenzen als testbare Regeln konzipiert",
+        "Ein erstes vertikales Modulslice samt API/Frontend/Tests beschrieben",
+        "Verantwortlichkeit jedes Moduls und Security-Kreuzschnitte benannt"
+      ],
+      "dependsOn": [
+        "F03"
+      ],
+      "failureCases": [
+        "Bestehende API, Daten und laufende Jobs müssen während Migration interoperabel bleiben"
+      ],
+      "focus": "Architektur"
+    },
+    {
+      "id": "M01",
+      "kind": "task",
+      "epic": "M",
+      "priority": "P0",
+      "title": "Modulkatalog und fachliche Bounded Contexts festlegen",
+      "goal": "Plattformfunktionen werden konfigurierbare, verständliche Module mit eindeutigen Grenzen.",
+      "scope": [
+        "Kern stets aktiv: Auth, Tenant, RBAC, Audit, Tickets/Basis-Intake, Update/Backups; optionale Bereiche explizit klassifizieren",
+        "Modul IDs, Display Name, Zweck, Datenhoheit, API-Routen, UI-Einstieg, Jobs, Dependencies, Capabilities, Migration/Entitlement spezifizieren",
+        "Beispielkatalog: GIS, Analytics, KI, Mailbox, Messenger, Benachrichtigung, interne Aufgaben, Importe, Redmine, Publishing",
+        "Abschalten: Verhalten bei bestehenden Datensätzen und aktiven Workflows je Modul dokumentieren"
+      ],
+      "acceptance": [
+        "Modulmanifest-Schema versioniert, mit Pflichtfeldern und Validierungsfehlern",
+        "Kein Modul kann Sicherheits-/Datenintegritätskern ausschalten",
+        "Abhängigkeitsgraph ist azyklisch und erklärt Blocker",
+        "Beispielmodule repräsentieren reale bestehende Codepfade und klaren Datenbesitz"
+      ],
+      "dependsOn": [
+        "F06"
+      ],
+      "failureCases": [
+        "Keine tatsächliche DB-Löschung als Nebenwirkung des Deaktivierens"
+      ],
+      "focus": "Architektur/Produkt"
+    },
+    {
+      "id": "M02",
+      "kind": "task",
+      "epic": "M",
+      "priority": "P0",
+      "title": "Gemeinsame Typen, API-Clients und Modulkontrakte für alle React-Apps",
+      "goal": "Dreifach modellierte DTOs, Rollen und Fehlerzustände werden beherrschbar.",
+      "scope": [
+        "Gemeinsames contracts-Paket im Monorepo mit TypeScript-Types und validierten DTO-/Error-Schemas",
+        "Bürger/Admin/OPS verwenden eine zentrale HTTP/Session-/Scope-Konvention ohne heimliche Tokenweitergabe",
+        "Serverseitig definierte Modul-Capabilities als typisierte Clientmodelle generieren",
+        "Aufbau-/Test-/Release-Budgets je Workspace und zirkuläre Imports erkennen"
+      ],
+      "acceptance": [
+        "Contract-Tests und Workspace-Builds grün",
+        "Kein Frontend dupliziert sicherheitskritische Rollen-/Statuskonstanten ohne zentralen Vertrag",
+        "API-Fehler und 401/403/409/429 konsistent abgebildet",
+        "Zyklen/unerlaubte Cross-Domain-Imports schlagen CI fehl"
+      ],
+      "dependsOn": [
+        "F03",
+        "F06"
+      ],
+      "failureCases": [
+        "Shared-Package darf kein ungeprüfter globaler Store oder Zustand über Tenantgrenzen werden"
+      ],
+      "focus": "Backend/Frontend"
+    },
+    {
+      "id": "M03",
+      "kind": "task",
+      "epic": "M",
+      "priority": "P0",
+      "title": "Backend-Modulregistry mit Abhängigkeiten und sicheren Lifecycle-Hooks",
+      "goal": "Module sollen anhand eines deklarativen Vertrags initialisiert und kontrolliert betrieben werden.",
+      "scope": [
+        "Registry/Discovery mit statischem Manifest, Version und validierten Dependencies",
+        "Setup, Initialize, Health, Quiesce/Disable und Readonly-Zustände mit klarer Reihenfolge definieren",
+        "Kapselung von API/Jobs/Events pro Modul; zentrale Auth/RBAC/Logging-Aufsicht beibehalten",
+        "Test- und Migrationsmodus unterstützt alle Modulkonfigurationen ohne dynamisch untrusted Code zu laden"
+      ],
+      "acceptance": [
+        "Registry verweigert Zyklen, unbekannte Module und inkonsistente Versionen",
+        "Modul A startet nicht bei deaktivierter Pflichtabhängigkeit B; Fehler diagnostizierbar",
+        "Health/Readiness zeigt degradierten optionalen Dienst ohne vollständigen Plattformabbruch",
+        "Aktivierung/Deaktivierung hinterlässt nachvollziehbaren Audit-Eintrag"
+      ],
+      "dependsOn": [
+        "M01",
+        "M02"
+      ],
+      "failureCases": [
+        "Kein Laden von benutzerhochgeladenem Code und keine Umgehung des Express-Middleware-Sicherheitsmodells"
+      ],
+      "focus": "Backend/Architektur"
+    },
+    {
+      "id": "M04",
+      "kind": "task",
+      "epic": "M",
+      "priority": "P0",
+      "title": "Tenant-aware Feature Controls: Policy, Konflikte und sichere Defaults",
+      "goal": "Tenant-Admins dürfen erlaubte Module steuern, ohne globale Policies/Rechte auszuhebeln.",
+      "scope": [
+        "Effektiver Zustand = Plattformverfügbarkeit ∧ Tenant-Konfiguration ∧ Deployment-Capability ∧ RBAC/Org-Scope ∧ Modulabhängigkeiten",
+        "API-Guards für direkte Endpunkte, Hintergrundjobs, Exporte, SSE/Push und externe Aktionen; UI allein genügt nicht",
+        "Persistente revisionsfähige Konfiguration, Optimistic Concurrency, caching mit Invalidierung, Migration/Defaults",
+        "Definiertes Off-Verhalten: laufende Jobs drain/pause, bestehende Daten read-only wenn nötig, Deep-Link erklärt Inaktivität"
+      ],
+      "acceptance": [
+        "Zwei Tenants konfigurieren getrennt; Cross-Tenant-Update führt zu 403/404 ohne Metadatenleck",
+        "Direkt-API/Job/Push/SSE senden bei aus nie verbotene Modulevents; Core-Funktionen bleiben an",
+        "Umschalten während Workflow/Queue verarbeitet ohne Datenverlust oder Doppelaktion",
+        "Konfigurationsänderungen auditierbar, rollbackfähig und per 409 geschützt"
+      ],
+      "dependsOn": [
+        "M03"
+      ],
+      "failureCases": [
+        "Kritischer negativer Pfad: Module off trotz aktiver Jobs, offene Queue, spätes Event, Session mit stale Policy"
+      ],
+      "focus": "Backend/Security"
+    },
+    {
+      "id": "M05",
+      "kind": "task",
+      "epic": "M",
+      "priority": "P1",
+      "title": "Admin-Verwaltungszentrale „Module & Funktionen“ für Plattform und Tenant",
+      "goal": "Anwendungsverwalter verstehen und steuern erlaubte Funktionen mit Konsequenzen.",
+      "scope": [
+        "Mantine-basiertes Modulverzeichnis mit Beschreibung, Abhängigkeiten, Status, Kosten/Integrationen, Sicherheitswirkung",
+        "Plattform-Admin/mandantenspezifischer Admin sehen nur erlaubte Aktionen; Erklärung effektiver/gesperrter Zustände",
+        "Vor Umschalten Vorschau: betroffene Nutzer, Queue/Workflows, Rückfall, Wiederaktivierung",
+        "Aktivierung mit Confirm für risikoreiche Module, Audit-Historie und Konfliktbehandlung"
+      ],
+      "acceptance": [
+        "Tablet/360px, Tastatur und Screenreader; sichere Fehlerinformation",
+        "Tenant-Admin kann keine globale Sperre überschreiben",
+        "Deaktivieren von Modul mit aktiven Aufgaben zeigt zulässige Optionen drain/verschieben/stopp statt Datenverlust",
+        "Vorheriger Status und Änderungen nach Refresh konsistent"
+      ],
+      "dependsOn": [
+        "M04",
+        "D02"
+      ],
+      "failureCases": [
+        "UI darf keine gefährliche globale Aktion unter gewöhnlichem Toggle verstecken"
+      ],
+      "focus": "Frontend/UX"
+    },
+    {
+      "id": "M06",
+      "kind": "task",
+      "epic": "M",
+      "priority": "P1",
+      "title": "Client-Modulregistry für Menüs, Routes, Quick Actions und Suche",
+      "goal": "Aktive und zugängliche Module erscheinen konsistent in Bürger-, Admin- und OPS-Navigation.",
+      "scope": [
+        "Einheitliche Registry für erlaubte Routen, Menüs, Quick Actions, Entity-/Suchprovider und Deep Links",
+        "Lazy Loading optionaler Features und versionssichere Fallbackroute",
+        "Zustandswechsel via SSE/Refetch, klare Zugriffs-/Modul-off-Nachricht",
+        "Fehler-/Offlinezustände unterscheiden temporär nicht geladen vs dauerhaft deaktiviert"
+      ],
+      "acceptance": [
+        "Direktlink in deaktiviertes Modul zeigt sinnvolle Wiederaufnahme statt Blank Page",
+        "Navigation/Suche/Quick Actions respektieren effektiven Zustand nach Reauth/Scopewechsel",
+        "Keine unautorisierten Daten werden im Bundle-Bootstrap/Client-Cache freigegeben",
+        "Nach Umschalten werden Berechtigungen und UI ohne Logout korrekt aktualisiert"
+      ],
+      "dependsOn": [
+        "M04",
+        "M02",
+        "D02"
+      ],
+      "failureCases": [
+        "Clientflags sind nie Auth-Quelle; Bootstrap-Daten minimieren"
+      ],
+      "focus": "Frontend/Backend"
+    },
+    {
+      "id": "M07",
+      "kind": "task",
+      "epic": "M",
+      "priority": "P1",
+      "title": "Workflow-/Domänenevents als Module-Schnittstelle mit Outbox-Grundlage",
+      "goal": "Direkte Cross-Module-Aufrufe reduzieren und Ereignisse zuverlässig machen.",
+      "scope": [
+        "Domain Events für Ticket erstellt/zugewiesen, Workflow verändert, Bürgerantwort, OPS abgeschlossen definieren",
+        "Versionsschema und Tenant/Correlation/Actor, sichere Redaction, idempotente Consumer",
+        "Transactional-Outbox-Option für Mail/AI/Notifications evaluieren und erste vertikale Integrationsstrecke realisieren",
+        "Fehlende optionale Module verändern Kernvorgang nicht unkontrolliert"
+      ],
+      "acceptance": [
+        "Ablauf liefert bei optionalem Modul off den erwarteten Status ohne verlorene Kernaktion",
+        "Dubletten nach Restart erzeugen keine doppelte Mail/Workflowfortsetzung",
+        "Event-Contract und Test mit mindestens zwei Modulen dokumentiert",
+        "Backpressure, Replay/Dead-Letter und Auditierbarkeit nachweisbar"
+      ],
+      "dependsOn": [
+        "M01",
+        "M04",
+        "R04"
+      ],
+      "failureCases": [
+        "PII nicht wahllos in Eventbus; Berechtigungen auch im Consumer"
+      ],
+      "focus": "Backend/Architektur"
+    },
+    {
+      "id": "M08",
+      "kind": "task",
+      "epic": "M",
+      "priority": "P1",
+      "title": "Monolithische Hotspots kontrolliert in Fachmodule extrahieren",
+      "goal": "Große Dateien sollen wartbar werden, ohne Workflowkompatibilität zu verlieren.",
+      "scope": [
+        "Extraktion von backend/src/routes/workflows.ts, backend/src/routes/admin.ts und backend/src/services/settings.ts nach Domainmodulen in vertikalen PRs",
+        "WorkflowSettings.tsx und TicketDetail.tsx in verständliche Screens/Hooks/Features aufteilen",
+        "Kontrollierte Adapter für Legacy-API und persistierte Workflowformate; keine simultane komplette Neuschreibung",
+        "Dependency-Linter und klare Code Ownership im Repository"
+      ],
+      "acceptance": [
+        "Snapshot-/Contract-/DB-/Browser-Tests vor und nach jedem Extraktionsslice identisch",
+        "Keine Änderung von DB-/Event-/API-Semantik ohne separaten ADR",
+        "Einzelne PRs auf wenige zusammengehörige Kontrakte begrenzt",
+        "Große Dateien werden messbar reduziert und neue Module halten Grenzregeln ein"
+      ],
+      "dependsOn": [
+        "F03",
+        "M01",
+        "M02"
+      ],
+      "failureCases": [
+        "Regression in vorhandenen Workflowdefinitionen; Migrationsfähigkeit alter Templates erhalten"
+      ],
+      "focus": "Architektur/Backend/Frontend"
+    },
+    {
+      "id": "D01",
+      "kind": "task",
+      "epic": "D",
+      "priority": "P0",
+      "title": "Mantine-Migrations-ADR mit React-/Ökosystem-Kompatibilitätsmatrix",
+      "goal": "UI-Library-Wechsel technisch sauber und reversibel vorbereiten.",
+      "scope": [
+        "Ist-Inventar: React 18.3, MUI/Admin/OPS, eigene CSS/Tailwind-Bestandteile und SmartTable/DataGrid",
+        "Mantine 9 (React 19.2+) gegen Mantine 8 als kompatible Übergangsbasis bewerten; Datepickers, Notifications, Form, Modals, Table, RichText, Icons, Maps, PDF",
+        "React/ReactDOM, Vite, React-Router, Tests, MUI-Coexistence, CSP/SSR/PWA und NPM-Lockfiles in Spike prüfen",
+        "Empfohlenen Version-Pinning-/Upgrade-/Downgradeplan und Pilotroute festlegen"
+      ],
+      "acceptance": [
+        "Demo-App kompiliert, rendert mit Fokus/Portal/Overlays und besteht Browser-Smoke",
+        "ADR dokumentiert Entscheidung und entfallende MUI-Abhängigkeiten ohne Big Bang",
+        "Kein unkontrolliertes React-Major-Update in allen drei Frontends zugleich",
+        "Degradations- und Rollbackpfad im Releaseplan vorhanden"
+      ],
+      "dependsOn": [
+        "F02",
+        "F05"
+      ],
+      "failureCases": [
+        "React peerDependency-Konflikt, globale CSS-Reihenfolge, Portal/Overlay-Fokus, Datagrid-Funktionsverlust"
+      ],
+      "focus": "Frontend/Architektur"
+    },
+    {
+      "id": "D02",
+      "kind": "task",
+      "epic": "D",
+      "priority": "P1",
+      "title": "Mantine-Foundation: Theme-Tokens, Komponentenrichtlinien und Barrierefreiheit",
+      "goal": "Ein konsistentes kommunales Designsystem statt tausender lokaler CSS-Ausnahmen.",
+      "scope": [
+        "Gemeinsame Design-Tokens für Typografie, Kontrast, Spacing, Radii, Breakpoints, Farben, Oberflächen, Status, Fokus",
+        "MantineProvider, Theme-Layer, Farb-/Brandingstrategie je Tenant, Dark-/High-Contrast- und Reduced-Motion-Verhalten",
+        "Semantische Form-, Button-, Alert-, Notification-, Skeleton-, Modal- und Shell-Richtlinien",
+        "Gemeinsamer Storybook-/Showroom-artiger Komponenten-Katalog mit Tests statt Blind-Styles"
+      ],
+      "acceptance": [
+        "Fokus/Keyboard/Screenreader-Namen und 360px in Referenzkomponenten überprüft",
+        "Farbstatus nie alleiniger Informationsträger; WCAG-2.2-AA-Ziel und dokumentierte Ausnahmen",
+        "Kein stilistischer Bruch zwischen Admin/OPS/Bürger und Tenant-Branding",
+        "Vorher/Nachher-Screenshots mit synthetischen Daten vorhanden"
+      ],
+      "dependsOn": [
+        "D01",
+        "F01"
+      ],
+      "failureCases": [
+        "MantineProvider und Legacy-CSS dürfen sich in Pilotphase nicht gegenseitig brechen"
+      ],
+      "focus": "Frontend/UX"
+    },
+    {
+      "id": "D03",
+      "kind": "task",
+      "epic": "D",
+      "priority": "P1",
+      "title": "Neue Mantine AppShell und kontextbezogene Navigation für Admin",
+      "goal": "Sachbearbeiter sehen Aufgaben und Kontext statt übergroße Menügruppen.",
+      "scope": [
+        "Rollen-/Tenant-/Org-kontextsichere Navigation mit AppShell, Desktop-Sidebar, mobilem Drawer, Breadcrumbs und Schnellaktionen",
+        "Navigation nach Benutzerjobs statt 40 Einstellungsunterpunkten; Details in Admin-Zentrale erhalten",
+        "Optionales Modul ausblenden, aber bei Deep-Link verständliche Barriere anzeigen",
+        "Keyboard-Navigation, Command Palette Einstieg, persistente legitime Filter/Scopes"
+      ],
+      "acceptance": [
+        "Auf 360px keine überlappenden Aktionen/scrollendes Hauptmenü",
+        "Aktive Tenant-/Org-Auswahl bleibt bei Routewechsel eindeutig, Freigaben erkennbar",
+        "Direkte Links zu erlaubten Seiten funktionieren nach Browser-Reload",
+        "Tests für Module on/off, fehlende Rechte und stale Tenant-Kontext"
+      ],
+      "dependsOn": [
+        "D02",
+        "M06"
+      ],
+      "failureCases": [
+        "Keine Ersetzung bestehender fachlicher URL-Routen ohne Redirect und Migration"
+      ],
+      "focus": "Frontend/UX"
+    },
+    {
+      "id": "D04",
+      "kind": "task",
+      "epic": "D",
+      "priority": "P1",
+      "title": "SmartTable → Mantine-konforme performante Datenraster und Listen",
+      "goal": "Tabellen bleiben leistungsfähig, zugänglich und verständlich nach MUI-Ausbau.",
+      "scope": [
+        "Funktionsinventar SmartTable: Filter, Sortierung, Saved Views, Auswahl, Bulk-Actions, Druck, Sticky Header, Column Manager, SSE-Refresh",
+        "Geeignete Table/Virtualisierungslösung auf Mantine-Basis mit ADR statt voreiligem 1:1-Ersatz",
+        "Große Datenmengen serverseitig paginieren/filtern, Tastatur und Responsive-Card-Modus definieren",
+        "Migration über Adapter: zuerst eine repräsentative Liste, danach alle übrigen"
+      ],
+      "acceptance": [
+        "Feature-Parität bestehender Tabellenfunktionen durch verifizierte Checkliste",
+        "10k+ synthetische Zeilen ohne DOM-Explosion im vereinbarten Lastprofil",
+        "360px-Mobilansicht fachlich brauchbar, nicht horizontale Tabelle als einzige Lösung",
+        "Kein Auswahlverlust bei Live-Update, Filterwechsel, Refresh oder Berechtigungswechsel"
+      ],
+      "dependsOn": [
+        "D02",
+        "F03",
+        "R01"
+      ],
+      "failureCases": [
+        "Bulk-Action führt nach Filteränderung nie auf falscher Datensatzmenge aus"
+      ],
+      "focus": "Frontend/Backend/UX"
+    },
+    {
+      "id": "D05",
+      "kind": "task",
+      "epic": "D",
+      "priority": "P1",
+      "title": "Formular-/Dialog-/Fehlerzustandsbibliothek auf Mantine",
+      "goal": "Komplexe Formulare werden konsistent und sicher bedienbar.",
+      "scope": [
+        "Gemeinsame Validierungs-, dirty-form-, autosave-/explicit-save- und Inline-Fehler-Muster",
+        "Modals/Drawers/Toasts mit Focus Trap, Return Focus, Escape/Cancel, Confirm für destruktive Aktionen",
+        "Datums-, Upload-, Combobox-/MultiSelect- und Tenant-/Org-Picker verlässlich gestalten",
+        "Form-Felder nach Nutzerjob gruppieren; Lesemodus und Bearbeitung trennen"
+      ],
+      "acceptance": [
+        "Ungültige Eingabe behält Kontext und Scroll-/Fokusposition",
+        "409-Konflikt zeigt Diff/Neu laden statt stilles Überschreiben",
+        "Screenreader-Fehlermeldungen nachvollziehbar und 360px bedienbar",
+        "Referenztests für Validierung, Submit-Doppelklick, Error, Timeout, Cancel"
+      ],
+      "dependsOn": [
+        "D02",
+        "F03"
+      ],
+      "failureCases": [
+        "Keine optimistischen Datenupdates ohne Version/Idempotenz"
+      ],
+      "focus": "Frontend/UX"
+    },
+    {
+      "id": "D06",
+      "kind": "task",
+      "epic": "D",
+      "priority": "P1",
+      "title": "Admin-Mantine-Migration: Tickets, Dashboard, Workflow, Settings als Slices",
+      "goal": "MUI/Legacy-Styles werden durch konsistente produktive Screens ersetzt.",
+      "scope": [
+        "Priorität: Dashboard/Ticketliste → Ticketdetail → Workflow-Monitor/Editor → Einstellungen/Organisation/AI → Mailbox/Logs",
+        "Für jede Route Backlog-/Regressionstest, Screenshot und Mobile-/Keyboard-Abnahme anlegen",
+        "Migration von WorkflowSettings.tsx und GeneralSettings.tsx in Teilkomponenten plus gemeinsame Form-/Table-Primitives",
+        "Alte MUI/CSS-Abhängigkeiten erst entfernen, wenn letzte Nutzung belegt entfällt"
+      ],
+      "acceptance": [
+        "Kein Kernflow verliert Rechte-/Tenant-Kontext oder Funktionalität",
+        "Vorher/Nachher-Smokes inkl. Browser Reload, Undo, Konflikt und Error",
+        "Importierte Komponenten folgen neuen Tokens ohne globales CSS-Patchwork",
+        "Präzise Entfernung unbenutzter MUI-Pakete reduziert Bundle nach Messung"
+      ],
+      "dependsOn": [
+        "D03",
+        "D04",
+        "D05",
+        "M08"
+      ],
+      "failureCases": [
+        "Migration niemals als massiver PR; gemischte Zustandsspeicherung vermeiden"
+      ],
+      "focus": "Frontend/UX"
+    },
+    {
+      "id": "D07",
+      "kind": "task",
+      "epic": "D",
+      "priority": "P1",
+      "title": "OPS Mantine-AppShell und touch-zentrierte Komponenten",
+      "goal": "Feldmitarbeitende können mit wenigen großen Aktionen und schlechter Verbindung arbeiten.",
+      "scope": [
+        "OPS-Login, Dashboard, Aufgaben/Tickets, Scanner, Detail, Messenger, Profil in kompatiblen Mantine-Slices",
+        "Touch Targets, reduzierte Navigation, Offline-Sync-Leiste, kritische Status-/Konflikt-Aktionen",
+        "MUI-Icons/Komponenten nur nach Parität von Push, QR, Webcam und mobilen Dialogen entfernen",
+        "Mobile-Geräteprofil iOS Safari/Android Chrome samt PWA prüfen"
+      ],
+      "acceptance": [
+        "Auf 320–360px keine horizontale Pflichtnavigation, Buttons bedienbar",
+        "Offline/Sync/Fehler/Erfolg immer deutlich erkennbar",
+        "Scanner/Deep Link/Push bleiben nutzbar; keine Regression in Audio-Interaktionen",
+        "Typ-/Browser-Smoke und Gerätecheck dokumentiert"
+      ],
+      "dependsOn": [
+        "D02",
+        "D05",
+        "O02"
+      ],
+      "failureCases": [
+        "WebRTC/Media-Berechtigungen müssen durch User Gesture weiterhin funktionieren"
+      ],
+      "focus": "Frontend/OPS"
+    },
+    {
+      "id": "D08",
+      "kind": "task",
+      "epic": "D",
+      "priority": "P1",
+      "title": "Bürgerfrontend-Mantine: freundlich, leicht, mehrsprachig und datensparsam",
+      "goal": "Meldung ohne überfrachtete Verwaltungsoptik; Gleichklang über alle UI-Flächen.",
+      "scope": [
+        "Mantine-kompatibler öffentlicher Look mit Formular-/Stepper-/Upload-/Alert-Komponenten",
+        "Mehrsprachige Labels/Fehlertexte, Fokusordnung, günstige Datenverbindung, optionaler Tenant-Branding-Rahmen",
+        "Bürgerlogin, Meldung, Ergebnis, Verifikation, Status und Rückfragen schrittweise umstellen",
+        "Keine erzwungene Anmeldung oder zusätzliche PII allein durch neue UI-Komponenten"
+      ],
+      "acceptance": [
+        "Browser-Tests für mindestens zwei Sprachen, 320/360px und Tastatur",
+        "Ausgefüllte Meldung bleibt bei Netzwerkfehlern bis bewusstem Verwerfen erhalten",
+        "Keine fremden Tenant-Daten durch Branding-/Route-Kombination",
+        "Keine erhebliche Bundle-Regression gegenüber gemessener Baseline"
+      ],
+      "dependsOn": [
+        "D02",
+        "D05",
+        "B01"
+      ],
+      "failureCases": [
+        "Fokus nach Sprache/Validierungsfehler, öffentliche Form wird nicht Desktop-lastig"
+      ],
+      "focus": "Frontend/UX"
+    },
+    {
+      "id": "D09",
+      "kind": "task",
+      "epic": "D",
+      "priority": "P1",
+      "title": "Visuelle Regression, UX-Review und A11y-Gates für Mantine-Rollout",
+      "goal": "Gestalterische Qualität wird prüfbar statt Geschmackssache.",
+      "scope": [
+        "Referenzscreens 320/360/768/1440px und Light/Dark/HighContrast bei relevanten Rollen",
+        "Playwright Screenshot-/DOM-Smokes, axe-ähnliche A11y-Automation und manuelle Tastatur/Screenreader-Checkliste",
+        "UX-Spezifikation für Informationshierarchie, Ausrichtung, Leerräume, Ladezustände, responsives Verhalten",
+        "Regression-Baselines im PR erst nach fachlichem Review aktualisieren"
+      ],
+      "acceptance": [
+        "Keine unreviewten Bildbaseline-Updates zur Kaschierung eines Defekts",
+        "Kritische Formulare mit Tastatur vollständig bedienbar, sichtbarer Fokus",
+        "Empty/Loading/Error/Forbidden/Offline/Succeeded in jedem Referenzflow abgedeckt",
+        "Kontrast, Beschriftung, Touch Targets und Motion mit Prüfevidenz"
+      ],
+      "dependsOn": [
+        "D02",
+        "F04"
+      ],
+      "failureCases": [
+        "UI darf nicht nur hübscher werden; Aufgabenabschluss und Fehlerbehandlung müssen verbessert sein"
+      ],
+      "focus": "Frontend/QA"
+    },
+    {
+      "id": "B01",
+      "kind": "task",
+      "epic": "B",
+      "priority": "P1",
+      "title": "Bürgermeldung in drei verständlichen Schritten: Anliegen, Ort/Medien, Bestätigen",
+      "goal": "Bürger verstehen den Vorgang ohne Fachsprache und ohne unnötige Pflichtfelder.",
+      "scope": [
+        "Disclosure-/Consent-Analyse und Minimal-Pflichtkern je Meldeart, optional Anonymitäts-/Kontaktentscheidung rechtlich abstimmen",
+        "Verantwortliche Geometrie-/Standortabfrage, Bild-Upload und Fortschrittsanzeige",
+        "Klarer Entwurf, Zusammenfassung, Hinweis zu Status/Rückfrage und Abschlussbeleg",
+        "Netzwerkunterbrechung und Duplicate-Submit ohne doppelte Meldung behandeln"
+      ],
+      "acceptance": [
+        "Ein kompletter 360px-Handyweg mit Tastatur und Screenreader funktioniert",
+        "Keine vorgetäuschten Frist- oder Bearbeitungsgarantien",
+        "Doppelklick/Timeout erzeugen nicht mehrfachen Fall und zeigt sichere Wiederaufnahme",
+        "Mindestens zwei typische Meldungsarten und alle Fehlzustände gegen synthetische Daten geprüft"
+      ],
+      "dependsOn": [
+        "F01",
+        "F03"
+      ],
+      "failureCases": [
+        "Bürger-PII und Anhänge nicht unbemerkt im lokalen Cache speichern"
+      ],
+      "focus": "Frontend/Bürger"
+    },
+    {
+      "id": "B02",
+      "kind": "task",
+      "epic": "B",
+      "priority": "P1",
+      "title": "Standort- und Medienerfassung fehlertolerant, datensparsam und mobil",
+      "goal": "Fotos und Karte helfen bei Zuständigkeit, ohne Bürger mit Technikproblemen aufzuhalten.",
+      "scope": [
+        "GPS nur mit expliziter Freigabe, Adresse oder Kartenauswahl als gleichwertiger Weg",
+        "Uploadgrößen/-typen client- und serverseitig prüfen, Fortschritt, Retry, sichere Vorschau",
+        "EXIF/Geodaten/Dateinamen-Hygiene, Mehrfachbilder und opt-out-/Fallback-Weg",
+        "Keine Blockierung durch Nominatim-/Wetter-/Geocoder-Ausfall"
+      ],
+      "acceptance": [
+        "Karten-/Upload-Semantik bei Slow-4G, denied location, Flugmodus und defekten Formaten verständlich",
+        "Exporte/Logs leaken keine GPS-EXIF-Daten unbeabsichtigt",
+        "Mehrere Bilder werden exakt der einen Meldung zugeordnet, bei Teilfehler klarer Zustand",
+        "Nutzer kann Ort ohne Geolokalisierung festlegen"
+      ],
+      "dependsOn": [
+        "B01",
+        "S05"
+      ],
+      "failureCases": [
+        "Kein echter Medienfile mit PII in öffentlichen Testartefakten"
+      ],
+      "focus": "Frontend/Backend"
+    },
+    {
+      "id": "B03",
+      "kind": "task",
+      "epic": "B",
+      "priority": "P1",
+      "title": "Bürgerstatus und Rückfragen als transparente Timeline",
+      "goal": "Bürger sollen wissen, was geschieht, was offen ist und was sie tun können.",
+      "scope": [
+        "Ereignis-/Statussprache für eingegangen, geprüft, zugewiesen, Rückfrage, in Arbeit, erledigt",
+        "Datenschutzkonforme Statusansicht für tokenisierten/angemeldeten Bürger und explizite Benachrichtigungspräferenzen",
+        "Rückfragen beantworten, sichere Dokumentenübergabe und Verlauf ohne verwaltungsinterne Notizen",
+        "Deep Links nach Login/Token, abgelaufener/ungültiger Zugang und Löschung verständlich behandeln"
+      ],
+      "acceptance": [
+        "Jeder fachliche Status hat menschenlesbare Konsequenz und nächste Handlung",
+        "Bürger sieht nur zulässige Ereignisse und Anhänge",
+        "Veraltete Links zeigen sichere Wiederaufnahme statt Detailleck",
+        "Negative Tests für fremde Meldung, Statuskonflikt, Ausfall und doppelte Benachrichtigung"
+      ],
+      "dependsOn": [
+        "F03",
+        "A02"
+      ],
+      "failureCases": [
+        "Internes Journal/Audit darf nie versehentlich Bürgern sichtbar werden"
+      ],
+      "focus": "Backend/Frontend"
+    },
+    {
+      "id": "B04",
+      "kind": "task",
+      "epic": "B",
+      "priority": "P1",
+      "title": "Mehrsprachigkeit als konsistenter Produktvertrag inkl. Barrierefreiheit",
+      "goal": "Sprache ist Teil der Funktion und kein nachträglicher String-Austausch.",
+      "scope": [
+        "Gemeinsame übersetzbare Status-/Fehler-/Validierungsnachrichten, lesbare Bürgerbegriffe",
+        "Sprachwechsel ohne Verlust laufender Formularangaben und ohne kaputte Datums-/Adressformate",
+        "KI-Übersetzung nur als kontrollierter Vorschlag mit Herkunft/Qualität; fachliche Pflichttexte freigeben",
+        "Kontraste, Screenreader-Labels und lange Übersetzungen in responsive Mantine-Layouts testen"
+      ],
+      "acceptance": [
+        "Bürgerlauf in mindestens DE/EN vollständig mit definierten Fehlertexten abgenommen",
+        "Fallback-Sprache nachvollziehbar statt leere UI",
+        "Wichtige Einwilligungen erhalten versionsfähige Originalsprache",
+        "Übersetzung sendet keine unnötigen Kontaktdaten an Provider"
+      ],
+      "dependsOn": [
+        "B01",
+        "D08"
+      ],
+      "failureCases": [
+        "Automatische Übersetzung darf nicht rechtlich verbindliche Texte still ändern"
+      ],
+      "focus": "UX/Frontend"
+    },
+    {
+      "id": "B05",
+      "kind": "task",
+      "epic": "B",
+      "priority": "P2",
+      "title": "Abschluss, Rückmeldung und Servicequalität datenschutzkonform",
+      "goal": "Die Plattform kann aus Rückmeldungen lernen, ohne Bürger zu überwachen.",
+      "scope": [
+        "Abschlussbestätigung in Alltagssprache mit eindeutiger Entscheidung/weiterer Option",
+        "Freiwillige, minimalinvasive Zufriedenheitsabfrage mit nachvollziehbarer Zweckbindung",
+        "Eskalations-/Wiedereröffnungsweg bei nicht gelöstem Problem, klare Zuständigkeit",
+        "Anonyme oder aggregierte Verbesserungskennzahlen ohne Personenprofil"
+      ],
+      "acceptance": [
+        "Keine Kopplung der Fallbearbeitung an Bewertung",
+        "Wiedereröffnung folgt zulässigem Workflow, keine doppelte Ticketanlage",
+        "Aufbewahrungs-/Löschregel und Opt-out überprüft",
+        "Bericht trennt erledigt, geschlossen, rückgemeldet und ungelöst"
+      ],
+      "dependsOn": [
+        "B03",
+        "S03"
+      ],
+      "failureCases": [
+        "Kein Tracking-Druck nach Meldungsabschluss"
+      ],
+      "focus": "Produkt/Frontend"
+    }
+  ]
+}
