@@ -878,6 +878,896 @@
         "Kein Tracking-Druck nach Meldungsabschluss"
       ],
       "focus": "Produkt/Frontend"
+    },
+    {
+      "id": "A01",
+      "kind": "task",
+      "epic": "A",
+      "priority": "P1",
+      "title": "Task-first Admin-Dashboard: Heute, Jetzt erledigen, Verantwortung",
+      "goal": "Der Arbeitsbeginn zeigt zuerst relevante Aufgaben statt einer großen System- und Statistikübersicht.",
+      "scope": [
+        "Priorisierte Arbeitseingänge: neu, überfällig, Rückfragen, meine Tickets, Team-/Org-Aufgaben, Freigaben, Fehler/Queues",
+        "Verantwortlichkeit, SLA-Risiko, Kontext und 1–3 Hauptaktionen sichtbar; Führung/Plattformadministration erhalten eigene Perspektiven",
+        "Quick Actions mit vorhandenen Ticket-/Workflowkontrakten und Modul-/Capability-Registry",
+        "Kontext-/Filter-/Ansichtszustand bei Navigationsrücksprung erhalten"
+      ],
+      "acceptance": [
+        "Sachbearbeitung kann top-3-Fälle ohne Navigationstiefe finden und öffnen",
+        "Widget zeigt nur zum Scope passende Daten und keine Cross-Tenant-Anzahl-Leaks",
+        "Fehlende Berechtigungen/kein aktives Modul werden verständlich erklärt",
+        "Mobil 360px, Keyboard und Performancebudget pro Widget geprüft"
+      ],
+      "dependsOn": [
+        "F01",
+        "D03",
+        "M06"
+      ],
+      "failureCases": [
+        "Keine heuristisch erfundene Priorität ohne nachvollziehbaren Entscheidungsweg"
+      ],
+      "focus": "Frontend/UX"
+    },
+    {
+      "id": "A02",
+      "kind": "task",
+      "epic": "A",
+      "priority": "P1",
+      "title": "Ticketdetail zum entscheidungsorientierten Arbeitsplatz umbauen",
+      "goal": "Verwaltungsmitarbeitende erkennen Sachverhalt, Zuständigkeit, offenen Schritt und Historie ohne visuelle Überlastung.",
+      "scope": [
+        "Kontext-Header: Status, Priorität, Frist, Org, Zuweisung, Datenschutzklasse, nächste Hauptaktion",
+        "Arbeitsoberfläche mit Tabs/Sections für Bearbeitung, Nachrichten/Anhänge, Verlauf, Karte und technische Details",
+        "Sichere Zuweisung, Status-/Workflowwechsel, Kommentar, Bürgerkommunikation mit Vorschau, Undo/Confirm",
+        "Optimistic-Concurrency/409-Konflikt, Rechtewechsel und Inaktivität mit explizitem Wiederaufnahmepfad"
+      ],
+      "acceptance": [
+        "Routineaktion mit deutlich weniger Klicks im dokumentierten Nutzer-Test",
+        "Formulare/Edit-Modi speichern nur beabsichtigte Felder, keine stillen Überschreibungen",
+        "Audit/History bleibt korrekt; Interne Notizen können nicht Bürgerkanal erreichen",
+        "Von Liste und Deep Link bleiben Filter, Tenant, Tab und Berechtigung konsistent"
+      ],
+      "dependsOn": [
+        "A01",
+        "D05",
+        "F03"
+      ],
+      "failureCases": [
+        "Keine Machtaktion allein auf Basis KI-generierter Empfehlung; bei Mail/Außenwirkung explizite Prüfung"
+      ],
+      "focus": "Frontend/Backend"
+    },
+    {
+      "id": "A03",
+      "kind": "task",
+      "epic": "A",
+      "priority": "P1",
+      "title": "Workflow-Editor für Verwaltungsteams verständlich und validierbar machen",
+      "goal": "Die sehr große WorkflowSettings-Seite wird fachlich beherrschbar statt tausende Felder und Spezialfälle zugleich zu zeigen.",
+      "scope": [
+        "Workflow-Definitionen, Ausführungsinstanzen, SLA-/Retry-Strategie und Governance visuell klar trennen",
+        "Schritt-/Verzweigungseditor als nachvollziehbarer Fluss mit strukturiertem Formular, Versions- und Abhängigkeitsanzeige",
+        "Dry-Run/Simulation, Vorabprüfung, Change-Preview, Aktivierungs-/Rollbackstrategie",
+        "Edit-Lock/Optimistic Concurrency, Zugriffsrechte, lange Dialoge und Fehlersituationen berücksichtigen"
+      ],
+      "acceptance": [
+        "Bestehende Workflowformate und Ausführung bleiben interoperabel",
+        "Fehlkonfiguration (Endlosschleife, unbekannter Schritt, fehlende Integration, deaktiviertes Modul) wird vor Aktivierung entdeckt",
+        "Mobile Lesen möglich; Editieren auf Tablet/Desktop per Tastatur erreichbar",
+        "Vollständige fachliche Durchstichtests mit realistischem synthetischen Fall"
+      ],
+      "dependsOn": [
+        "M08",
+        "M04",
+        "D05",
+        "R04"
+      ],
+      "failureCases": [
+        "Änderungen aktiv laufender Workflowinstanzen bleiben versioniert und werden nicht heimlich überschrieben"
+      ],
+      "focus": "Backend/Frontend/UX"
+    },
+    {
+      "id": "A04",
+      "kind": "task",
+      "epic": "A",
+      "priority": "P1",
+      "title": "Admin-Einstellungen nach Aufgabe und Verantwortlichkeit reorganisieren",
+      "goal": "Konfiguration muss professionell wartbar sein, nicht eine lange Liste von Bereichen ohne Hierarchie.",
+      "scope": [
+        "Eigene Konfigurationsbereiche Organisation/Benutzer, Module & Integrationen, Kommunikation, KI/Workflows, Datenschutz, Betrieb",
+        "Suche innerhalb der Einstellungen, verständliche Kurzbeschreibung, An-/Aus-Wirkung, Health und Defaults",
+        "Mandant/Plattform getrennt: Sichtbarkeit, effektiver Wert, Override, Quelle, Berechtigungen",
+        "Änderungsvorschau, Audit, Confirm und verständliche Fehlermeldung bei Konflikt"
+      ],
+      "acceptance": [
+        "Spezifische Einstellung in wenigen Sekunden auffindbar und ohne Tenant-Verwechslung änderbar",
+        "Kritische Änderungen besitzen Vorschau und Berechtigungs-/Reauth-Gate",
+        "Modulstatus und Env/DB/Tenant-Konfigurationsquelle sind transparent",
+        "Desktop und 360px bedienbar ohne Fachsprache im Standardfall"
+      ],
+      "dependsOn": [
+        "M05",
+        "D03"
+      ],
+      "failureCases": [
+        "Kein Trugschluss, dass bloße UI-Sichtbarkeit Serverrechte ersetzt"
+      ],
+      "focus": "Frontend/UX"
+    },
+    {
+      "id": "A05",
+      "kind": "task",
+      "epic": "A",
+      "priority": "P1",
+      "title": "Globale Suche und Command Palette mit Mandanten- und Modulkontext",
+      "goal": "Objekte, Personen, Aufgaben und sichere Aktionen werden aus dem Arbeitskontext gefunden.",
+      "scope": [
+        "Query-Provider je aktivem Modul für Tickets, Benutzer, Organisation, Workflows, Aufgaben, Leistungen",
+        "Suchergebnis zeigt Quelle, Status, relevante Org, erlaubte Aktion; keyboard-first mit Cmd/Ctrl+K",
+        "Index-/Pagination-/Debounce-Strategie und Rechtefilter serverseitig",
+        "Filter-/Tenantwechsel und Deep-Link-Rücksprünge im Workspace erhalten"
+      ],
+      "acceptance": [
+        "Keine Ergebnisse fremder Tenant-/Org-/Feldrechte, auch nicht in Autocomplete/Counts",
+        "Suchanfrage liefert messbare p95 unter definiertem Testbestand",
+        "Treffer und Aktionen je deaktiviertem Modul verschwinden; bestehender Link bekommt verständliche Erklärung",
+        "Tastatur und Screenreader inkl. Nullresultate/Netzwerkfehler geprüft"
+      ],
+      "dependsOn": [
+        "M06",
+        "F03",
+        "R02"
+      ],
+      "failureCases": [
+        "Search-Protokolle dürfen nicht unbegrenzt sensible Personensuchen speichern"
+      ],
+      "focus": "Backend/Frontend"
+    },
+    {
+      "id": "A06",
+      "kind": "task",
+      "epic": "A",
+      "priority": "P2",
+      "title": "Nachvollziehbares Analytics-/Lagebild statt Vanity-Dashboard",
+      "goal": "Leitung und Sachbearbeitung erkennen Engpässe und Wirkung ohne Scheinkorrelationen.",
+      "scope": [
+        "Fachlich definierte Kennzahlen für Eingang, Erstbearbeitung, Zuständigkeit, SLA-Risiko, offene Rückfragen, Abschluss, Re-Open",
+        "Tenant/Org-/Rollenberechtigte Filter und vergleichbare Zeiträume, Export nur mit gesonderten Rechten",
+        "Drilldown vom Aggregat in erlaubte Tickets, Datenqualität und Zeitbezug anzeigen",
+        "KI-Lagebild als interpretierbarer Vorschlag mit Quellen und menschlicher Prüfung"
+      ],
+      "acceptance": [
+        "Alle Kennzahlen deterministisch aus Testdaten reproduzierbar",
+        "Kleine Gruppen/PII bleiben vor Reidentifikation geschützt",
+        "Zeitintervalle und Zeitzonen korrekt; keine doppelten Tickets durch Queue-Retries",
+        "Dashboard-Bundle und Aggregationszeit erfüllen vereinbartes Budget"
+      ],
+      "dependsOn": [
+        "A02",
+        "R01",
+        "S03"
+      ],
+      "failureCases": [
+        "Nie „KI sagt“ als überprüfbare statistische Wahrheit ausgeben"
+      ],
+      "focus": "Produkt/Analytics"
+    },
+    {
+      "id": "O01",
+      "kind": "task",
+      "epic": "O",
+      "priority": "P1",
+      "title": "OPS „Meine Einsätze“ als robuste mobile Tagesliste",
+      "goal": "Außendienst erledigt nächste Aufgabe mit einem Handgriff.",
+      "scope": [
+        "Meine Zuweisungen, priorisierte Tickets und Kontext (Ort, Status, Zeit, Rückmeldung) in klarer mobiler Liste",
+        "Akzeptieren/Starten/Pausieren/Erledigen mit eindeutigem nächsten Schritt und rollenbasierter Abnahme",
+        "Karten-/Routenöffnung, QR-Einstieg, Foto- und Notizbelege mit offlinefähigem Verlauf",
+        "Status und Synczustand dauerhaft sichtbar, Quick Actions ohne versehentlichen Doppelabschluss"
+      ],
+      "acceptance": [
+        "Hauptaktionen mit Handschuh-/Touch-Größe auf 320/360px getestet",
+        "Rolle/Org/Task-Owner darf nur eigene zulässige Aufgaben bearbeiten",
+        "Flugmodus/Verbindungswechsel behalten Entwürfe und zeigen Queue-Status",
+        "Abbrechen, erneutes Öffnen, fehlende Rechte, veralteter Datensatz demonstriert"
+      ],
+      "dependsOn": [
+        "A02",
+        "D07",
+        "O02"
+      ],
+      "failureCases": [
+        "Keine Annahme, dass Client-Zeit oder lokale Speicherung serverseitige Freigabe ersetzt"
+      ],
+      "focus": "Frontend/OPS"
+    },
+    {
+      "id": "O02",
+      "kind": "task",
+      "epic": "O",
+      "priority": "P0",
+      "title": "Offline-Queue: Synckonflikte, Idempotenz und Datenlebenszyklus",
+      "goal": "Bestehende Dexie-basierte Mutationsqueue wird sicher gegen Netz-/App-/Versionswechsel.",
+      "scope": [
+        "Mutationen mit Idempotency-Key, Revision, Tenant/Org/Actor und Ablaufzeit modellieren; serverseitige Version/409-Logik",
+        "Konfliktanzeige mit „erneut prüfen/zusammenführen/verwerfen“ statt blindem Replay",
+        "Encrypt-at-rest-/Session-/Logout-/Multi-Account-Scope evaluieren und ggf. sichere Löschung implementieren",
+        "Wiederanlauf bei App-Update, Retry/Backoff, fehlender Berechtigung und abgelaufenen Tokens"
+      ],
+      "acceptance": [
+        "Zwei Geräte mit konkurrierender Bearbeitung überschreiben nicht still dieselbe Aufgabe",
+        "Wiederholter Replay nach Serverantwort-Ausfall wirkt genau einmal fachlich",
+        "Logout/Tenantwechsel leert oder sperrt nicht erlaubten Cache, keine Leaks",
+        "Offline-Flows nach PWA-Update auf echten Testgeräten nachgewiesen"
+      ],
+      "dependsOn": [
+        "F03",
+        "F04",
+        "S01"
+      ],
+      "failureCases": [
+        "Sensitive Bilder/Kommentare dürfen nicht versehentlich im fremden Account verbleiben"
+      ],
+      "focus": "Backend/OPS/Security"
+    },
+    {
+      "id": "O03",
+      "kind": "task",
+      "epic": "O",
+      "priority": "P1",
+      "title": "Messenger, Presence und Calls über mobile Netzwechsel stabilisieren",
+      "goal": "Kommunikation bleibt nachvollziehbar, ohne scheinbare Online-/Call-Zustände.",
+      "scope": [
+        "XMPP-/SSE-Heartbeat, Reconnect, Auth-Failure, Mehrfachclients und first-accept-Claim mit Zustandsdiagramm dokumentieren",
+        "UI zeigt verlässlich connecting/reconnecting/offline/failed/ended und klaren Text bei WebRTC-Best-Effort",
+        "Medienfreigabe iOS Safari/PWA, fehlender TURN, Bluetooth und Background/Foreground testen",
+        "Message send idempotent/retryable, sichere Fehlertexte und minimale Logs"
+      ],
+      "acceptance": [
+        "Keine doppelte Call-Annäherung nach Reconnect, keine hängenden Call-Sessions im Test",
+        "401/403 beendet Reconnect sicher; Scopewechsel führt nicht zu fremden Nachrichten",
+        "Tests für Socket closes, Gerätewechsel, Call-Abbruch, Netzverlust und Audio-Fallback",
+        "Einschränkungen ohne öffentlich erreichbaren TURN sichtbar und nicht als garantiert beworben"
+      ],
+      "dependsOn": [
+        "O02",
+        "R05"
+      ],
+      "failureCases": [
+        "Keine automatische Call-Aufzeichnung, keine dauerhafte Speicherung sensibler Signalisierung"
+      ],
+      "focus": "Backend/OPS"
+    },
+    {
+      "id": "O04",
+      "kind": "task",
+      "epic": "O",
+      "priority": "P1",
+      "title": "OPS-Push, QR-Deep-Links und PWA-Lifecycle robust machen",
+      "goal": "Hand-off aus Ticket/PDF/Benachrichtigung öffnet immer den richtigen erlaubten Fall.",
+      "scope": [
+        "Routing- und Installationscheck für OPS-PWA, QR-PDF und token-/authentifizierte Deep-Links",
+        "Push-Meldungen nur bei Modul an, aktueller Berechtigung und erlaubtem Tenant",
+        "Service Worker Update-/Cache-Strategie mit Versionskommunikation und Wiederherstellung angefangener Arbeit",
+        "Fallback Browser ohne installierte PWA und auslaufende/ungültige Links"
+      ],
+      "acceptance": [
+        "QR führt nach Login ohne Kontextverlust zu richtigem Ticket und zeigt sichere Fehler bei Fremd-Tenant",
+        "Push enthält kein PII in Sperrbildschirm-Texten außer explizit freigegeben",
+        "App-Update löst keine unbemerkte Offline-Queue-Löschung aus",
+        "iOS/Android/Browser-Neustart mit manuellen Protokollen abgenommen"
+      ],
+      "dependsOn": [
+        "O02",
+        "M06"
+      ],
+      "failureCases": [
+        "Keine ungeschützten IDs/PII im QR-Token oder auf Push-Vorschau"
+      ],
+      "focus": "Frontend/OPS/Security"
+    },
+    {
+      "id": "O05",
+      "kind": "task",
+      "epic": "O",
+      "priority": "P2",
+      "title": "GIS im Feld: Karte, Zuständigkeiten und Navigation alltagstauglich",
+      "goal": "Mitarbeitende finden Einsatzorte und relevante Kontextdaten schnell.",
+      "scope": [
+        "Karte als optionaler Kontext zur Ticketliste, kein Zwang bei fehlendem GPS oder schlechtem Netz",
+        "Zuständigkeits-/Org-Layer und Statusfilter mit Berechtigungsprüfung",
+        "Navigation zu Drittanbieter nur nach bewusster Aktion und datensparsamer Übergabe",
+        "Teilweise Offline-/Stale-Kartenhinweis und zugängliche Listenalternative"
+      ],
+      "acceptance": [
+        "Kartentreffer und Liste zeigen identische erlaubte Daten",
+        "Fehlerhafte Geokodierung lässt manuelle Adresse unberührt",
+        "A11y-Alternativen, 360px und Schlecht-Netz funktionieren",
+        "Geo-/Adressdaten nicht in unberechtigten Links/Analytics-Events enthalten"
+      ],
+      "dependsOn": [
+        "O01",
+        "S05"
+      ],
+      "failureCases": [
+        "Kartenbibliothek nicht blind migrieren; Datenquelle, Lizenz und Performance separat prüfen"
+      ],
+      "focus": "Frontend/GIS"
+    },
+    {
+      "id": "R01",
+      "kind": "task",
+      "epic": "R",
+      "priority": "P0",
+      "title": "Datenbank-Hotspots und Index-Strategie auf realistischer Datenmenge",
+      "goal": "Langsame Queries und N+1-Muster vor UI-Ausbau messbar beseitigen.",
+      "scope": [
+        "MySQL 8.4 und Legacy-Adapter mit EXPLAIN/Index-Report für Tickets/Workflows/Tasks/Org/Notifications erfassen",
+        "Grenzen für Pagination, Sort, Search und Tenant-Filter samt EXPLAIN-Plan festlegen",
+        "Additive, versionierte Index-/Schemaänderungen mit Hot-Upgrade-/Rollbackplan",
+        "Datenaufbewahrung, große Bild-BLOBs und Tabellenwachstum bewerten"
+      ],
+      "acceptance": [
+        "Staging-Query-Baseline reproduzierbar und Query-Pläne vor/nach jeder Änderung dokumentiert",
+        "Hochlast-Test mit mindestens zwei Tenants zeigt keine Scope-Regression",
+        "Migration läuft auf leerer und realitätsnah gefüllter Testdatenbank",
+        "Keine Änderung an produktiven Bestandsdaten ohne Backup/Restoreplan"
+      ],
+      "dependsOn": [
+        "F04",
+        "F05",
+        "S01"
+      ],
+      "failureCases": [
+        "Unlimitierte Tabellen-Scans und globale Count-Leaks verhindern"
+      ],
+      "focus": "Backend/Daten"
+    },
+    {
+      "id": "R02",
+      "kind": "task",
+      "epic": "R",
+      "priority": "P0",
+      "title": "API p95/p99, Ressourcenlimits und Backpressure verbessern",
+      "goal": "Backend muss auch bei hohen Ticket-/Workflowvolumen schnell und stabil antworten.",
+      "scope": [
+        "Latenz nach Route/Tenant/Query-/Provider-Klasse messen, langsame Controller von teuren Abhängigkeiten entkoppeln",
+        "Timeout-/Cancellation-/Rate-Limit-/Payload-Policies für APIs, externe Provider und Bulk-Requests definieren",
+        "Standardisierte Cursor-/Limit-Pagination, ETag/Cache nur für sichere Scopes",
+        "Peak- und Ressourcenprofile (CPU/RAM/DB Connections) mit Budget und Lasttest"
+      ],
+      "acceptance": [
+        "p95 und Fehlerrate im vereinbarten Testprofil verbessern, Vorher/Nachher-Zahlen im PR",
+        "Schwellwerte überschreiten liefert 429/503/Timeout verlässlich statt Prozessabbruch",
+        "Cache/Rate-Limit nach Tenant/Identität ohne Cross-Tenant-Leak",
+        "Offene Browseranfragen und Servercancel lösen keine hängenden Jobs aus"
+      ],
+      "dependsOn": [
+        "R01",
+        "F03"
+      ],
+      "failureCases": [
+        "Keine unüberwachte Query-/Cache-Optimierung auf Kosten der Berechtigungsprüfung"
+      ],
+      "focus": "Backend/Performance"
+    },
+    {
+      "id": "R03",
+      "kind": "task",
+      "epic": "R",
+      "priority": "P1",
+      "title": "Frontends: Route-Splitting, render-sichere Datenabfragen und Bundle-Budgets",
+      "goal": "Admin, Bürger und OPS sollen ohne visuelles Ruckeln schnell interagieren.",
+      "scope": [
+        "Initial-JS je App per realem Build analysieren; Routen-/Modul-Lazy-Loading und Shared-Bundle-Abwägung",
+        "Query-Cache, Re-fetch, SSE-Events und stale/optimistic State vereinheitlichen",
+        "Render-Profiler für sehr große WorkflowSettings/TicketDetail/Listen und Virtualisierung einsetzen",
+        "Bilder, Fonts, Karten/Editoren erst bei Bedarf laden; Preload nur nutzerrelevant"
+      ],
+      "acceptance": [
+        "Gemessene Web Vitals und Bundle-Vergleiche je Referenzroute dokumentiert",
+        "Keine Doppelfetch-Schleifen oder Browserfreezes bei typischen Listen und Live-Updates",
+        "360px Low-End/Slow-4G-Budget und Keyboard/Focus vollständig erhalten",
+        "Langsame API meldet Skeleton/Retry statt endlosem Spinner"
+      ],
+      "dependsOn": [
+        "F05",
+        "D03",
+        "M06"
+      ],
+      "failureCases": [
+        "Nicht nur Bundle-Size optimieren, wenn Auth-/Data-Cache dabei unsicher wird"
+      ],
+      "focus": "Frontend/Performance"
+    },
+    {
+      "id": "R04",
+      "kind": "task",
+      "epic": "R",
+      "priority": "P0",
+      "title": "Persistente Queue-/Workflow-Worker: Retry, Lease, Idempotenz, Dead Letter",
+      "goal": "KI-, Mail-, Workflow- und Übersetzungsjobs müssen Neustarts und Mehrfachworker tolerieren.",
+      "scope": [
+        "Status-/Lease-/Claim-Vertrag definieren (pending, running, retry, failed, cancelled, done) und konkurrierende Worker prüfen",
+        "Idempotency/Outbox/Delivery-Semantik für externe E-Mail-/Ticket-/Webhook-Aktionen",
+        "Exponential Backoff, Max-Attempts, Dead-Letter, manueller Retry mit Audit und Berechtigung",
+        "Monitoring von Warteschlange, Poison Messages und Wiederanlauf nach Crash"
+      ],
+      "acceptance": [
+        "Parallelworker verarbeitet denselben fachlichen Auftrag nicht unkontrolliert doppelt",
+        "Nach Crash zwischen externer Aktion und Ack ist fachliches Ergebnis konsistent oder explizit kompensierbar",
+        "Admin sieht Jobstatus, letzten Fehler redigiert, Retry/Cancel ohne PII",
+        "Synthetic-Fault-Test für DB-Timeout, Provider-429/500, Worker-Neustart und Duplicate Events"
+      ],
+      "dependsOn": [
+        "F03",
+        "F04"
+      ],
+      "failureCases": [
+        "„exactly once“ nicht behaupten, wenn Provider keinen Idempotency-Key unterstützt; dann dedup/compensation dokumentieren"
+      ],
+      "focus": "Backend/Ops"
+    },
+    {
+      "id": "R05",
+      "kind": "task",
+      "epic": "R",
+      "priority": "P0",
+      "title": "SSE-/Realtime-Stabilität und Snapshot-Recovery",
+      "goal": "Admin und OPS dürfen keine stillen veralteten Daten und Statusanzeigen zeigen.",
+      "scope": [
+        "SSE-Topics, Heartbeat, Last-Event-ID oder Snapshot+Refetch-Recovery modellieren",
+        "Auth-/Tenantwechsel, Sessionablauf, Proxy-Timeout und Reconnect/Backoff definieren",
+        "Event-Fanout, Rate-/Resource-Limits und Mehrfachbrowserfenster testen",
+        "Realtime-UX mit „Verbindung weg / Daten aktualisieren“ statt Zombie-Aktualisierung"
+      ],
+      "acceptance": [
+        "Clients finden nach Netzunterbrechung den richtigen Zustand ohne Duplikate",
+        "Keine Events aus fremdem Tenant/Org oder deaktiviertem Modul",
+        "401/403 beendet unsichere Reconnect-Schleife; Backoff schützt Backend",
+        "Staging-Stress-Test mit definiertem Clientprofil und Metriken"
+      ],
+      "dependsOn": [
+        "F03",
+        "R04"
+      ],
+      "failureCases": [
+        "SSE ist Benachrichtigung, nicht alleinige Datenquelle; bei Eventverlust erneuter API-Snapshot"
+      ],
+      "focus": "Backend/Frontend"
+    },
+    {
+      "id": "R06",
+      "kind": "task",
+      "epic": "R",
+      "priority": "P1",
+      "title": "Last-, Soak- und Chaos-Tests für kommunale Kernflows",
+      "goal": "Leistungsreserven/Failure Modes statt nur happy-path-Funktion nachweisen.",
+      "scope": [
+        "Reproduzierbare Szenarien: parallele Bürger-Submissions, Admin-Ticketlisten, OPS-Updates, Mail/AI-Queues, SSE-Clients",
+        "Lastprofil mit kleinen/großen Tenants, Bildlast und langsamen externen APIs",
+        "Dauerlauf, Neustart, Packet Loss, DB-Disconnect und Provider-Störung simulieren",
+        "Ergebnisse mit Konfidenz-/Varianzangabe, Ressourcensättigung, Bottlenecks und Regressionstrend dokumentieren"
+      ],
+      "acceptance": [
+        "Test ist auf isolierten Daten und Infrastruktur reproduzierbar",
+        "p95/99, 5xx, Datenintegrität, Queue-Lag, Speicher-/CPU-Verlauf und Wiederanlauf werden gemessen",
+        "Stop-Kriterien verhindern Überlast realer Systeme",
+        "Fehler führen zu priorisierten, verlinkten Folgetickets statt pauschalem ‚läuft‘"
+      ],
+      "dependsOn": [
+        "R02",
+        "R04",
+        "R05"
+      ],
+      "failureCases": [
+        "Keine Lasttests gegen Produktion ohne separate ausdrückliche Betreiberfreigabe"
+      ],
+      "focus": "QA/Performance"
+    },
+    {
+      "id": "R07",
+      "kind": "task",
+      "epic": "R",
+      "priority": "P0",
+      "title": "Observability: sichere Metriken, Tracing, strukturierte Logs und SLO-Dashboard",
+      "goal": "Betriebsverantwortliche erkennen, ob Kernabläufe funktionieren, bevor Nutzer eskalieren.",
+      "scope": [
+        "Request-/Correlation-ID durch Proxy → API → Job → Notification/Workflow weiterreichen",
+        "RED/USE-Metriken (Rate, Error, Duration / Utilization, Saturation, Errors), Queue Lag, Retry, SSE reconnect, DB pool",
+        "PII-freie Logging-/Sampling-/Retentionstrategie und getrennte Security-Audit-Events",
+        "Dashboard und Alerting mit Runbook, Störungsstufen und Verantwortlichkeiten"
+      ],
+      "acceptance": [
+        "Keine Rohprompts, Bürgerbeschreibungen, Tokens, Cookies oder Upload-Payloads in Logs",
+        "Alert basiert auf service-relevantem Symptom, nicht nur CPU",
+        "Dashboard zeigt echte API-/Job-/Journey-Baselines und nachvollziehbare Grenzen",
+        "Tracing durch synthetischen End-to-End-Fall möglich"
+      ],
+      "dependsOn": [
+        "F05",
+        "R02"
+      ],
+      "failureCases": [
+        "Cardinality Explosion, Token-/Query-Leak und Alarmflut verhindern"
+      ],
+      "focus": "Ops/Backend"
+    },
+    {
+      "id": "R08",
+      "kind": "task",
+      "epic": "R",
+      "priority": "P1",
+      "title": "Resiliente Fehlermeldungen, Recovery und Degraded Mode end-to-end",
+      "goal": "Nutzer sollen Fehler verstehen, Daten behalten und einen klaren Weg weiter haben.",
+      "scope": [
+        "Gemeinsamer Fehlervertrag 401/403/404/409/429/500/Timeout/Offline samt Retry-Hinweis",
+        "Degraded Mode bei ausgefallenem LLM, SMTP, XMPP, Geocoder; Kern-Ticketbearbeitung bleibt möglich, soweit fachlich sicher",
+        "Fehler- und Ladezustände für Bürger/Admin/OPS mitsamt Formularpersistenz",
+        "Crash-/Error-Boundary, Monitoring, „Support-Code“/Correlation ID mit Redaction"
+      ],
+      "acceptance": [
+        "Keine Blank Pages im Kernablauf nach definierter Fehlerklasse",
+        "Nicht gespeicherte Nutzeränderungen bleiben, wenn sicher möglich, erhalten",
+        "Externes System off wird verständlich erklärt und löst keinen unautorisierten Fallback aus",
+        "E2E-Test für fünf priorisierte Fehlerszenarien pro Oberfläche"
+      ],
+      "dependsOn": [
+        "F03",
+        "D05",
+        "R07"
+      ],
+      "failureCases": [
+        "Ein grüner Toast ohne bestätigte Persistenz ist verboten"
+      ],
+      "focus": "Frontend/Backend/UX"
+    },
+    {
+      "id": "S01",
+      "kind": "task",
+      "epic": "S",
+      "priority": "P0",
+      "title": "Tenant-/Org-/Capability-Isolation als testbare Sicherheitsinvariante",
+      "goal": "Jede Daten- und Aktionsgrenze wird serverseitig belegt.",
+      "scope": [
+        "Rollenmatrix aus backend/src/services/rbac.ts und Auth-Middleware gegen API-Routen inventarisieren",
+        "Negative Tests für fremde Tenants, Org, Admin-Kontext, Citizen-Token, OPS-Session, alte Tokens",
+        "Exporte, Uploads, AI-History, SSE, Suche, Queue und Module-off direkt testen",
+        "Auditevents/Fehlermeldungen ohne ID-/Metadatenleck überprüfen"
+      ],
+      "acceptance": [
+        "Jede kritische Route besitzt mindestens Erlaubt/Verboten/Anderer-Tenant-Test",
+        "Admin-UI-Guard ist niemals Sicherheitsquelle",
+        "Race/Policy-Cache/Modulewechsel bestehen Regressionstests",
+        "Findings ausschließlich vertraulich nach Schweregrad weiterbearbeitet"
+      ],
+      "dependsOn": [
+        "F02",
+        "F04"
+      ],
+      "failureCases": [
+        "Keine Security-Testlogs mit realen Nutzer-/Produktionsdaten"
+      ],
+      "focus": "Security/Backend"
+    },
+    {
+      "id": "S02",
+      "kind": "task",
+      "epic": "S",
+      "priority": "P0",
+      "title": "Produktionssecrets, sichere Compose-Defaults und Proxy-Härtung",
+      "goal": "Unsichere Defaultkennwörter und Konfigurationsdrift dürfen nicht in Deployments gelangen.",
+      "scope": [
+        "Produktive Compose-Variablen für MySQL, JWT, XMPP, SMTP, KI als erforderliche Secrets ohne echte Werte",
+        "Fail-Closed-Startup, Setup-/Rotation-/Bestandsmigration und dokumentierte Upgrade-Hinweise",
+        "Proxy Trust, CORS, CSP, Secure Cookies, Auth-Ratelimits und WebSocket-/SSE-Weiterleitung prüfen",
+        "Reproduzierbare Konfigurations-Prüfung vor Deployment einführen"
+      ],
+      "acceptance": [
+        "Prod-Konfig mit fehlenden/Default-Secrets schlägt nachweislich fehl",
+        "Wechsel alter Installationen erhält Daten und Dienstzugang mit dokumentiertem Rotationsfenster",
+        "Security-Smoketest für CORS/Headers/Proxy und Logs ohne Tokens",
+        "Keine Standard-Adminpasswörter in Dokumentation/Images"
+      ],
+      "dependsOn": [
+        "F02",
+        "P02"
+      ],
+      "failureCases": [
+        "Nicht einfach Secrets entfernen ohne kompatiblen Bestandsupgrade-/Rollbackplan"
+      ],
+      "focus": "Ops/Security"
+    },
+    {
+      "id": "S03",
+      "kind": "task",
+      "epic": "S",
+      "priority": "P0",
+      "title": "Datenschutz, Datenflüsse, Aufbewahrung, Auskunft und Löschung",
+      "goal": "Der öffentliche Verwaltungskontext braucht überprüfbare Datensparsamkeit.",
+      "scope": [
+        "Dateninventar für Submission, Citizen, Ticket, Upload/EXIF, Chat, AI-History, Logs, Backups und Third-Party-Flows",
+        "Fachlich autorisierte Aufbewahrungs-/Lösch-/Export-Strategien samt Legal Hold und Audit",
+        "Bürger-/Mitarbeiterrechte und Datenschutzhinweise mit Datenschutzverantwortlichen abstimmen",
+        "Testbare Lösch-/Retention-Jobs inkl. Backup-Retention und Nachweis ohne PII entwickeln"
+      ],
+      "acceptance": [
+        "Datenflussübersicht inklusive externer Provider und verantwortlicher Freigabe vorhanden",
+        "Lösch-/Auskunftslauf nur für erlaubte Person/Scope; Audit ohne Weitergabe von Payload",
+        "Backup-Ausnahmen/Restore-Nachlauf dokumentiert",
+        "Keine unkontrollierte Analytics-/KI-Speicherung"
+      ],
+      "dependsOn": [
+        "F01",
+        "F03"
+      ],
+      "failureCases": [
+        "Rechtliche Fristen nicht eigenmächtig festlegen; Verantwortliche entscheiden anhand Einsatzkontext"
+      ],
+      "focus": "Security/Produkt/Ops"
+    },
+    {
+      "id": "S04",
+      "kind": "task",
+      "epic": "S",
+      "priority": "P0",
+      "title": "KI-Assistenten kontrolliert: Vorschlag, Validierung, Budget und menschlicher Entscheid",
+      "goal": "KI entlastet, aber steuert keine unkontrollierten Verwaltungsentscheidungen.",
+      "scope": [
+        "Task-Key-/Provider-Routing, Datenminimierung, Prompt-Injection-Schutz und strukturiertes Output-Schema pro Use Case",
+        "Confidence/Quellen/Fehlerrisiko und erklärbarer „KI-Vorschlag“ in Admin",
+        "Provider-Fallback, Token-/Kostenbudget, Timeout/Rate-Limit, Queue-Retry und Kill-Switch je Tenant",
+        "Vier-Augen-/Freigaberegeln für Bürgernachrichten, externe API-Aktionen, Zuordnungen oder Löschungen"
+      ],
+      "acceptance": [
+        "Generative Antwort kann niemals ohne autorisierte Handlung direkt Bürgerdaten verändern oder extern senden",
+        "Prompt-Injection-Test mit bösartigem Bürgertext/Attachment führt zu keiner Tool-Übernahme",
+        "Kosten/Timeout/Providerfehler haben sichtbaren manuellen Fallback",
+        "KI-Logs redigiert und nach Policy aufbewahrt, Tenant-Trennung nachgewiesen"
+      ],
+      "dependsOn": [
+        "M04",
+        "R04",
+        "S01"
+      ],
+      "failureCases": [
+        "KI-Assistenz nicht mit Entwicklungsagenten-Orchestrierung verwechseln"
+      ],
+      "focus": "Backend/AI/Security"
+    },
+    {
+      "id": "S05",
+      "kind": "task",
+      "epic": "S",
+      "priority": "P0",
+      "title": "Dateien, Anhänge, Exporte und Geodaten gegen Missbrauch härten",
+      "goal": "Anhänge dürfen nur autorisiert, sauber verarbeitet und datensparsam ausgegeben werden.",
+      "scope": [
+        "Upload-Size-/Type-/Content-Inspection, Bilddekodierung/Re-Encoding und EXIF-/GPS-Minimierung",
+        "Geschützte Attachment-Downloadroute, Dateinamen-Sanitation, CSP, nosniff und Auth für Bürger/Admin/OPS",
+        "PDF/CSV-Exportformeln, HTML/Markdown-Escaping, PII-Masking und Link-/Token-Freigaben",
+        "Speicherung/Lifecycle/Dateiviren-Scan je Risiko und Deployment-Policy begründen"
+      ],
+      "acceptance": [
+        "Fremder Tenant und entwerteter Token erhalten keinen Dateinamen, Metadatum oder Binärinhalt",
+        "Bösartige/fehlformatige Uploads werden nachvollziehbar abgewiesen",
+        "Export kann nicht Formel-/Script-Injection ausführen",
+        "Mehrfachupload/Rollback und Slow-Client-Abbruch verlieren keine bereits bestätigten Daten"
+      ],
+      "dependsOn": [
+        "S01",
+        "F03"
+      ],
+      "failureCases": [
+        "Dateien niemals direkt aus öffentlich zugänglichem Storage-Verzeichnis referenzieren"
+      ],
+      "focus": "Security/Backend"
+    },
+    {
+      "id": "S06",
+      "kind": "task",
+      "epic": "S",
+      "priority": "P1",
+      "title": "Security-Gates: Dependencies, SBOM, Secret-Scan und unabhängige Reviews",
+      "goal": "Änderungen bleiben nachvollziehbar sicher und versorgbar.",
+      "scope": [
+        "CI-SAST/Dependency-/Secret-Scans mit abgestuften Warn-/Block-Regeln und dokumentierter Risikofreigabe",
+        "SBOM/Pinning-/Updatepolitik für React/Mantine, Node, MySQL, XMPP, Drittanbieter-Assets",
+        "CODEOWNERS-/Review-Regeln für kritische Bereiche und Third-Party-Code-Lizenzen",
+        "Threat Modeling bei Featureflags, neuen Provider-Flows, PWA/Offline, Im-/Export"
+      ],
+      "acceptance": [
+        "Aktuelle bekannte kritische Abhängigkeiten blockieren Release oder haben genehmigte dokumentierte Ausnahme",
+        "Kein Secret in Test-/Build-/PR-Artefakten",
+        "Security-/Architektur-Reviewer unabhängig vom Implementierer nachweisbar",
+        "Periodischer Patch-/Update-Runbook vorhanden"
+      ],
+      "dependsOn": [
+        "F02",
+        "D01"
+      ],
+      "failureCases": [
+        "Keine automatische Paketaktualisierung direkt in Produktion"
+      ],
+      "focus": "Security/Ops"
+    },
+    {
+      "id": "P01",
+      "kind": "task",
+      "epic": "P",
+      "priority": "P0",
+      "title": "Backup/Restore-Drill: vollständiger Daten- und Attachment-Wiederanlauf",
+      "goal": "Backup ist erst verlässlich, wenn Restore auf einer isolierten Instanz funktioniert.",
+      "scope": [
+        "Datenbank, Dateivolumes, XMPP-relevante Konfig, Secrets/Keys und Versionszuordnung inventarisieren",
+        "Verschlüsselte/sicher gespeicherte Snapshots mit Retention und Wiederherstellungsskripten",
+        "Restore auf Wegwerf-Datenbasis, fachliche Login/Ticket/Workflow/OPS-Smokes und überprüfte Integrität",
+        "Dokumentation von RPO/RTO-Anforderungen, realen Messwerten, Rollen und Wiederholungsfrequenz"
+      ],
+      "acceptance": [
+        "Mindestens ein vollständig protokollierter erfolgreicher Restore-Drill ohne Echtdaten",
+        "Fehlende Schlüssel/Teilsnapshot werden zuverlässig erkannt",
+        "Restore auf kompatibler Softwareversion und Nachlauf-/Migrationstests dokumentiert",
+        "Löschung von Testbackup/temporären Zugangsdaten nach Drill geprüft"
+      ],
+      "dependsOn": [
+        "F04",
+        "S02"
+      ],
+      "failureCases": [
+        "Kein destruktiver Probe-Restore auf Produktivvolumes"
+      ],
+      "focus": "Ops/Daten"
+    },
+    {
+      "id": "P02",
+      "kind": "task",
+      "epic": "P",
+      "priority": "P0",
+      "title": "Migrationen und Legacy-Bootstrap auf sichere Upgradepfade bringen",
+      "goal": "Alte Installationen können kontrolliert aktualisiert und bei Fehlern wiederhergestellt werden.",
+      "scope": [
+        "Schema_migrations und checksum-gesicherte Definitionsdateien gegen aktuelle DB-Initialisierung prüfen",
+        "Fresh-Install, Upgrade aus altem Snapshot, fehlgeschlagene Migration, Wiederholung und Checksum-Drift testen",
+        "Legacy ensureColumn-Bootstrap schrittweise ablösen mit dokumentiertem Migrationsfenster",
+        "Backfill/Indexierung auf großen Tabellen ohne unkontrollierten Lock"
+      ],
+      "acceptance": [
+        "Unveränderliche historische Migrationen und deterministische Reihenfolge",
+        "Upgradepfad testet mindestens einen historischen Stand mit echten Schemaunterschieden, aber anonymisierten Daten",
+        "Jeder irreversible Schritt hat Backup/Fallback und operator runbook",
+        "Fehlgeschlagenes Upgrade bricht sicher ab und zeigt Ursache ohne Secret"
+      ],
+      "dependsOn": [
+        "F02",
+        "P01"
+      ],
+      "failureCases": [
+        "Keine bestehende Migration rückwirkend editieren und nicht still bei Schemafehler weiterstarten"
+      ],
+      "focus": "Daten/Ops"
+    },
+    {
+      "id": "P03",
+      "kind": "task",
+      "epic": "P",
+      "priority": "P1",
+      "title": "Release-Pipeline: reproduzierbare Images, Preflight, gestufter Rollout, Rollback",
+      "goal": "Auslieferungen müssen überprüfbar und rückholbar sein.",
+      "scope": [
+        "SemVer-/Commit-/Build-Metadaten über backend/admin/ops/frontend konsistent",
+        "CI-Prüfungen, Container-Build/Scan, Image-Digest, Release-Notizen und Änderungsliste",
+        "Backup-/Migration-/Smoke-Gates, Staging vor Produktion, menschlicher Deploy-Approve",
+        "Canary/Pilot-Tenant für optionale Module und Mantine-Slices mit Featureflag und Rollbackpfad"
+      ],
+      "acceptance": [
+        "Release kann aus exakt demselben Tag und Dependencies reproduziert werden",
+        "Fehler in Health/Tickets/OPS/Bürger-Kernweg stoppt weitere Ausrollung",
+        "Rollback von Code und ggf. Daten bei inkompatibler Migration dokumentiert",
+        "Keine autogemergten oder aus UI direkt gestarteten Produktionsshell-Kommandos"
+      ],
+      "dependsOn": [
+        "P01",
+        "P02",
+        "F02"
+      ],
+      "failureCases": [
+        "Image 'latest' nicht als unveränderlicher Release-Identifier benutzen"
+      ],
+      "focus": "Ops/QA"
+    },
+    {
+      "id": "P04",
+      "kind": "task",
+      "epic": "P",
+      "priority": "P1",
+      "title": "Betriebshandbuch, Supportdiagnose und Incident-Prozess professionalisieren",
+      "goal": "Administrator:innen erkennen Störungen und können gezielt, sicher reagieren.",
+      "scope": [
+        "Installations-/Upgrade-/Backup-/Restore-/On-call-/Alert-Runbooks und Zuständigkeiten pflegen",
+        "Support-Korrelationen (Trace/Incident-ID) und datenschutzsichere Diagnosedaten",
+        "Manual Fallback bei KI, SMTP, XMPP, GIS und Queue-Störung dokumentieren",
+        "Admin-Health-/Systeminfos-Seite zeigt Verfügbarkeit der aktivierten Module, keine sensitiven Interna für unberechtigte Rollen"
+      ],
+      "acceptance": [
+        "Support kann fünf typische Störungen anhand des Runbooks diagnostizieren",
+        "Status/Runbook-Links stimmen mit tatsächlichen Compose-/API-Routen überein",
+        "Vorfallspur ohne PII aufbewahrbar und auditfähig",
+        "Notfallpfad für verlorene Berechtigung, gestörte DB und Fehlupdate beschrieben"
+      ],
+      "dependsOn": [
+        "R07",
+        "P01",
+        "P03"
+      ],
+      "failureCases": [
+        "Keine sensiblen Stacktraces in Bürger-/Unberechtigt-UI"
+      ],
+      "focus": "Docs/Ops"
+    },
+    {
+      "id": "P05",
+      "kind": "task",
+      "epic": "P",
+      "priority": "P1",
+      "title": "Integrationen als optionale, versionierte Connectoren mit Health und Limits",
+      "goal": "Redmine, Mail, XMPP, Wetter, Geocoder und KI sind modular betreibbar.",
+      "scope": [
+        "Connector-Manifest: Capability, Endpoint, Credential-Scope, Rate-Limit, Health, Timeout, Retry und Circuit Breaker",
+        "Secret-Lifecycle, Tenant-Konfig, Datenminimierung, Provider-Ausfall und modulare Aktivierung",
+        "API-/Webhook-Signatur, Idempotency und Mappingversionen; Sandbox/Probeaktionen statt realem Versand",
+        "Admin sieht Berechtigungs-/Konfigstatus, Fehlermeldung und manuellen Fallback"
+      ],
+      "acceptance": [
+        "Deaktivierter Connector erzeugt keine weiteren externen Calls und blockiert Kernprozess nicht unnötig",
+        "Config-Fehler/429/5xx/DNS-Ausfall führen zu sichtbarem degradierten Modus",
+        "Zentrales Audit für Integrationseinstellung und gezielten Job-Retry",
+        "Zwei Tenants können unterschiedliche Provider nutzen ohne Daten-/Secret-Leak"
+      ],
+      "dependsOn": [
+        "M03",
+        "M04",
+        "R04",
+        "S02"
+      ],
+      "failureCases": [
+        "Keine ungeprüften externen Hooks aus Bürgertext/Workflowdefinition direkt ausführbar"
+      ],
+      "focus": "Backend/Integrationen"
+    },
+    {
+      "id": "P06",
+      "kind": "task",
+      "epic": "P",
+      "priority": "P0",
+      "title": "Staging-Golden-Path: Bürger → Admin → OPS → Abschluss inklusive Rollback",
+      "goal": "Die Produktphilosophie wird regelmäßig als realer durchgehender Test nachgewiesen.",
+      "scope": [
+        "Golden Path mit zwei Tenants, Bürgerregistrierung/Submission/Validierung, Admin-Ticketzuweisung, Workflow, OPS-Feldaktion, Rückfrage und Abschluss",
+        "Negative Wege: fehlende Rollen, Provider off, Duplicate, Offline-Konflikt, Reconnect, ungültiger Link",
+        "Browser/Handy/Compose/E2E in isolierter Staging-Pipeline; Render-Screenshots nur mit synthetischen Daten",
+        "Qualitätsreport per Commit mit Dauer, Fehler, Performance und bekannter Abdeckung"
+      ],
+      "acceptance": [
+        "E2E durchläuft den vollständigen Weg wiederholbar ohne echte E-Mail/AI oder Live-Accounts",
+        "Nach absichtlichem Fehler wird korrekt und ohne Datendoppelung wiederaufgenommen",
+        "Tenantwechsel/Berechtigungen und deaktiviertes Modul werden im selben Lauf geprüft",
+        "Runbook beschreibt manuelle Abnahme und Human-Gate vor Release"
+      ],
+      "dependsOn": [
+        "F04",
+        "R04",
+        "M04",
+        "B01",
+        "A02",
+        "O01",
+        "P03"
+      ],
+      "failureCases": [
+        "Deployment wird nie allein aus Erfolg eines simplen Health-Endpunkts freigegeben"
+      ],
+      "focus": "QA/Produkt/Ops"
     }
   ]
 }
