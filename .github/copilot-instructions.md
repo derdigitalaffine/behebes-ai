@@ -1,0 +1,5 @@
+# behebes.AI – repositoryweite Entwicklungsanweisungen
+
+Vor Änderungen verbindlich lesen: `AGENTS.md`, `docs/AGENT_ORCHESTRATION.md`, `docs/ARCHITECTURE.md`, `docs/SECURITY_PRIVACY.md`, `docs/DEVELOPMENT.md`, `docs/TESTING.md`. Priorität: Datenschutz und Sicherheit vor Funktionserweiterung. Serverauth/Tenant-/Org-Scopes müssen unverändert geschützt bleiben; keine produktiven Secrets, PII oder echten Bürgerdaten in Prompts, Issues oder Commits. Kleine vertikale Slices, echte Testevidenz, dokumentierte Migrationen/Backups, menschliche Freigabe für Merges/Releases/produktiv wirkende Aktionen.
+
+Spezialistenprofile stehen in `.github/agents/*.agent.md`. Der `behebes-orchestrator` koordiniert und delegiert, implementiert aber nicht ohne abgestimmten Owner. Nicht jeden „Agenten“ mit der bereits vorhandenen **Laufzeit-KI** aus `backend/src/services/` verwechseln. GitHub-/IDE-Funktionen für Agentenübergabe sind abhängig vom eingesetzten Copilot-Client; das Repository selbst startet keinen Multi-Agent-Daemon.
