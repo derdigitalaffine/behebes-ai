@@ -7,6 +7,9 @@ on:
       - 'scripts/check-docs.mjs'
       - 'scripts/check-agent-orchestration.mjs'
       - 'agents/**'
+      - 'planning/**'
+      - 'scripts/check-roadmap.mjs'
+      - 'scripts/import-roadmap-issues.mjs'
       - '.github/workflows/docs.yml'
   push:
     branches: [main]
@@ -36,3 +39,4 @@ jobs:
         run: |
           node scripts/check-docs.mjs
           node scripts/check-agent-orchestration.mjs
+          node scripts/check-roadmap.mjs
