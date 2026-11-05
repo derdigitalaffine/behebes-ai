@@ -8,6 +8,10 @@ Das Format orientiert sich an Keep a Changelog und folgt Semantic Versioning.
 
 ## [Unreleased] / [Unveroeffentlicht]
 
+### Documentation / Dokumentation
+- DE: Agentenorganisation, dokumentierte Roadmap, Architektur-, Sicherheits-, QA- und Betriebsguides samt Doku-CI vorbereitet.
+  EN: Prepared development-agent coordination, evidence-based roadmap, architecture, security, QA, operations guides and documentation CI.
+
 ### Changed / Geaendert
 - DE: Laufende Weiterentwicklung fuer Messenger-Stabilitaet, Mobile-UX und Admin-Konsistenz.
   EN: Ongoing development for messenger stability, mobile UX, and admin consistency.

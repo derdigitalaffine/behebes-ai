@@ -1,0 +1,43 @@
+name: Feature / Verbesserung
+description: Strukturierte fachliche Anforderung mit überprüfbarer Abnahme
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Bitte keine Bürgerdaten, Zugangsdaten oder produktiven Logs in Issues einfügen. Bei Security-Verdacht einen vertraulichen Meldeweg verwenden.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Nutzerproblem und beobachtbares Ziel
+      placeholder: Wer benötigt welches neue Verhalten und warum?
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Akzeptanzkriterien
+      placeholder: Gegeben / Wenn / Dann; positiver und negativer Pfad
+    validations:
+      required: true
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priorität
+      options: [P0 - kritisch, P1 - wichtig, P2 - Ausbau]
+    validations:
+      required: true
+  - type: textarea
+    id: boundaries
+    attributes:
+      label: Berechtigungen, Tenant, Org, Datenschutz und KI
+      description: Betroffene Rollen, Daten und Außenwirkungen. Falls nicht betroffen, begründen.
+  - type: textarea
+    id: technical
+    attributes:
+      label: API/DB/Offline/UX/QA/Operations
+      description: Verträge, Migration, Audit, Wiederanlauf, mobile Nutzung und Tests.
+  - type: textarea
+    id: handoff
+    attributes:
+      label: Owner, Reviewer, Abhängigkeiten und Nicht-Ziele

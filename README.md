@@ -1,5 +1,12 @@
 # behebes.AI
 
+> **Projektstatus & Dokumentationsportal (Stand: 05.11.2026):**
+> [Dokumentationsindex](docs/INDEX.md) · [Projektstand](docs/STATUS.md) ·
+> [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md) ·
+> [Entwicklungs-/Agentenorganisation](AGENTS.md) ·
+> [Orchestrierung](docs/AGENT_ORCHESTRATION.md) · [Sicherheit](docs/SECURITY_PRIVACY.md).
+> Der dokumentierte Release `v1.0.7` stammt vom 01.03.2026; ein aktueller Produktionsstand ist damit nicht bestätigt.
+
 **Digital public service operations platform for municipal case management, workflow automation, and AI-supported administration.**  
 **Digitale Verwaltungsplattform fuer Buergermeldungen, Workflow-Automation und KI-gestuetzte Sachbearbeitung.**
 

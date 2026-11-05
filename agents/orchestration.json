@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "purpose": "Development-agent coordination only; no production AI execution or GitHub mutation",
+  "authority": "AGENTS.md",
+  "approvalPolicy": {
+    "humanRequiredFor": ["merge", "release", "deployment", "production-data-access", "external-actions"],
+    "implementationMayNotSelfApprove": true,
+    "referenceRepositoriesReadOnly": [
+      "derdigitalaffine/wf-app",
+      "derdigitalaffine/kostuemwettbewerb",
+      "derdigitalaffine/takt-platform"
+    ]
+  },
+  "agents": {
+    "orchestrator": {"profile": ".github/agents/orchestrator.agent.md", "writesProduction": false},
+    "architecture": {"profile": ".github/agents/architecture.agent.md", "writesProduction": false},
+    "backend": {"profile": ".github/agents/backend.agent.md", "writesProduction": false},
+    "frontend": {"profile": ".github/agents/frontend.agent.md", "writesProduction": false},
+    "securityQa": {"profile": ".github/agents/security-qa.agent.md", "writesProduction": false},
+    "docsOps": {"profile": ".github/agents/docs-ops.agent.md", "writesProduction": false}
+  },
+  "gates": [
+    {"id": "ready", "dependsOn": [], "owner": "orchestrator", "reviewer": "architecture", "evidence": "Akzeptanzkriterien, Scope und Risiken"},
+    {"id": "architecture", "dependsOn": ["ready"], "owner": "architecture", "reviewer": "securityQa", "evidence": "Daten-/API-/Rollenvertrag und ADR bei Bedarf"},
+    {"id": "implementation", "dependsOn": ["architecture"], "owner": "backend", "alternativeOwner": "frontend", "reviewer": "architecture", "evidence": "PR-Diff, relevante Tests, Dokumentation"},
+    {"id": "assurance", "dependsOn": ["implementation"], "owner": "securityQa", "reviewer": "docsOps", "evidence": "unabhängige Negativtests, Testbefehle/Ergebnisse, UX-Gates"},
+    {"id": "humanApproval", "dependsOn": ["assurance"], "owner": "orchestrator", "reviewer": "human", "evidence": "GitHub-Review und CI-Checks; Agent genehmigt nicht selbst"},
+    {"id": "operations", "dependsOn": ["humanApproval"], "owner": "docsOps", "reviewer": "human", "evidence": "Backup, Preflight, Runbook, Smoke und Rollback bei Releases"}
+  ]
+}

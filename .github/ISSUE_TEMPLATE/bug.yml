@@ -1,0 +1,33 @@
+name: Fehlerbericht (ohne sensible Daten)
+description: Reproduzierbarer Fehler mit erwarteter und tatsächlicher Wirkung
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Keine produktiven Tokens, Bürgerdaten, Screenshots mit PII oder Secret-Logs posten. Sicherheitslücken vertraulich melden.
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduktionsschritte mit synthetischen Daten
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Erwartetes und tatsächliches Verhalten
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Bereich, Version, Rolle und betroffene Plattform
+      placeholder: Bürger/Admin/OPS/Backend, Tag/Commit, Browser, Tenant-Kontext anonymisiert
+  - type: textarea
+    id: impact
+    attributes:
+      label: Auswirkung, Schweregrad, Regression und sicherer Workaround
+  - type: textarea
+    id: testing
+    attributes:
+      label: Vorhandene Tests und mögliche Negativ-/Regressionstests

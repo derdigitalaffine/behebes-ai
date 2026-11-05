@@ -1,0 +1,40 @@
+# Architektur- und Organisationsentscheidungen (ADR-Register)
+
+**Regel:** Entscheidungen dokumentieren **wann**, **warum**, **Alternativen**, **Konsequenzen**, **Prüfbedarf**. Keine nachträgliche Behauptung formeller Freigabe.
+
+## ADR-0001 – Entwicklungsagenten von Laufzeit-KI trennen
+
+- **Datum:** 2026-11-05
+- **Status:** vorgeschlagen im Agenten-/Dokumentationspaket; wirksam erst nach Merge/Freigabe.
+- **Kontext:** Produkt enthält bereits LLM-Hub/AI-Queue/Workflows. Gewünscht ist zusätzlich geordnete Multi-Agent-Arbeit an der Codebasis.
+- **Entscheidung:** Provider-neutrale `AGENTS.md`-Regeln, `.github/agents/*.agent.md`-Rollen, zentrale Übergabe- und Review-Gates. Keine neue produktive Agentenruntime und kein autonomes Deployment.
+- **Alternativen:** unkoordinierte freie Coding-Agenten (verworfen), sofortiges Agenten-Framework mit DB/Queue/Secrets (später erst nach separater Sicherheits- und Kostenentscheidung).
+- **Konsequenz:** klare Ownership, aber zunächst manueller Task-Dispatch und menschliche Freigabe.
+
+## ADR-0002 – Dokumentation als ausführbaren Qualitätsvertrag prüfen
+
+- **Datum:** 2026-11-05
+- **Status:** vorgeschlagen.
+- **Entscheidung:** Index + Markdown-Pflichtseiten + relativer Linkcheck mit Node-Standardbibliothek in einer isolierten GitHub Actions Workflow-Datei. Kein CI-Grün für Produktcode behauptet.
+- **Konsequenz:** schnelle statische Doku-Checks; vollständiger Node-/Browser-/DB-Testpfad ist separater Roadmap-Punkt.
+
+## ADR-0003 – Roadmap nach nachweisbaren Gates statt angenommenem Reifegrad
+
+- **Datum:** 2026-11-05
+- **Status:** vorgeschlagen.
+- **Entscheidung:** P0 Betrieb/Security/Restore/CI vor P1 UX/Fachvertragsausbau und P2 Erweiterungen. Ein Punkt wird erst mit Test-/PR-Evidenz verifiziert.
+- **Konsequenz:** ehrliche Statusführung, keine erfundenen Deadlines oder Produktionsfreigaben.
+
+## Neues ADR-Template
+
+```text
+ADR-NNNN: Titel
+Datum / Status: vorgeschlagen | akzeptiert | ersetzt
+Problem und Nutzer-/Betriebswirkung:
+Bisheriger Stand und beteiligte Komponenten:
+Entscheidung und Alternativen:
+Tenant/RBAC/PII/AI/Audit/Offline/Migration:
+Kompatibilität, Kosten, Risiken und Rollback:
+Test-/Review-Evidenz:
+Links auf Issue, PR und ersetzte ADRs:
+```
