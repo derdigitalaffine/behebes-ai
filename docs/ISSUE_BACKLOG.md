@@ -109,7 +109,7 @@ Geschwindigkeit und Verfügbarkeit durch Evidenz statt Bauchgefühl verbessern: 
 | ID | Prio | Aufgabe | Vorbedingungen |
 | --- | --- | --- | --- |
 | S01 | P0 | Tenant-/Org-/Capability-Isolation als testbare Sicherheitsinvariante | F02, F04 |
-| S02 | P0 | Produktionssecrets, sichere Compose-Defaults und Proxy-Härtung | F02, P02 |
+| S02 | P0 | Produktionssecrets, sichere Compose-Defaults und Proxy-Härtung | F02 |
 | S03 | P0 | Datenschutz, Datenflüsse, Aufbewahrung, Auskunft und Löschung | F01, F03 |
 | S04 | P0 | KI-Assistenten kontrolliert: Vorschlag, Validierung, Budget und menschlicher Entscheid | M04, R04, S01 |
 | S05 | P0 | Dateien, Anhänge, Exporte und Geodaten gegen Missbrauch härten | S01, F03 |

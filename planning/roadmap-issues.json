@@ -1471,8 +1471,7 @@
         "Keine Standard-Adminpasswörter in Dokumentation/Images"
       ],
       "dependsOn": [
-        "F02",
-        "P02"
+        "F02"
       ],
       "failureCases": [
         "Nicht einfach Secrets entfernen ohne kompatiblen Bestandsupgrade-/Rollbackplan"
