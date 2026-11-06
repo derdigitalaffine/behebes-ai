@@ -23,9 +23,13 @@ export const sanitizeOpenTarget = (value?: string | null): string | null => {
   try {
     decoded = decodeURIComponent(trimmed);
   } catch {
-    decoded = trimmed;
+    return null;
   }
-  if (!decoded.startsWith('/') || decoded.startsWith('//')) return null;
+  // URL parsers normalize backslashes as slashes; encoded separators
+  // must not turn an internal PWA deep-link into a protocol-relative URL.
+  if (!decoded.startsWith('/') || decoded.startsWith('//') ||
+      decoded.includes('\\') || /[\u0000-\u001f\u007f]/.test(decoded) ||
+      /%(?:2f|5c)/i.test(decoded)) return null;
   return decoded;
 };
 
