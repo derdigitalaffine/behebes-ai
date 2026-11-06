@@ -60,9 +60,12 @@ export async function generateGovernedChat(
   input: GovernedGeneration
 ): Promise<ProviderGenerationResult> {
   const { connection, context, grant, request } = input;
-  if (!connection || !context || connection.id.length === 0 ||
+  if (!input || !connection || !context || !request ||
+      typeof connection.id !== 'string' || !connection.id.trim() ||
+      typeof connection.providerId !== 'string' || !connection.providerId.trim() ||
+      typeof connection.region !== 'string' || !connection.region.trim() ||
       context.providerId !== connection.providerId || context.region !== connection.region ||
-      context.taskKey !== request?.taskKey) {
+      context.taskKey !== request.taskKey) {
     throw new AiGatewayError('policy_denied');
   }
   const decision = assessAiEgress(context, grant, input.nowMs);

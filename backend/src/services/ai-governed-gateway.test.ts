@@ -71,6 +71,16 @@ describe('K03/K07/K16: governed AI connection facade', () => {
     expect(resolve).not.toHaveBeenCalled();
     expect(fetcher).not.toHaveBeenCalled();
   });
+  it('fails closed on malformed connection identities without resolving credentials', async () => {
+    const resolve = vi.fn(async () => 'fake-secret-never-log');
+    for (const badId of [undefined, null, '', '  ']) {
+      await expect(generateGovernedChat({
+        ...payload, connection: { ...payload.connection, id: badId as any },
+        credentials: { resolve },
+      })).rejects.toMatchObject({ code: 'policy_denied' });
+    }
+    expect(resolve).not.toHaveBeenCalled();
+  });
   it('does not accept a task mismatch even with a valid tenant grant', async () => {
     const resolve = vi.fn(async () => 'fake-secret-never-log');
     await expect(generateGovernedChat({
