@@ -45,6 +45,12 @@
 - **Entscheidung:** Fähigkeitsprüfung gegen expliziten, vertrauenswürdigen Modellkatalog; stale/unknown-Probes führen vor dem Provideraufruf zu einem kontrollierten Fehler.
 - **Details:** [ADR-0006](ADR-0006-MODEL-CAPABILITIES.md), [Issue #76](https://github.com/derdigitalaffine/behebes-ai/issues/76).
 
+## ADR-0007 – Sicherheitsprüfungen für KI-Egress und Credentials
+
+- **Datum:** 2026-11-06; **Status:** isolierte Implementierung, keine produktive Freigabe.
+- **Entscheidung:** ausdrückliche Tenant-/Task-/Region-/Datenklassen-Freigabe **vor** Secret-Auflösung und Provideraufruf; statische Endpoint-Prüfung und dokumentierte DNS/IP-Transportgrenze.
+- **Details:** [ADR-0007](ADR-0007-AI-EGRESS-GOVERNANCE.md). **Issues:** [K03 #75](https://github.com/derdigitalaffine/behebes-ai/issues/75), [K07 #79](https://github.com/derdigitalaffine/behebes-ai/issues/79), [K16 #88](https://github.com/derdigitalaffine/behebes-ai/issues/88).
+
 ## Neues ADR-Template
 
 ```text
