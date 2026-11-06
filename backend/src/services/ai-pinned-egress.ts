@@ -176,7 +176,8 @@ export function createPinnedHttpsFetcher(destination: PinnedAiDestination): type
           reject(new AiEgressTransportError('transport_rejected'));
           return;
         }
-        if (status === 204 || status === 205 || status === 304) {
+        if (status < 200 || status >= 300 || status === 204 || status === 205) {
+          // Do not download, buffer or log untrusted provider error bodies.
           incoming.destroy();
           resolve(new Response(null, { status }));
           return;
