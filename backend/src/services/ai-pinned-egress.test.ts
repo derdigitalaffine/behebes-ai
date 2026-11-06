@@ -44,7 +44,8 @@ describe('K07: address classes and DNS rebinding controls', () => {
       { address: '2606:4700:4700::1111', family: 6 },
     ]);
     const result = await resolvePinnedAiDestination(base, [origin], resolver);
-    expect(resolver).toHaveBeenCalledExactlyOnceWith('models.example.invalid');
+    expect(resolver).toHaveBeenCalledTimes(1);
+    expect(resolver).toHaveBeenCalledWith('models.example.invalid');
     expect(result).toEqual({
       endpoint: origin + '/v1/chat/completions',
       hostname: 'models.example.invalid',
@@ -55,12 +56,12 @@ describe('K07: address classes and DNS rebinding controls', () => {
   });
 
   it.each([
-    [{ address: '127.0.0.1', family: 4 }],
-    [{ address: '1.1.1.1', family: 4 }, { address: '10.0.0.1', family: 4 }],
-    [{ address: '2606:4700:4700::1111', family: 6 }, { address: '::1', family: 6 }],
-    [{ address: '1.1.1.1', family: 6 }],
-    [{ address: 'invalid', family: 4 }],
-  ])('rejects a DNS answer with even one unsafe or malformed address', async records => {
+    { records: [{ address: '127.0.0.1', family: 4 }] },
+    { records: [{ address: '1.1.1.1', family: 4 }, { address: '10.0.0.1', family: 4 }] },
+    { records: [{ address: '2606:4700:4700::1111', family: 6 }, { address: '::1', family: 6 }] },
+    { records: [{ address: '1.1.1.1', family: 6 }] },
+    { records: [{ address: 'invalid', family: 4 }] },
+  ])('rejects a DNS answer with even one unsafe or malformed address', async ({ records }) => {
     await expectDenied(resolvePinnedAiDestination(base, [origin], async () => records),
       'address_rejected');
   });

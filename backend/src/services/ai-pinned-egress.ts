@@ -153,7 +153,7 @@ export function pinnedHttpsRequestOptions(
  */
 export function createPinnedHttpsFetcher(destination: PinnedAiDestination): typeof fetch {
   const target = pinnedHttpsRequestOptions(destination);
-  return (async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
+  return (async (input: string | URL | Request, init?: RequestInit): Promise<Response> => {
     if (String(input) !== destination.endpoint ||
         init?.method !== 'POST' || init.redirect !== 'error' ||
         typeof init.body !== 'string' || Buffer.byteLength(init.body, 'utf8') > 320_000 ||
