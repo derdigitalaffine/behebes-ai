@@ -2,7 +2,7 @@
 
 `roadmap-issues.json` ist die **versionierte, maschinenlesbare Entwurfssammlung** der geplanten GitHub-Tickets. **Nicht** jede Aufgabe ist bereits umgesetzt, oder überhaupt als GitHub-Issue angelegt.
 
-Enthalten: **1 Programmticket**, **9 Epics (E-F bis E-P)** und **59 Umsetzungstickets (F01…P06)**. Die JSON-IDs sind stabil und werden über den Marker `<!-- behebes-roadmap-id:KEY -->` in den Issues gespeichert.
+Enthalten: **1 Programmticket**, **10 Epics (E-F bis E-P einschließlich E-K)** und **81 Umsetzungstickets (F01…P06 sowie K01–K22)**. Die JSON-IDs sind stabil und werden über den Marker `<!-- behebes-roadmap-id:KEY -->` in den Issues gespeichert.
 
 ## Freigabe / Import
 

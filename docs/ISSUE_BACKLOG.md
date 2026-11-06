@@ -1,6 +1,6 @@
 # Verbindlicher Issue-Backlog (als Entwürfe gespeichert)
 
-**Stand:** 05.11.2026. **Single Source of Truth:** [`planning/roadmap-issues.json`](../planning/roadmap-issues.json). Die GitHub-Issues im Fork sind derzeit **deaktiviert**; die folgenden stabilen Schlüssel sind **noch keine Issue-Nummern**.
+**Stand:** 05.11.2026. **Single Source of Truth:** [`planning/roadmap-issues.json`](../planning/roadmap-issues.json). Die GitHub-Issues im Fork sind inzwischen **aktiviert**. Bestehende Planungs-IDs werden den tatsächlichen GitHub-Nummern zugeordnet; neue K01–K22-Tickets werden beim autorisierten Roadmap-Sync angelegt. Stabile Schlüssel bleiben verbindlich.
 
 Jeder Task enthält in der JSON-Datei: geschäftlichen Nutzen, eindeutigen Epic-/Prioritätsbezug, Implementierungsscope, spezifische Akzeptanzkriterien, negativen Testfall, Dependency-Keys und federführenden Bereich. Die Importdatei erzeugt daraus ausführliche, strukturierte Issues mit Sicherheits-/UX-/Rollout-/Qualitätsgate.
 
@@ -128,6 +128,35 @@ Wiederherstellbarer, beobachtbarer und wartbarer Self-hosting-Betrieb mit getest
 | P05 | P1 | Integrationen als optionale, versionierte Connectoren mit Health und Limits | M03, M04, R04, S02 |
 | P06 | P0 | Staging-Golden-Path: Bürger → Admin → OPS → Abschluss inklusive Rollback | F04, R04, M04, B01, A02, O01, P03 |
 
+
+### E-K – KI-Backend-Plattform: Provider-Fabric, Modellrouting, Qualität, Datenschutz und Betrieb (P0; 22 Tasks)
+
+KI als verlässlichen, überprüfbaren und mandantenfähigen Unterstützungsdienst betreiben: Wechsel zwischen lokalen und Cloud-Backends ohne Fachlogik-Rewrite, mit Fähigkeiten pro Modell, transparentem Routing, sicheren Zugangsdaten, gutem Fallback und menschlicher Kontrolle.
+
+| ID | Prio | Aufgabe | Vorbedingungen |
+| --- | --- | --- | --- |
+| K01 | P0 | Ist-Aufnahme, Zielarchitektur und LLM-Backend-Migrations-ADR | F03, S01 |
+| K02 | P0 | Typisierte Provider-Adapter mit einheitlichem Request-/Response-Vertrag | K01, M02 |
+| K03 | P0 | KI-Connection-Verwaltung mit sicherem Credential-Lifecycle und Tenant-Scope | K01, S02 |
+| K04 | P0 | Modellkatalog und verifizierbare Capability-Matrix statt Namensheuristik | K02 |
+| K05 | P0 | Provider-Probes, Health, Timeouts, Retries und Circuit Breaker | K02 |
+| K06 | P0 | Deterministisches Task-Routing mit Fallback-Pools, Prioritäten und Governance | K04, K05, M04, R04 |
+| K07 | P0 | Sichere KI-Endpunktkonfiguration und kontrollierter Netzwerkzugang | K02, S02 |
+| K08 | P0 | Fachliche Prompt-/Task-Verträge mit strukturierten Versionen | K02, F03 |
+| K09 | P1 | Validierte KI-Ausgaben, Confidence/Provenance und kontrollierte Reparatur | K08, S04 |
+| K10 | P1 | Multimodale KI-Backends für Bilder und Dokumente mit Datenschutz-Gates | K04, K09, S05 |
+| K11 | P1 | Streaming-Antworten mit Abbruch, Limits und verständlicher Admin-UX | K02, R02 |
+| K12 | P1 | KI-Queue: idempotente Ausführung und sichere Provider-Failover-Semantik | R04, K06 |
+| K13 | P0 | KI-Qualitäts-Evaluationsframework mit synthetischen Golden Cases | K08, F04 |
+| K14 | P1 | Mantine-KI-Cockpit: Verbindungen, Modelle, Routing, Test und Diagnose | D02, M05, K04, K06 |
+| K15 | P1 | KI-Nutzung, Tokenkosten, Budgets und datensparsames Monitoring | K06, R07 |
+| K16 | P0 | KI-Datenschutz- und Egress-Governance je Task und Mandant | K03, S03 |
+| K17 | P2 | Tenant-sichere Wissenskontexte und RAG für Assistenz | K16, K09, S01 |
+| K18 | P1 | Kompatible Legacy-Integration und risikofreier Parallelbetrieb | K02, K06, K13, P02 |
+| K19 | P1 | On-Prem-KI-Backends: Ollama, vLLM, LM Studio kontrolliert integrieren | K02, K04, K07, K05 |
+| K20 | P1 | KI-gestützte Facharbeit: Provenance, Human-in-the-loop und Vieraugenfreigabe | K09, S04, A02 |
+| K21 | P1 | Herstellerspezifische Adapter und Azure-/Native-API-Support | K02, K04, K07 |
+| K22 | P1 | Provider-Contract-, Chaos- und Qualitätsregressionen als Release-Gate | K13, K19, K21, R04 |
 
 ## Vollständige Akzeptanz und Import
 

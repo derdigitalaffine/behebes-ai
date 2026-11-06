@@ -2,7 +2,7 @@
 
 **Stand:** 05.11.2026. **Quellcodebasis:** `main@12ae45fa`, Arbeitsdokumente im Branch `docs/agenten-orchestrierung-und-projektleitfaden`. **Ist und Soll strikt getrennt.** Kein produktiver Performance-/Datenschutz-/QA-Nachweis aus diesem Plan ableitbar.
 
-> **GitHub-Status:** Der Fork `derdigitalaffine/behebes-ai` hat `has_issues=false`. Daher werden **keine erfundenen Issue-Nummern** angegeben. Alle 69 geplanten Issue-Entwürfe (1 Programm + 9 Epics + 59 Slices) liegen in [planning/roadmap-issues.json](../planning/roadmap-issues.json). Nach Aktivierung von Issues importiert [scripts/import-roadmap-issues.mjs](../scripts/import-roadmap-issues.mjs) die Entwürfe idempotent.
+> **GitHub-Status:** Der Fork `derdigitalaffine/behebes-ai` hat `has_issues=false`. Daher werden **keine erfundenen Issue-Nummern** angegeben. Alle 69 geplanten Issue-Entwürfe (1 Programm + 10 Epics + 81 Slices) liegen in [planning/roadmap-issues.json](../planning/roadmap-issues.json). Nach Aktivierung von Issues importiert [scripts/import-roadmap-issues.mjs](../scripts/import-roadmap-issues.mjs) die Entwürfe idempotent.
 
 ## Produktleitbild
 
@@ -16,6 +16,12 @@
 - **Ready:** Persona + Nutzen, Modul-/Tenant-/Org-Scope, Fehlerpfade/Dependencies, API-/DB-/Offline-/Job-/KI-Folgen, Testplan und Review.
 - **Done:** funktionierender vertikaler Slice, Backend-Guards + Negativtests, 320/360px/Keyboard, CI/Browser/E2E, Performancevergleich, Doku/Runbook, Rollback und unabhängige Security-Freigabe wo erforderlich.
 - **Harte Stopps:** fehlende produktive Secrets, nicht nachweisbare Tenant- oder Queue-Sicherheit, nicht geprobter Restore vor inkompatibler Migration, kritische A11y-/Datenverlust-Regression.
+
+## Operative Milestones statt bloßer Phasen
+
+**Acht deklarative und technisch geordnete Meilensteine M0–M7** sind in [MILESTONES.md](MILESTONES.md) beschrieben und in [planning/milestones.json](../planning/milestones.json) versioniert. Alle 81 Arbeitspakete haben genau einen Milestone, der erst nach dokumentierten Exit-Gates abgeschlossen werden darf. Due Dates werden nicht ohne Teamkapazität erfunden.
+
+**Neuer wesentlicher Querschnitt:** [KI-Backend-/Provider-Fabric](AI_BACKENDS.md) mit 22 priorisierten Aufgaben K01–K22, sicheren Credentials, mehrteiliger Provider-Kompatibilität, Tenant-Egress-Policies, Modellfähigkeiten, robustem Failover, Queue und Qualitäts-Evaluationen. Die ursprüngliche LLM-Hub-/Legacy-Provider-Migration muss kompatibel bleiben.
 
 ## Umsetzungswellen (Gates statt frei erfundener Termine)
 
@@ -42,6 +48,7 @@
 | **E-O** – OPS: robuste Außendienstarbeit, offline und mobil | P1 | 5 Slices | Feldteams sollen Aufgaben verlässlich auf dem Smartphone ausführen, mit klarer Synchronisierung und sicheren Übergaben. | O02/F04 |
 | **E-R** – Messbare Performance, Stabilität und Resilienz | P0 | 8 Slices | Geschwindigkeit und Verfügbarkeit durch Evidenz statt Bauchgefühl verbessern: Datenbank, API, Frontend, Worker und Realtime. | F05 |
 | **E-S** – Sicherheit, Datenschutz und KI-Governance | P0 | 6 Slices | Öffentliche Verwaltungssoftware muss datensparsam, mandantensicher und prüfbar bleiben – auch bei modularen Features und KI. | F02 |
+| **E-K** – KI-Backend-Plattform: Provider-Fabric, Modellrouting, Qualität, Datenschutz und Betrieb | P0 | 22 Slices | KI als verlässlichen, überprüfbaren und mandantenfähigen Unterstützungsdienst betreiben: Wechsel zwischen lokalen und Cloud-Backends ohne Fachlogik-Rewrite, mit Fähigkeiten pro Modell, transparentem Routing, sicheren Zugangsdaten, gutem Fallback und menschlicher Kontrolle. | K01/F03/S01 |
 | **E-P** – Betrieb, Migration, Integration und Release-Exzellenz | P0 | 6 Slices | Wiederherstellbarer, beobachtbarer und wartbarer Self-hosting-Betrieb mit getesteten Upgrade-/Rollbackpfaden. | P01/F04 |
 
 ## Architektur- und UX-Entscheidungen
