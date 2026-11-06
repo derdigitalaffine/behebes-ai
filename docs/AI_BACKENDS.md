@@ -147,3 +147,9 @@ Ein Provider wird nur als „unterstützt“ dokumentiert, wenn konkrete Adapter
 Nach dem isolierten Sicherheitsgateway aus PR #98 verbindet der neue HTTPS-Transport nun ausschließlich auf eine zuvor geprüfte und für den Request gepinnte IP. Er prüft **sämtliche A-/AAAA-DNS-Antworten** und lehnt Spezial-/Privatadressen, gemischte Antworten und ungeprüfte Origins ab. TLS validiert weiterhin das Zertifikat für den ursprünglichen Provider-Hostnamen, nicht für die gepinnte IP. Die Secret-Referenz wird erst nach erfolgreicher DNS-/Endpoint-/Tenantprüfung geladen.
 
 **Status:** technisch implementierter, aber **nicht im produktiven LLM-Hub eingeschalteter** Baustein. Infrastruktur-Egress-Firewall, Secret-Lifecycle, datenschutzrechtlich geprüfte Providerfreigaben, Integrations-/Netzwerkausfalltests und ein unabhängiger Security-Review bleiben Pflicht. [ADR-0008](ADR-0008-AI-PINNED-EGRESS.md) · [PR #99](https://github.com/derdigitalaffine/behebes-ai/pull/99).
+
+## K03-Implementierung: geprüfte Secret-Bindings (PR #100)
+
+Das isolierte Gateway hat einen konkreten serverseitigen Credential-Resolver erhalten, der **Tenant, Provider und Verbindung** bei jedem Secret-Read exakt vergleicht. Nur explizit genehmigte `AI_PROVIDER_*`-Keys können aus einem sicheren Reader bezogen werden; bei einem fremden Scope wird der Store nicht kontaktiert. Ein Environment-Reader ist als Deployment-Baseline verfügbar, darf aber nicht als vollständiger Managed-Secretmanager oder automatische Container-Rotation missverstanden werden.
+
+**Weiter offen:** Secretmanager-Verschlüsselung/-Rotation/-Audit, sichere Übernahme bestehender `llmHub`-/OAuth-Credentials, Admin-/RBAC-Freigaben und vollständige Produktivintegration. [ADR-0009](ADR-0009-AI-CREDENTIAL-BINDINGS.md) · [K03 #75](https://github.com/derdigitalaffine/behebes-ai/issues/75).
