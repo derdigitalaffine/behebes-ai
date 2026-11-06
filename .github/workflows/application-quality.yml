@@ -60,6 +60,25 @@ jobs:
         run: npm ci --no-audit --no-fund
       - name: Run Vitest without watch or pass-with-no-tests
         run: npm test --workspace=backend -- --run
+  ui-unit:
+    name: Vitest / ${{ matrix.workspace }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: [frontend, admin, ops]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Reproducible install from root lockfile
+        run: npm ci --no-audit --no-fund
+      - name: Run workspace unit tests
+        run: npm test --workspace=${{ matrix.workspace }} -- --run
+
   test-inventory:
     name: Test inventory (missing suites are reported)
     runs-on: ubuntu-latest
