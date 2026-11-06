@@ -63,6 +63,12 @@
 - **Entscheidung:** Referenzen auf Secret-Keys sind strikt mit Tenant/Provider/Connection gebunden; Reads nach erfolgreicher Policyprüfung, ohne zusätzlichen Token-Cache und mit redigierter Fehlerbehandlung.
 - **Details:** [ADR-0009](ADR-0009-AI-CREDENTIAL-BINDINGS.md), [K03 #75](https://github.com/derdigitalaffine/behebes-ai/issues/75).
 
+## ADR-0010 – Schreibfreier LLM-Hub-Pilot-Preview ohne Providerfallback
+
+- **Datum:** 2026-11-06; **Status:** sicherheitsgebundene Teilimplementierung, Runtime-Ausführung bleibt deaktiviert.
+- **Entscheidung:** nur explizite Route für öffentliche UI-Übersetzung, strikt geprüfte Capability/Tenant/Endpoint/Legacy-Secret-Übereinstimmung, keine implizite Providerwahl oder Datenbankmutation.
+- **Details:** [ADR-0010](ADR-0010-LLMHUB-PILOT-PREVIEW.md), [K18 #90](https://github.com/derdigitalaffine/behebes-ai/issues/90).
+
 ## Neues ADR-Template
 
 ```text

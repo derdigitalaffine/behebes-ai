@@ -153,3 +153,9 @@ Nach dem isolierten Sicherheitsgateway aus PR #98 verbindet der neue HTTPS-Trans
 Das isolierte Gateway hat einen konkreten serverseitigen Credential-Resolver erhalten, der **Tenant, Provider und Verbindung** bei jedem Secret-Read exakt vergleicht. Nur explizit genehmigte `AI_PROVIDER_*`-Keys können aus einem sicheren Reader bezogen werden; bei einem fremden Scope wird der Store nicht kontaktiert. Ein Environment-Reader ist als Deployment-Baseline verfügbar, darf aber nicht als vollständiger Managed-Secretmanager oder automatische Container-Rotation missverstanden werden.
 
 **Weiter offen:** Secretmanager-Verschlüsselung/-Rotation/-Audit, sichere Übernahme bestehender `llmHub`-/OAuth-Credentials, Admin-/RBAC-Freigaben und vollständige Produktivintegration. [ADR-0009](ADR-0009-AI-CREDENTIAL-BINDINGS.md) · [K03 #75](https://github.com/derdigitalaffine/behebes-ai/issues/75).
+
+## K18/K06 – LLM-Hub-Pilot-Kompatibilitätsprüfung (PR #101)
+
+Ein interner, **standardmäßig deaktivierter und ausschließlich lesender** Kompatibilitätsplaner überprüft den echten `llmHub`-Task-Routingzustand für öffentliche `ui_translation`-Aufgaben. Er erfordert eine explizite Taskroute und eine separat vertrauenswürdig verwaltete Freigabe für Tenant, Provider, Modell, Datenschutz und Endpunkt. Legacy-API-/OAuth-Credentials werden ausdrücklich **nicht** still auf K03-Secret-Referenzen umgedeutet. Das Featureflag `AI_LLM_HUB_GUARDED_PILOT_MODE=preview` erlaubt nur eine serverinterne Vorprüfung; es existieren weder eine API-Route noch ein Execute-Modus.
+
+**Kein produktiver Wechsel, keine Datenbankmigration, kein Prompt-/Token-Transport.** Eine positive Vorprüfung ist noch keine Sendefreigabe. Vor einem produktiven Piloten benötigt das System die vollständige autorisierte Credential-/Tenant-Policyquelle, Migrationsstrategie, Netzwerk-Egress-Firewall und QA-/Privacy-Freigabe. [ADR-0010](ADR-0010-LLMHUB-PILOT-PREVIEW.md).
