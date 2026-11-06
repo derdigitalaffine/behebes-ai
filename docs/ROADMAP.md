@@ -1,8 +1,8 @@
 # behebes.AI Next · detaillierte Weiterentwicklungsroadmap
 
-**Stand:** 05.11.2026. **Quellcodebasis:** `main@12ae45fa`, Arbeitsdokumente im Branch `docs/agenten-orchestrierung-und-projektleitfaden`. **Ist und Soll strikt getrennt.** Kein produktiver Performance-/Datenschutz-/QA-Nachweis aus diesem Plan ableitbar.
+**Stand:** 06.11.2026. **Quellcodebasis:** `main@12ae45fa`, Arbeitsdokumente im Branch `docs/agenten-orchestrierung-und-projektleitfaden`. **Ist und Soll strikt getrennt.** Kein produktiver Performance-/Datenschutz-/QA-Nachweis aus diesem Plan ableitbar.
 
-> **GitHub-Status:** Der Fork `derdigitalaffine/behebes-ai` hat `has_issues=false`. Daher werden **keine erfundenen Issue-Nummern** angegeben. Alle 69 geplanten Issue-Entwürfe (1 Programm + 10 Epics + 81 Slices) liegen in [planning/roadmap-issues.json](../planning/roadmap-issues.json). Nach Aktivierung von Issues importiert [scripts/import-roadmap-issues.mjs](../scripts/import-roadmap-issues.mjs) die Entwürfe idempotent.
+> **GitHub-Status:** Issues sind aktiv und **alle 92 Planungsobjekte sind tatsächlich in GitHub angelegt**: [Master-Roadmap [#3](https://github.com/derdigitalaffine/behebes-ai/issues/3)](https://github.com/derdigitalaffine/behebes-ai/issues/3), 10 Epics und 81 Slices. Die 8 Milestone-Gates werden unter [Meilensteinplan](MILESTONES.md) und [Planungsmanifest](../planning/milestones.json) verwaltet. Angelegt ≠ implementiert; es liegen keine produktiven Performance- oder Abnahmedaten aus dem Roadmap-Prozess vor.
 
 ## Produktleitbild
 
@@ -35,6 +35,10 @@
 | W5 **Skalierung & Release-Vertrauen** | Metriken und synthetische Last | `R01–R08`, `S04–S06`, `P03–P05` entlang nachgewiesener Engpässe; laufende Pflege ab W0 |
 
 **Wellen sind nicht strikt vollständig sequenziell:** Beobachtbarkeit, Security, UX-Research und fachliche Prototypen beginnen parallel. Kritische Gates blockieren aber die riskante produktive Migration. `P06` ist fortlaufender End-to-End-Beweis, kein einmaliges Abschluss-Screenshot.
+
+## GitHub-Master, Epic- und KI-Tracker
+
+Master: [#3](https://github.com/derdigitalaffine/behebes-ai/issues/3); KI-/Provider-Fabric: [#72](https://github.com/derdigitalaffine/behebes-ai/issues/72); Modulplattform: [#5](https://github.com/derdigitalaffine/behebes-ai/issues/5); Mantine/UX: [#6](https://github.com/derdigitalaffine/behebes-ai/issues/6); Stabilität: [#10](https://github.com/derdigitalaffine/behebes-ai/issues/10). Der [Issue-Index](ISSUE_BACKLOG.md) verlinkt alle 81 Tasks und ihre blockierenden Vorgänger. Im KI-Bereich werden 22 konkrete Tickets ([#73](https://github.com/derdigitalaffine/behebes-ai/issues/73) bis [#94](https://github.com/derdigitalaffine/behebes-ai/issues/94)) abgearbeitet – inklusive kompatibler Legacy-Provider-Migration und sicherem lokalem Inferenzbetrieb.
 
 ## Epics und Deliverables
 
