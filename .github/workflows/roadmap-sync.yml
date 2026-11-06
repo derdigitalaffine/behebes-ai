@@ -1,0 +1,42 @@
+name: Roadmap milestones and AI issue synchronization
+on:
+  push:
+    branches:
+      - docs/agenten-orchestrierung-und-projektleitfaden
+    paths:
+      - planning/**
+      - scripts/check-roadmap.mjs
+      - scripts/check-milestones.mjs
+      - scripts/import-roadmap-issues.mjs
+      - scripts/sync-roadmap-milestones.mjs
+      - .github/workflows/roadmap-sync.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: roadmap-fork-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    if: github.repository == 'derdigitalaffine/behebes-ai' && (github.ref == 'refs/heads/docs/agenten-orchestrierung-und-projektleitfaden' || github.ref == 'refs/heads/main')
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Validate roadmap and dependency-safe milestone coverage
+        run: |
+          node scripts/check-roadmap.mjs
+          node scripts/check-milestones.mjs
+      - name: Import only missing tracked roadmap issues
+        run: node scripts/import-roadmap-issues.mjs --apply
+      - name: Create/update owned GitHub milestones and assign tracked implementation issues
+        run: node scripts/sync-roadmap-milestones.mjs --apply

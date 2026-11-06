@@ -1,77 +1,90 @@
-# Roadmap – von Codebestand zu überprüfbarem Betrieb
+# behebes.AI Next · detaillierte Weiterentwicklungsroadmap
 
-**Stand 05.11.2026.** Dies ist eine **initiale, evidenzorientierte Roadmap** aus der Repository-Inventur, nicht die Behauptung einer vorhandenen GitHub-Projects-Planung. Termine/Stories werden nach fachlicher Priorität und Kapazität festgelegt. Release `v1.0.7` vom 01.03.2026 ist der letzte bestätigte GitHub-Release, kein attestierter aktueller Produktionstand.
+**Stand:** 06.11.2026. **Quellcodebasis:** `main@12ae45fa`, Arbeitsdokumente im Branch `docs/agenten-orchestrierung-und-projektleitfaden`. **Ist und Soll strikt getrennt.** Kein produktiver Performance-/Datenschutz-/QA-Nachweis aus diesem Plan ableitbar.
 
-## Prioritätsmodell
+> **GitHub-Status:** Issues sind aktiv und **alle 92 Planungsobjekte sind tatsächlich in GitHub angelegt**: [Master-Roadmap [#3](https://github.com/derdigitalaffine/behebes-ai/issues/3)](https://github.com/derdigitalaffine/behebes-ai/issues/3), 10 Epics und 81 Slices. Die 8 Milestone-Gates werden unter [Meilensteinplan](MILESTONES.md) und [Planungsmanifest](../planning/milestones.json) verwaltet. Angelegt ≠ implementiert; es liegen keine produktiven Performance- oder Abnahmedaten aus dem Roadmap-Prozess vor.
 
-- **P0 – betriebskritisch:** Datenschutz, Mandantentrennung, Autorisierung, Datenintegrität, Restore, geschlossene kritische Lücken.
-- **P1 – Releasequalität:** durchgängige Tests, beobachtbare Workflows, robuste UX, Dokumentationsvertrauen.
-- **P2 – Weiterentwicklung:** Komfort, zusätzliche Automatisierung und Ausbau nach stabiler Basis.
+## Produktleitbild
 
-## Phase A – Evidenz und Entwicklungsorganisation (P0)
+**Bürgeranliegen → korrekte Zuständigkeit → sichere Sachbearbeitung/Workflow → mobile OPS-Ausführung → transparenter Abschluss.** Eine funktionierende App minimiert Unsicherheit, Nacharbeit, Kontextwechsel und unkontrollierte Automatisierung. Kein generisches Dashboard-Redesign ohne belegten Nutzwert. Siehe [Produktvision und Nutzerjobs](PRODUCT_VISION.md).
 
-**Liefergegenstand:** `AGENTS.md`, Rollen, Übergabeprotokoll, Doc-Index, Architekturkarte, Status-Snapshot, PR-/Issue-Vorlagen, Doku-CI; nachvollziehbare Risiken statt unbelegter Reifegradzahl.
+## Prioritäten und Qualitäts-Gates
 
-**Abnahme:** Alle Agentenrollen kennen Read-first, Grenzen und Review-Owner; `node scripts/check-docs.mjs` ist grün; PR liefert Dateiliste und Validierung. **Status:** mit diesem Paket vorbereitet, noch nicht gemergt oder in GitHub aktiviert.
+- **P0:** Auth/Privacy/Tenant, Datenintegrität, Bereitstellung/Restore, CI/Testbasis, Modulvertrags- und Job-Sicherheit. P0 ist Risikoklasse, keine Behauptung akuter Sicherheitslücken.
+- **P1:** anwendungsübergreifender UI-Polish/Mantine, task-first Admin, Bürger- und OPS-Experience, solide Performance, Release-Prozess.
+- **P2:** nutzerzentrierte Verbesserungen nach stabiler Basis (Feedback, GIS-Comfort, ergänzende Analytics).
+- **Ready:** Persona + Nutzen, Modul-/Tenant-/Org-Scope, Fehlerpfade/Dependencies, API-/DB-/Offline-/Job-/KI-Folgen, Testplan und Review.
+- **Done:** funktionierender vertikaler Slice, Backend-Guards + Negativtests, 320/360px/Keyboard, CI/Browser/E2E, Performancevergleich, Doku/Runbook, Rollback und unabhängige Security-Freigabe wo erforderlich.
+- **Harte Stopps:** fehlende produktive Secrets, nicht nachweisbare Tenant- oder Queue-Sicherheit, nicht geprobter Restore vor inkompatibler Migration, kritische A11y-/Datenverlust-Regression.
 
-## Phase B – reproduzierbare Qualitätsbaseline (P0)
+## Operative Milestones statt bloßer Phasen
 
-1. GitHub Actions mit Node-Version gemäß `backend/package.json` (`>=22`) aufsetzen.
-2. `npm ci`, vier TS-Builds, passende Tests, `tsc`/Lint kontrolliert ausführen; nicht existierende Tests nicht als grün ausgeben.
-3. GitHub-PR-Checks und Schutzregeln tatsächlich konfigurieren/prüfen; den bestehenden Git-Runbook-Anspruch mit Realität vergleichen.
-4. OpenAPI- und Migrations-Drift-Checks sowie minimale API-Health-/Auth-Smokes ergänzen.
+**Acht tatsächlich angelegte GitHub-Meilensteine M0–M7** sind unter [GitHub Milestones](https://github.com/derdigitalaffine/behebes-ai/milestones) und in [MILESTONES.md](MILESTONES.md) beschrieben und in [planning/milestones.json](../planning/milestones.json) versioniert. Alle 81 Arbeitspakete haben genau einen Milestone, der erst nach dokumentierten Exit-Gates abgeschlossen werden darf. Due Dates werden nicht ohne Teamkapazität erfunden.
 
-**Abnahme:** reproduzierbarer CI-Lauf mit echten Log-/Check-URLs, bekannten Flakes und einem benannten Pflicht-Gate. **Abhängigkeit:** Phase A.
+**Neuer wesentlicher Querschnitt:** [KI-Backend-/Provider-Fabric](AI_BACKENDS.md) mit 22 priorisierten Aufgaben K01–K22, sicheren Credentials, mehrteiliger Provider-Kompatibilität, Tenant-Egress-Policies, Modellfähigkeiten, robustem Failover, Queue und Qualitäts-Evaluationen. Die ursprüngliche LLM-Hub-/Legacy-Provider-Migration muss kompatibel bleiben.
 
-## Phase C – Sicherheit & Datenresilienz (P0)
+## Umsetzungswellen (Gates statt frei erfundener Termine)
 
-1. Compose-Fallback-Credentials entfernen oder produktiv fail-closed gestalten; bestehende Deployments migrationssicher behandeln.
-2. JWT/CORS/Proxy-/Token-/API-Zugriffe prüfen, Tenant- und Org-Scope mit gezielten Negativtests belegen.
-3. Bürger-Uploads, Datenexporte, Prompt-Injection, AI-Queue-Outputs und ausgehende Aktionen prüfen.
-4. Datenaufbewahrung, Löschung, Audit, redaktionelle Freigaben und externe Provider-Datenströme dokumentieren.
-5. Restore auf separater Testinstanz vorführen; Migration/Legacy-Bootstrap und Rollback-Szenarien belegen.
+| Welle | Vorbedingungen | Endzustand / Exit-Gate |
+| --- | --- | --- |
+| W0 **Bestand verstehen und absichern** | bestehender Stand + synthetische Testumgebung | `F01–F06`, `S01–S03`, `P01–P02` mit reproduzierbaren Tests; alle Risiken sichtbar |
+| W1 **Modulare Contracts** | W0 Sicherheits-/CI-Grundlage | `M01–M04` und erstes risikoarmes Pilotmodul mit Tenant-/Off-/Direct-API-Tests |
+| W2 **Mantine Foundations** | F02/F05, D01 ADR | `D01–D05` plus referenzierter Admin-Pilot; keine unbeabsichtigte MUI-/React-Regression |
+| W3 **Erste perfekte durchgehende Journey** | M04/D05/F04 | `B01`, `A01–A02`, `O01–O02` integriert in Golden-Path `P06` |
+| W4 **Migration vertikal nach Fachwert** | erfolgreiche Pilot-Journey | `D06–D09`, `A03–A06`, `B02–B05`, `O03–O05`; jede Route mit Rollback |
+| W5 **Skalierung & Release-Vertrauen** | Metriken und synthetische Last | `R01–R08`, `S04–S06`, `P03–P05` entlang nachgewiesener Engpässe; laufende Pflege ab W0 |
 
-**Abnahme:** dokumentierte Prüfmatrix, Findings nach Schweregrad, verifizierte Gegenmaßnahmen, Restore-Protokoll ohne Echtdaten. **Abhängigkeit:** B.
+**Wellen sind nicht strikt vollständig sequenziell:** Beobachtbarkeit, Security, UX-Research und fachliche Prototypen beginnen parallel. Kritische Gates blockieren aber die riskante produktive Migration. `P06` ist fortlaufender End-to-End-Beweis, kein einmaliges Abschluss-Screenshot.
 
-## Phase D – deterministische Fach- und AI-Workflows (P1)
+## GitHub-Master, Epic- und KI-Tracker
 
-1. Workflow-/Queue-Lebenszyklus: Zustandsübergänge, Retries, Duplikate, Zuständigkeiten, Freigaben.
-2. API-Schema zu Implementierung abgleichen, Berechtigungsvarianten pro Endpoint.
-3. LLM-Routing und KI-Bewertung mit synthetischen Szenarien, Fallback/Timeout/Kostenlimit und Mensch-in-der-Schleife testen.
-4. Import-/Organisations-Zuständigkeitskonflikte und Batch-Rollback testen.
+Master: [#3](https://github.com/derdigitalaffine/behebes-ai/issues/3); KI-/Provider-Fabric: [#72](https://github.com/derdigitalaffine/behebes-ai/issues/72); Modulplattform: [#5](https://github.com/derdigitalaffine/behebes-ai/issues/5); Mantine/UX: [#6](https://github.com/derdigitalaffine/behebes-ai/issues/6); Stabilität: [#10](https://github.com/derdigitalaffine/behebes-ai/issues/10). Der [Issue-Index](ISSUE_BACKLOG.md) verlinkt alle 81 Tasks und ihre blockierenden Vorgänger. Im KI-Bereich werden 22 konkrete Tickets ([#73](https://github.com/derdigitalaffine/behebes-ai/issues/73) bis [#94](https://github.com/derdigitalaffine/behebes-ai/issues/94)) abgearbeitet – inklusive kompatibler Legacy-Provider-Migration und sicherem lokalem Inferenzbetrieb.
 
-**Abnahme:** Unit-/API-/Integrationstests inkl. Negativfälle; kein KI-Output löst unberechtigte Fachaktion aus. **Abhängigkeit:** B/C.
+## Epics und Deliverables
 
-## Phase E – benutzbare, mobile End-to-End-Kernwege (P1)
+| Epic | Priorität | Geplanter Umfang | Fachliche Wirkung | Erste wesentliche Abhängigkeit |
+| --- | --- | --- | --- | --- |
+| **E-F** – Produktführung, Qualitätsbaseline und überprüfbare Architektur | P0 | 6 Slices | Die bestehende Plattform entlang echter Bürger-, Sachbearbeitungs-, Leitungs- und OPS-Aufgaben verstehen. Qualitätsstatus und technische Entscheidungen messbar machen. | Ist-Stand |
+| **E-M** – Modulplattform, Feature Controls und Entkopplung | P0 | 8 Slices | Aus dem gewachsenen modularen Monolithen eine nachvollziehbare Modularchitektur mit sicherer Aktivierung je Tenant schaffen, ohne laufende Vorgänge zu verlieren. | F03/F06 |
+| **E-D** – Mantine Design System und visueller UX-Polish | P1 | 9 Slices | Eine ruhige, professionelle und barrierearme Oberfläche für alle drei Anwendungen etablieren, ohne unkontrollierte Big-Bang-Umschreibung. | D01 und CI |
+| **E-B** – Bürgererlebnis: melden, verstehen, verfolgen | P1 | 5 Slices | Ein Anliegen in möglichst wenigen verständlichen Schritten erfassen und mit ehrlichem Status transparent verfolgen. | B01/F01 |
+| **E-A** – Admin als task-first Arbeitsraum für Verantwortung und Entscheidungen | P1 | 6 Slices | Für Verwaltungsmitarbeitende die nächste verantwortbare Handlung vor Konfigurations- und Tabellenkomplexität stellen. | A01/D03 |
+| **E-O** – OPS: robuste Außendienstarbeit, offline und mobil | P1 | 5 Slices | Feldteams sollen Aufgaben verlässlich auf dem Smartphone ausführen, mit klarer Synchronisierung und sicheren Übergaben. | O02/F04 |
+| **E-R** – Messbare Performance, Stabilität und Resilienz | P0 | 8 Slices | Geschwindigkeit und Verfügbarkeit durch Evidenz statt Bauchgefühl verbessern: Datenbank, API, Frontend, Worker und Realtime. | F05 |
+| **E-S** – Sicherheit, Datenschutz und KI-Governance | P0 | 6 Slices | Öffentliche Verwaltungssoftware muss datensparsam, mandantensicher und prüfbar bleiben – auch bei modularen Features und KI. | F02 |
+| **E-K** – KI-Backend-Plattform: Provider-Fabric, Modellrouting, Qualität, Datenschutz und Betrieb | P0 | 22 Slices | KI als verlässlichen, überprüfbaren und mandantenfähigen Unterstützungsdienst betreiben: Wechsel zwischen lokalen und Cloud-Backends ohne Fachlogik-Rewrite, mit Fähigkeiten pro Modell, transparentem Routing, sicheren Zugangsdaten, gutem Fallback und menschlicher Kontrolle. | K01/F03/S01 |
+| **E-P** – Betrieb, Migration, Integration und Release-Exzellenz | P0 | 6 Slices | Wiederherstellbarer, beobachtbarer und wartbarer Self-hosting-Betrieb mit getesteten Upgrade-/Rollbackpfaden. | P01/F04 |
 
-- **Bürger:** Meldung, Verifikation, Status, Mehrsprachigkeit, PWA-Verbindungsabbruch.
-- **Admin:** Login, Ticket, Zuweisung, Workflow, AI-Queue/Fehler, Mailbox, Rollenrechte.
-- **OPS:** mobile Ticketannahme, Offline-Warteschlange, Wiederanlauf, QR-Deep-Link, Messenger.
-- **Querschnitt:** 360px, Touch, Tastatur/Fokus, Fehlermeldungen ohne Datenverlust, leere/gesperrte Zustände.
+## Architektur- und UX-Entscheidungen
 
-**Abnahme:** Browser-Smokes mit Testkonten und Screenshots ohne PII; manuelle Accessibility-Abnahme dokumentiert. **Abhängigkeit:** B–D.
+### 1. Modularchitektur
+- Sicherer Kern (Auth, Tenant, RBAC, Audit, Wiederherstellbarkeit) immer aktiv.
+- Optionen je Plattform/Tenant konfigurierbar; effektiver Zustand berücksichtigt Berechtigungen, Abhängigkeiten, Deployment-Konfiguration und laufende Jobs.
+- **Modul „aus“ heißt nicht „Daten löschen“**: Drain/Pause/Read-only je Kontrakt; Direct-API/Jobs/SSE/Push/Deep-Links konsistent.
+- [Konkretes Modell](MODULE_PLATFORM.md) und `M01–M08`.
 
-## Phase F – Release- und Betriebsreife (P1)
+### 2. Mantine und großer UI-Polish
+- Kein sofortiger globaler MUI-Replace. Zuerst React-19-/Mantine-Kompatibilitäts-ADR; Mantine 9 erfordert React 19.2+, ggf. Mantine 8 als bewusst begrenzte Brücke.
+- Ein Designsystem mit MantineProvider, Tokens, Formular-/Overlay-/Tabellen-/Error-Primitives.
+- Admin zuerst an einer repräsentativen Route, dann Tickets, Workflows, Settings. OPS und Bürger separat, aber mit gleicher Designphilosophie.
+- UX-Erfolg: Aufgabe schneller, weniger Fehler, kein Kontextverlust, mobil/keyboard/screenreader robust, nicht nur modernere Farben.
+- [UI-Migrationsstrategie](MANTINE_MIGRATION.md) und `D01–D09`.
 
-Runbooks für Installation, Monitoring, Backup/Restore, Incident-Reaktion, Migrationsblocker, Rollback, versionierte Container bauen. Readiness-Review vor jedem Tag.
+### 3. Stabilität und Performance
+- Messen vor Optimieren: DB/API/Queue/SSE/Mobile/Bundles, p50/p95/p99 und Benutzererfolg.
+- Queue-/Mail-/KI-Aktionen idempotent und wiederholbar; Double Submit/Timeout/Offline/Parallelbearbeitung explizit behandeln.
+- Realistische synthetische Testfälle und Lastszenarien; Slow-4G/320–360px/Low-End-Hardware.
+- [SLO-/Performanceplan](PERFORMANCE_SLOS.md) und `R01–R08`.
 
-**Abnahme:** mindestens ein vollständiger Drill mit Runbook, protokollierten Zeitpunkten und Verantwortlichen. **Abhängigkeit:** B/C/E.
+## Ownership und Ablauf
 
-## Phase G – Ausbau (P2)
+Ein Task besitzt genau eine federführende Rolle, verpflichtenden unabhängigen Review (kritische Schritte Security-/Architektur-Review), alle betroffenen Verträge und CI-/E2E-Evidenz im PR. Parallelarbeit nur bei geklärten API-/DB-Grenzen. Keine Big-Bang-Änderung an `routes/workflows.ts`, `routes/admin.ts`, `WorkflowSettings.tsx` ohne Regressionstests. Details: [Agentenorchestrierung](AGENT_ORCHESTRATION.md).
 
-Erst nach stabilen Gates: Modulentflechtung, zielgerichtete Agentenassistenz im Produkt, verfeinerte Suche/Analytik, Queue-Observability, automatische Bereitstellung mit expliziter Genehmigung.
+## Benötigte nächste Handlungen
 
-Detaillierte vorgeschlagene Issues mit Akzeptanzkriterien: [Start-Backlog](ISSUE_BACKLOG.md).
+1. Auf GitHub im Fork **Settings → General → Features → Issues aktivieren**. Die aktuelle API gibt `410: Issues has been disabled` zurück.
+2. [Roadmap-Validator](../scripts/check-roadmap.mjs) laufen lassen und [Issue-Importer](../scripts/import-roadmap-issues.mjs) im Dry-run prüfen; danach im eigenen GitHub-Zugriff mit explizitem `--apply` importieren.
+3. Nach Import die angezeigten echten Ticketnummern als Navigationshilfe ergänzen; **keine** bestehenden PRs oder Issues automatisch als erledigt markieren.
+4. W0 zuerst fachlich/technisch freigeben, anschließend die kleinsten vertikalen Slices priorisieren.
 
-## Arbeitsvorrat / Issue-Schnitt
-
-| Paket | Rolle führend | Reviewer | Schnitt |
-| --- | --- | --- | --- |
-| A-01 Agenten- und Doku-Baseline | Docs/Operations + Orchestrator | Security/QA | dieses Paket |
-| B-01 CI-Build-/Testbaseline | Backend + Frontend | Security/QA | 1 PR |
-| C-01 Konfigurations-/Secrets-Hardening | Architektur + Backend | Security/QA | eigenes PR |
-| C-02 Restore-/Migrations-Drill | Operations + Daten | Security/QA | eigenes PR |
-| D-01 Workflow/Queue-Kontrakt-Tests | Backend | Security/QA | kleine vertikale PRs |
-| E-01 Bürger-/Admin-/OPS-Smokes | Frontend/UX | Security/QA | pro Kernweg PR |
-
-**Änderungsregel:** Jede priorisierte Zeile nach Anlage einer Issue-Nummer mit Issue/PR verlinken und den Status auf `offen`, `in Arbeit`, `blockiert`, `verifiziert` setzen. Kein automatisches „fertig“ aufgrund eines geschriebenen Dokumentes.
+[Ausführlicher Issue-Backlog](ISSUE_BACKLOG.md) · [Planungsanleitung](../planning/README.md)

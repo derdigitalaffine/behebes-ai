@@ -4,7 +4,9 @@
 > [Dokumentationsindex](docs/INDEX.md) · [Projektstand](docs/STATUS.md) ·
 > [Roadmap](docs/ROADMAP.md) · [Architektur](docs/ARCHITECTURE.md) ·
 > [Entwicklungs-/Agentenorganisation](AGENTS.md) ·
-> [Orchestrierung](docs/AGENT_ORCHESTRATION.md) · [Sicherheit](docs/SECURITY_PRIVACY.md).
+> [Orchestrierung](docs/AGENT_ORCHESTRATION.md) · [Sicherheit](docs/SECURITY_PRIVACY.md) ·
+> [Milestones](docs/MILESTONES.md) · [KI-Provider-Architektur](docs/AI_BACKENDS.md) ·
+> [GitHub-Masterroadmap](https://github.com/derdigitalaffine/behebes-ai/issues/3).
 > Der dokumentierte Release `v1.0.7` stammt vom 01.03.2026; ein aktueller Produktionsstand ist damit nicht bestätigt.
 
 **Digital public service operations platform for municipal case management, workflow automation, and AI-supported administration.**  

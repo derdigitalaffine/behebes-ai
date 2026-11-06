@@ -1,0 +1,202 @@
+{
+  "schemaVersion": 1,
+  "repository": "derdigitalaffine/behebes-ai",
+  "sourceCatalog": "planning/roadmap-issues.json",
+  "assignmentPolicy": "Each implementation task belongs to exactly one release-quality milestone. Program and cross-phase epics remain unassigned.",
+  "dueDates": "Not assumed; set only after team capacity/dependency review.",
+  "milestones": [
+    {
+      "id": "M0",
+      "title": "M0 · Grundlagen, Produktqualität und Sicherheitsbaseline",
+      "description": "Produktnutzen, Risiken und messbare Ausgangslage erfassen. CI, synthetisches Staging, Tenant-Schutz, Restore/Upgrade und Architekturentscheidungen vor riskanten Umbauten absichern.",
+      "exitGates": [
+        "Vier-Workspace-CI und relevante negative Auth-/Tenant-/Org-Tests mit echtem Laufnachweis",
+        "Synthetischer End-to-End-Datenbestand, Messbaseline für Web/API/DB/Queue und UX-/Service-Blueprint",
+        "Sichere Betriebs-Defaults und Restore-/Upgrade-Drill auf isolierter Instanz",
+        "Gemessene, versionierte Verträge und Architektur-/Mantine-/KI-ADRs"
+      ],
+      "owners": "Produkt/Architektur, Backend, Security/QA, Operations",
+      "taskIds": [
+        "F01",
+        "F02",
+        "F03",
+        "F04",
+        "F05",
+        "F06",
+        "M02",
+        "D01",
+        "R01",
+        "S01",
+        "S02",
+        "S03",
+        "S05",
+        "P01",
+        "P02",
+        "K01"
+      ]
+    },
+    {
+      "id": "M1",
+      "title": "M1 · KI-Provider-Fabric und kontrollierter Backendzugang",
+      "description": "Die bestehenden LLM-/Legacy-Konfigurationen auf vertragliche, sichere und testbare Provider-, Modell- und Datenschutzgrundlagen heben – ohne Fachfunktionen umzuschreiben.",
+      "exitGates": [
+        "Typisierte Provider-Adapter und verpflichtende Contract-/Fault-Tests für API, Auth, Fehler und Limits",
+        "Geprüfte Connection-/Credential-/Endpoint-Richtlinien mit Maskierung, Rotation und Tenant-/Data-Egress-Gates",
+        "Modell-Capabilities nicht allein aus Namensmustern; dokumentierte Probes und manuelle Overrides",
+        "Qualitäts-Golden-Cases und KI-Datenfluss-/Privacyfreigaben mit menschlichem Review"
+      ],
+      "owners": "Backend/AI, Architektur, Security/Datenschutz",
+      "taskIds": [
+        "K02",
+        "K03",
+        "K04",
+        "K05",
+        "K07",
+        "K08",
+        "K13",
+        "K16"
+      ]
+    },
+    {
+      "id": "M2",
+      "title": "M2 · Modulplattform und deterministisches KI-Routing",
+      "description": "Modul-Registry und serverseitiges tenant-sicheres On/Off mit Job-/Event-Gates; KI-Ausführung über nachvollziehbare Task-Policies, Quality Gates und ausfallsichere Queue.",
+      "exitGates": [
+        "Core-Module bleiben unveränderlich aktiv; optionale Module und Dependencies sind validiert, auditierbar und sicher an-/abschaltbar",
+        "Direkt-API, UI, Deep-Link, SSE, Queue und externe Aktionen respektieren Tenant-/Capability-/Module-Off-Policy",
+        "Deterministische KI-Routen mit Modellcapabilities, Health-/Budget-/Datenfluss-Gates; manuelle Fallbacks",
+        "Retry-/Idempotenz-/Outbox- und KI-Outputvalidierung für mindestens einen realistischen vertikalen Slice getestet"
+      ],
+      "owners": "Architektur/Backend/AI, Security/QA",
+      "taskIds": [
+        "M01",
+        "M03",
+        "M04",
+        "R04",
+        "S04",
+        "K06",
+        "K09",
+        "K12"
+      ]
+    },
+    {
+      "id": "M3",
+      "title": "M3 · Mantine-Designsystem und Admin-Bedienfundament",
+      "description": "Ein konsistentes, barrierearmes Mantine-Designsystem, Modulverwaltung, Navigation, Formulare und Tabellen samt UX-Regressionsgates für einen produktiven Referenzslice bereitstellen.",
+      "exitGates": [
+        "Mantine-/React-Versionenentscheidung und Provider-/CSS-Koexistenz technisch geprüft",
+        "Design-Tokens, Primitive, AppShell, Formular-/Tabellenstandards mit Tests und Referenzscreens",
+        "Module und Rechte werden korrekt in Navigation, Verwaltungszentrale, Deeplinks abgebildet",
+        "Mobile 320/360px, Keyboard/Focus, Screenreader und Screenshot-Regression mit künstlichen Daten"
+      ],
+      "owners": "Frontend/UX, Produkt, Security/QA",
+      "taskIds": [
+        "M05",
+        "M06",
+        "D02",
+        "D03",
+        "D04",
+        "D05",
+        "D09"
+      ]
+    },
+    {
+      "id": "M4",
+      "title": "M4 · Goldener Bürger–Verwaltung–OPS-Prozess",
+      "description": "Die Kernphilosophie als Ende-zu-Ende-Produkt nachweisen: Bürger meldet, Admin priorisiert, OPS bearbeitet, Bürger erhält Rückmeldung – auch offline und bei Fehlern.",
+      "exitGates": [
+        "Bürger-Meldung, Standort/Medien, Status, i18n und Admin-Task-Workspace sind durchgängig nutzbar",
+        "OPS mit Offline-Queue, Touch, QR/Push, sicheren Konflikten und robustem Wiederanlauf",
+        "Synthetischer Golden-Path für mindestens zwei Tenants und relevante Modul-on/off-Varianten reproduzierbar",
+        "Staging-Release-/Restore-/Rollback-Smoketest und verständliche Fehlermeldungen"
+      ],
+      "owners": "Produkt, Bürger-Frontend, Admin/OPS, Backend/QA",
+      "taskIds": [
+        "D07",
+        "D08",
+        "B01",
+        "B02",
+        "B03",
+        "B04",
+        "A01",
+        "A02",
+        "A04",
+        "O01",
+        "O02",
+        "O04",
+        "P03",
+        "P06"
+      ]
+    },
+    {
+      "id": "M5",
+      "title": "M5 · Fachmodule, Workflows und KI-Exzellenz",
+      "description": "KI-Modelle wirklich in fachliche Abläufe integrieren und den monolithischen Code kontrolliert nach Modulen und Workflows entflechten; Administration auf Mantine konsolidieren.",
+      "exitGates": [
+        "Workflow-Versionierung, AI-/Mail-Queue-Verhalten und externe Integrationen mit Vertrags-/Regressionstests",
+        "KI-Cockpit für Connectors/Models/Routes/Tests mit auditierter, tenant-sicherer Konfiguration",
+        "Multimodalität, lokale und ggf. native Cloud-Backends nur bei geprüften Capabilities und Datenfreigaben",
+        "KI-Hilfen mit Quellen/Ungewissheit und verpflichtenden menschlichen Aktionen; Legacy-Migration rückschaltbar"
+      ],
+      "owners": "Backend/AI, Frontend, Architektur, Security/QA, Ops",
+      "taskIds": [
+        "M07",
+        "M08",
+        "D06",
+        "A03",
+        "P05",
+        "K10",
+        "K14",
+        "K18",
+        "K19",
+        "K20",
+        "K21"
+      ]
+    },
+    {
+      "id": "M6",
+      "title": "M6 · Performance, Telemetrie und Resilienz unter Last",
+      "description": "Echte Engpässe messen und nachweislich beheben; robuste Realtime-/Streaming- und Queue-Ausführung sowie kostentransparente KI-Nutzung schaffen.",
+      "exitGates": [
+        "Web-Vitals und API-/DB-/Queue-p95/99 mit identischem Stagingprofil vor/nach Optimierung",
+        "SSE-Snapshot-/Reconnect-Recovery, KI-Streaming-Abbruch, kontrollierte Backpressure und Dead-Letter-Fälle geprüft",
+        "AI-Usage/Kosten-/Budget- und Provider-Latenztelemetrie ohne PII; messbare Fehlerbudgets",
+        "Load-/Soak-/Chaos-/Provider-Contract-Gates für unterschiedliche Backend-Konfigurationen"
+      ],
+      "owners": "Performance/Backend/AI, Frontend, Ops/QA",
+      "taskIds": [
+        "A05",
+        "R02",
+        "R03",
+        "R05",
+        "R06",
+        "R07",
+        "R08",
+        "K11",
+        "K15",
+        "K22"
+      ]
+    },
+    {
+      "id": "M7",
+      "title": "M7 · Gesamtpolish, Security-Audit und Release-Freigabe",
+      "description": "Produktqualität über alle Workflows und Rollen konsolidieren, Betrieb/Security härten und echte Go/No-Go-Gates für Rollout und Support nachweisen.",
+      "exitGates": [
+        "A11y-/Mobile-/Dialog-/Error-/Offline-Polish und verbleibende P1/P2-UX-Slices fachlich abgenommen",
+        "Individuelle Berechtigungen, KI-/Provider-/Supply-Chain- und Datenschutz-Security-Reviews abgeschlossen",
+        "Runbooks, Support, Restore-/Rollback-Gates und produktive Upgrade-Checks tatsächlich geprobt",
+        "Offene P0-Blocker klar dokumentiert und menschliches Go/No-Go-Review durchgeführt"
+      ],
+      "owners": "Produkt/UX, QA/Security, Operations, Fachverantwortliche",
+      "taskIds": [
+        "B05",
+        "A06",
+        "O03",
+        "O05",
+        "S06",
+        "P04",
+        "K17"
+      ]
+    }
+  ]
+}

@@ -19,6 +19,17 @@
 
 [Agentenmanifest und Prüfregeln](../agents/README.md) · [Rollendefinitionen](../.github/agents/) · [Handoff-/Gate-Modell](AGENT_ORCHESTRATION.md).
 
+## Behebes Next: nutzerzentrierter Ausbau
+
+- [Produktvision und Nutzer-Journeys](PRODUCT_VISION.md)
+- [Detaillierte Roadmap (92 geplante Issues)](ROADMAP.md) und [Issue-Index](ISSUE_BACKLOG.md)
+- [Modulplattform und Feature-Controls](MODULE_PLATFORM.md)
+- [Mantine-Migration und großer UI-Polish](MANTINE_MIGRATION.md)
+- [Performance, Resilienz und SLOs](PERFORMANCE_SLOS.md)
+- [Milestone-Plan mit acht Qualitäts-Gates](MILESTONES.md)
+- [KI-Backend-Architektur und Provider-Fabric](AI_BACKENDS.md)
+- [Maschinenlesbare Issue-Planung](../planning/README.md)
+
 ## Was ist heute vorhanden?
 
 - **Anwendung:** `backend/` (Express/TS), `frontend/` (Bürger/PWA), `admin/` (Verwaltung), `ops/` (mobile Bearbeitung).
