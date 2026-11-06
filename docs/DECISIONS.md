@@ -69,6 +69,12 @@
 - **Entscheidung:** nur explizite Route für öffentliche UI-Übersetzung, strikt geprüfte Capability/Tenant/Endpoint/Legacy-Secret-Übereinstimmung, keine implizite Providerwahl oder Datenbankmutation.
 - **Details:** [ADR-0010](ADR-0010-LLMHUB-PILOT-PREVIEW.md), [K18 #90](https://github.com/derdigitalaffine/behebes-ai/issues/90).
 
+## ADR-0011 – Versionierter KI-Task und schema-validierter UI-Übersetzungsentwurf
+
+- **Datum:** 2026-11-06; **Status:** isolierter K08-Referenzslice, produktive Task-Freigabe offen.
+- **Entscheidung:** Strikter `ui_translation/v1`-Vertrag; Eingaben und Providerantworten schema-/platzhaltervalidiert, Ergebnis ausschließlich als ungeprüfter Entwurf.
+- **Details:** [ADR-0011](ADR-0011-AI-TASK-CONTRACTS.md), [K08 #80](https://github.com/derdigitalaffine/behebes-ai/issues/80).
+
 ## Neues ADR-Template
 
 ```text

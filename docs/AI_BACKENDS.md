@@ -159,3 +159,9 @@ Das isolierte Gateway hat einen konkreten serverseitigen Credential-Resolver erh
 Ein interner, **standardmäßig deaktivierter und ausschließlich lesender** Kompatibilitätsplaner überprüft den echten `llmHub`-Task-Routingzustand für öffentliche `ui_translation`-Aufgaben. Er erfordert eine explizite Taskroute und eine separat vertrauenswürdig verwaltete Freigabe für Tenant, Provider, Modell, Datenschutz und Endpunkt. Legacy-API-/OAuth-Credentials werden ausdrücklich **nicht** still auf K03-Secret-Referenzen umgedeutet. Das Featureflag `AI_LLM_HUB_GUARDED_PILOT_MODE=preview` erlaubt nur eine serverinterne Vorprüfung; es existieren weder eine API-Route noch ein Execute-Modus.
 
 **Kein produktiver Wechsel, keine Datenbankmigration, kein Prompt-/Token-Transport.** Eine positive Vorprüfung ist noch keine Sendefreigabe. Vor einem produktiven Piloten benötigt das System die vollständige autorisierte Credential-/Tenant-Policyquelle, Migrationsstrategie, Netzwerk-Egress-Firewall und QA-/Privacy-Freigabe. [ADR-0010](ADR-0010-LLMHUB-PILOT-PREVIEW.md).
+
+## K08 – Versionierte Task-Verträge und ungeprüfte Übersetzungsentwürfe (PR #102)
+
+Der neue `ui_translation/v1`-Referenzslice validiert eine ausdrücklich als **öffentlich** klassifizierte Task-Eingabe und prüft die JSON-Ausgabe des Modells gegen feste Felder, Sprache, Längen-/Markupregeln und die exakte Menge aller UI-Platzhalter. Der Text wird anschließend nur als **ungeprüfter Entwurf** zurückgegeben. Das System verbindet die Prüfung mit dem isolierten, tenant-/egressgebundenen K02–K16-Gateway; alle Tests verwenden Fake-Fetch und synthetische Texte.
+
+**Noch nicht produktiv angeschlossen:** LLM-Hub, Queue, Bürgerfrontend und Admin. Das ist eine technische Vorleistung, keine zuverlässige maschinelle Fach-/Sprachfreigabe. [ADR-0011](ADR-0011-AI-TASK-CONTRACTS.md).
