@@ -25,6 +25,14 @@
 - **Entscheidung:** P0 Betrieb/Security/Restore/CI vor P1 UX/Fachvertragsausbau und P2 Erweiterungen. Ein Punkt wird erst mit Test-/PR-Evidenz verifiziert.
 - **Konsequenz:** ehrliche Statusführung, keine erfundenen Deadlines oder Produktionsfreigaben.
 
+## ADR-0004 – Testbare KI-Provider-Baseline vor Runtime-Migration
+
+- **Datum:** 2026-11-06.
+- **Status:** implementierter CI-/Contract-Entwurf im ersten M0-PR; nach unabhängiger Freigabe wirksam.
+- **Entscheidung:** alle vier Workspace-Builds und echte Vitest-Tests automatisiert prüfen; zunächst nur einen redigierten, typisierten KI-Fehlervertrag einführen und den bestehenden LLM-Hub unverändert lassen.
+- **Kontext und Risiken:** [ADR-0004](ADR-0004-AI-PROVIDER-BASELINE.md).
+- **Tickets:** [#14 F02](https://github.com/derdigitalaffine/behebes-ai/issues/14), [#73 K01](https://github.com/derdigitalaffine/behebes-ai/issues/73), vorbereitend [#74 K02](https://github.com/derdigitalaffine/behebes-ai/issues/74).
+
 ## Neues ADR-Template
 
 ```text

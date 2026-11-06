@@ -8,6 +8,7 @@
 | --- | --- | --- |
 | Projektstand / nächste Schritte | [STATUS](STATUS.md), [ROADMAP](ROADMAP.md) | [Entscheidungen](DECISIONS.md), [Issue-Backlog](ISSUE_BACKLOG.md) |
 | Neue Entwickler / Agenten | [AGENTS](../AGENTS.md), [Entwicklungsprozess](DEVELOPMENT.md) | [Orchestrierung](AGENT_ORCHESTRATION.md), [Tests](TESTING.md) |
+| KI-Provider-Baseline und Vertragsprüfung | [ADR-0004](ADR-0004-AI-PROVIDER-BASELINE.md), [KI-Backends](AI_BACKENDS.md) | [Tests](TESTING.md), [Sicherheit](SECURITY_PRIVACY.md) |
 | Architektur und API | [Architektur](ARCHITECTURE.md), [API-Kontrakte](API_CONTRACTS.md) | [Daten & Migrationen](DATA_AND_MIGRATIONS.md) |
 | Bürger-, Admin-, OPS-Oberflächen | [UX-Prinzipien](UX_PRINCIPLES.md) | [Architektur](ARCHITECTURE.md), [Tests](TESTING.md) |
 | Sicherheit, Datenschutz, KI | [Security & Privacy](SECURITY_PRIVACY.md) | [Orchestrierung](AGENT_ORCHESTRATION.md), [Tests](TESTING.md) |

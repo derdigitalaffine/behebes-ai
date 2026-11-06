@@ -64,3 +64,19 @@ Für jeden Testlauf: Commit, Befehl, Umgebung/Versionsstand, Ergebnis, Link auf 
 3. DB-Fresh- und Upgrade-Migrations-Tests.
 4. Browser-Bürger-, Admin- und OPS-Smokes ohne echte Accounts.
 5. Restore-/Rollback-Drill und Proxy-/Secret-Hardening in isoliertem Teststack.
+
+## M0: erste laufende Produktcode-Baseline (nach Review/Merge)
+
+Die neue Workflow-Datei `.github/workflows/application-quality.yml` führt für geänderte Workspaces vier **getrennte Buildjobs** und einen Backend-Vitest-Run aus. `npm ci` nutzt die Root-Lockdatei. Das Testinventar `scripts/report-test-inventory.mjs` meldet fehlende Tests, behauptet aber keine Testabdeckung.
+
+```bash
+npm ci --no-audit --no-fund
+npm run build --workspace=backend
+npm run build --workspace=frontend
+npm run build --workspace=admin
+npm run build --workspace=ops
+npm test --workspace=backend -- --run
+node scripts/report-test-inventory.mjs
+```
+
+Die ersten Backend-Tests prüfen **nur synthetische KI-Provider-Fehlerfälle**. Es gibt noch keine Aussage über API-/DB-/Queue-/Tenant-/Offline-/Browser-Funktion und keine vollständige ESLint-/Typecheck-/E2E-Freigabe. Fehler in der Baseline-CI bleiben als echte Findings sichtbar, nicht als still übergangene grüne Checks. [ADR-0004](ADR-0004-AI-PROVIDER-BASELINE.md).
