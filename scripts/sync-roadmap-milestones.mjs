@@ -86,14 +86,25 @@ for (const x of existingMs) {
 }
 const planned = new Set(plan.milestones.map(m => m.id));
 for (const [id] of msById) if (!planned.has(id)) throw Error('Unexpected managed milestone ' + id);
+// GitHub list endpoints can lag a freshly created issue by several seconds.
 const byId = new Map();
-for (const issue of (await getAll(PREFIX + '/issues?state=all')).filter(x => !x.pull_request)) {
-  const found = String(issue.body || '').match(issueMarkerPattern);
-  if (!found) continue;
-  if (byId.has(found[1])) throw Error('Duplicate issue key ' + found[1]);
-  byId.set(found[1], issue);
+let missingTasks = [];
+for (let check = 1; check <= 12; check++) {
+  byId.clear();
+  for (const issue of (await getAll(PREFIX + '/issues?state=all')).filter(x => !x.pull_request)) {
+    const found = String(issue.body || '').match(issueMarkerPattern);
+    if (!found) continue;
+    if (byId.has(found[1])) throw Error('Duplicate issue key ' + found[1]);
+    byId.set(found[1], issue);
+  }
+  missingTasks = catalog.tasks.filter(task => !byId.has(task.id)).map(task => task.id);
+  if (missingTasks.length === 0) break;
+  if (check < 12) {
+    console.warn('GitHub list not yet consistent (' + missingTasks.length + ' missing); retry ' + check);
+    await sleep(3000);
+  }
 }
-for (const t of catalog.tasks) if (!byId.has(t.id)) throw Error('Task ' + t.id + ' not imported as GitHub issue');
+if (missingTasks.length) throw Error('Tasks still absent after consistency retries: ' + missingTasks.join(', '));
 for (const m of plan.milestones) if (m.taskIds.some(id => !byId.has(id))) throw Error('Missing milestone task ' + m.id);
 console.log('Validated ' + byId.size + ' tracked issues; no duplicate markers.');
 
