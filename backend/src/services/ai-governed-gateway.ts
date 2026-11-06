@@ -31,9 +31,15 @@ export interface AiConnectionDescriptor {
   timeoutMs?: number;
 }
 
+export interface AiCredentialAccessContext {
+  tenantId: string;
+  providerId: string;
+  connectionId: string;
+}
+
 export interface AiCredentialResolver {
   /** Trusted server-side resolver; must never call a user-controlled URL. */
-  resolve(ref: string): Promise<string | null>;
+  resolve(ref: string, context: AiCredentialAccessContext): Promise<string | null>;
 }
 
 export class AiGatewayError extends Error {
@@ -94,7 +100,11 @@ export async function generateGovernedChat(
   // Resolve only AFTER policy and endpoint validation. No secret in audit/UI.
   let token: string | null;
   try {
-    token = await input.credentials.resolve(connection.credentialRef);
+    token = await input.credentials.resolve(connection.credentialRef, {
+      tenantId: context.tenantId,
+      providerId: connection.providerId,
+      connectionId: connection.id,
+    });
   } catch {
     throw new AiGatewayError('credential_unavailable');
   }

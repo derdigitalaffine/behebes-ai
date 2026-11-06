@@ -57,6 +57,12 @@
 - **Entscheidung:** Alle DNS-Adressen bewerten, geprüfte IP am HTTPS-Socket pinnen und ursprünglichen Providerhostname für TLS/SNI/Host belassen.
 - **Details:** [ADR-0008](ADR-0008-AI-PINNED-EGRESS.md), [K07 #79](https://github.com/derdigitalaffine/behebes-ai/issues/79).
 
+## ADR-0009 – Tenant- und verbindungsgebundener KI-Credential-Resolver
+
+- **Datum:** 2026-11-06; **Status:** isolierte K03-Teilimplementierung, produktive Migration und Security-Review offen.
+- **Entscheidung:** Referenzen auf Secret-Keys sind strikt mit Tenant/Provider/Connection gebunden; Reads nach erfolgreicher Policyprüfung, ohne zusätzlichen Token-Cache und mit redigierter Fehlerbehandlung.
+- **Details:** [ADR-0009](ADR-0009-AI-CREDENTIAL-BINDINGS.md), [K03 #75](https://github.com/derdigitalaffine/behebes-ai/issues/75).
+
 ## Neues ADR-Template
 
 ```text

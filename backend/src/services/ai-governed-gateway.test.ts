@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { createBoundAiCredentialResolver } from './ai-credentials.js';
 import {
   AiGatewayError, generateGovernedChat,
   type GovernedGeneration,
@@ -95,6 +96,34 @@ describe('K03/K07/K16: governed AI connection facade', () => {
     })).rejects.toMatchObject({ code: 'endpoint_denied' });
     expect(dnsResolver).toHaveBeenCalledTimes(1);
     expect(resolve).not.toHaveBeenCalled();
+  });
+
+  it('binds secret lookup to actual tenant/provider/connection before provider traffic', async () => {
+    const read = vi.fn(async () => 'synthetic-bound-secret');
+    const credentials = createBoundAiCredentialResolver([{
+      ref: 'ai-provider/cloud-eu',
+      tenantId: 't1',
+      providerId: 'cloud-eu',
+      connectionId: 'conn1',
+      secretKey: 'AI_PROVIDER_CLOUD_EU',
+    }], { read });
+    const fetcher = vi.fn(async () => response());
+
+    await generateGovernedChat({
+      ...payload, credentials, fetcher: fetcher as unknown as typeof fetch,
+    });
+    expect(read).toHaveBeenCalledTimes(1);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+
+    read.mockClear();
+    fetcher.mockClear();
+    await expect(generateGovernedChat({
+      ...payload,
+      connection: { ...payload.connection, id: 'other-connection' },
+      credentials, fetcher: fetcher as unknown as typeof fetch,
+    })).rejects.toMatchObject({ code: 'credential_unavailable' });
+    expect(read).not.toHaveBeenCalled();
+    expect(fetcher).not.toHaveBeenCalled();
   });
 
   it('does not accept a task mismatch even with a valid tenant grant', async () => {
