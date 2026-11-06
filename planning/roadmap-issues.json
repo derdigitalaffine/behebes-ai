@@ -96,6 +96,16 @@
       "goal": "Wiederherstellbarer, beobachtbarer und wartbarer Self-hosting-Betrieb mit getesteten Upgrade-/Rollbackpfaden.",
       "deliverables": "Restore-/Upgrade-Drills, sichere Deployments, Runbooks, API-Integrationen, Staging-E2E und Release-Gates.",
       "risk": "Keine automatisch produktive Migration oder externe Nachricht durch Coding-Agenten; Menschen verantworten Freigabe und Rollout."
+    },
+    {
+      "id": "E-K",
+      "kind": "epic",
+      "area": "K",
+      "priority": "P0",
+      "title": "KI-Backend-Plattform: Provider-Fabric, Modellrouting, Qualität, Datenschutz und Betrieb",
+      "goal": "KI als verlässlichen, überprüfbaren und mandantenfähigen Unterstützungsdienst betreiben: Wechsel zwischen lokalen und Cloud-Backends ohne Fachlogik-Rewrite, mit Fähigkeiten pro Modell, transparentem Routing, sicheren Zugangsdaten, gutem Fallback und menschlicher Kontrolle.",
+      "deliverables": "Eine einheitliche, testbare Provider-Abstraktion über bestehendem LLM-Hub und KI-Queue; klare Task-/Input-/Output-Verträge; explizite Capability-Matrix; sichere Konfiguration; Health, Circuit Breaker, Last- und Fehlerprofile; Tenant-Richtlinien, Kosten-/Nutzungsbudget und Admin-KI-Zentrale auf Mantine; Datenschutz, Evals, Rollout und Legacy-Kompatibilität.",
+      "risk": "Kein freier Provider-Endpoint ohne sichere Netz-/Credential-Policy. Cloud-Ausleitung von Bürgerdaten nur mit begründeter Rechts-/Datenschutzfreigabe. Generative Ausgaben sind untrusted; externe Aktionen bleiben menschenkontrolliert. Test/Benchmarks nutzen synthetische Daten. Kein Provider wird allein aufgrund OpenAI-kompatibler URL als vollständig kompatibel angenommen."
     }
   ],
   "tasks": [
@@ -1767,6 +1777,634 @@
         "Deployment wird nie allein aus Erfolg eines simplen Health-Endpunkts freigegeben"
       ],
       "focus": "QA/Produkt/Ops"
+    },
+    {
+      "id": "K01",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P0",
+      "title": "Ist-Aufnahme, Zielarchitektur und LLM-Backend-Migrations-ADR",
+      "goal": "Die vorhandenen parallelen Konfigurations- und Providerpfade werden zunächst nachgewiesen, bevor sie zusammengeführt werden.",
+      "scope": [
+        "Inventar von llm-hub.ts, ai.ts, ai-client.ts, openai.ts, image-ai.ts, Admin AIProvider/AIQueue, Task-Keys und gespeicherten Legacy-Einstellungen",
+        "Datenflusskarte: Bürger/OPS/Admin → Prompt/Queue → Provider → Ergebnis/Audit/externes System",
+        "Nichtfunktionale Anforderungen an Modell-/Endpoint-Kompatibilität, Datenschutz, Laufzeit und Betrieb je Use Case formulieren",
+        "ADR für Adaptervertrag, OpenAI-Chat-/Responses-/Provider-natives Protokoll, kompatible Migration mit Dual-Read/Single-Write"
+      ],
+      "acceptance": [
+        "Alle produktiven Task-/Provider-Einstiege mit konkretem Codepfad und Zuständigkeit erfasst",
+        "Keine bestehende DB-Konfiguration oder Tenant-Route wird durch bloßes Umstellen der Defaults unbrauchbar",
+        "Legacy-Task-Zuordnungen, Rückfall- und Rolloutplan dokumentiert",
+        "Architecture-/Privacy-Review benennt harte Grenzen vor Implementierung"
+      ],
+      "dependsOn": [
+        "F03",
+        "S01"
+      ],
+      "failureCases": [
+        "Alte AskCodi-/OpenAI-Konfiguration kann andere Semantik als neue LLM-Hub-Routen aufweisen und darf nicht still entfallen"
+      ],
+      "focus": "Architektur/Backend/KI"
+    },
+    {
+      "id": "K02",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P0",
+      "title": "Typisierte Provider-Adapter mit einheitlichem Request-/Response-Vertrag",
+      "goal": "Jedes zugelassene Backend wird über einen testbaren Adapter statt über verstreute OpenAI-SDK-Aufrufe angebunden.",
+      "scope": [
+        "Trennung von fachlichem TaskEnvelope, ProviderTransport, AuthConfig, ModelCapabilities und GenerationResult/Usage/Errors",
+        "Adapter für OpenAI-kompatible Chat-Completions implementieren, zusätzliche native/Responses-Varianten nach ADR",
+        "Normiertes Fehler- und Resultatformat einschließlich ProviderRequestId, Latenz, Token Usage, Cancellation und Retryability",
+        "Integrationsadapter für ai.ts, llm-hub.ts und image-ai.ts schrittweise einbauen; keine unvermittelte Direktinstanziierung in Fachmodulen"
+      ],
+      "acceptance": [
+        "Fake-Provider-Contract-Suite gegen Erfolg, Partial Output, Timeout, 429, 500, invalides JSON und Abbruch",
+        "Keine Schlüssel, Rohprompts oder PII in Fehlermeldungen/Traces",
+        "Transportverhalten ist pro Adapter dokumentiert und weder Featuregleichheit noch Modell-ID impliziert",
+        "Bestehende Fachrouten bleiben in Pilotphase funktional und rückschaltbar"
+      ],
+      "dependsOn": [
+        "K01",
+        "M02"
+      ],
+      "failureCases": [
+        "OpenAI-kompatibler Endpunkt kann nur Teil-API unterstützen; fehlende Features müssen explizite Adapterfehler ergeben"
+      ],
+      "focus": "Backend/Architektur"
+    },
+    {
+      "id": "K03",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P0",
+      "title": "KI-Connection-Verwaltung mit sicherem Credential-Lifecycle und Tenant-Scope",
+      "goal": "Administrierende können Backends verwalten, ohne Zugangsdaten offenzulegen oder Mandantengrenzen zu verletzen.",
+      "scope": [
+        "Connection-Secrets als Referenzen mit kontrollierter Speicherung, Rotation, Maskierung und getrennter Berechtigung verwalten",
+        "Authmode pro Provider (API-Key, Managed Identity, passende OAuth-Flow je Hersteller) sicher statt universelle OAuth-Annahme",
+        "Tenant-/Plattform-Policy und Admin-RBAC für Anzeigen, Testen, Ändern, Löschen; Konfigurationsänderung auditieren",
+        "Bestehende LLM-Hub-Konfigurationen versioniert übernehmen, Masked-Sentinel- und konkurrierende Admin-Updates korrekt behandeln"
+      ],
+      "acceptance": [
+        "API gibt niemals vollständige Secrets an unberechtigte oder bereits konfigurierte Edit-Views zurück",
+        "Secretrotation und Anbieterwechsel ohne Verlust aktiver Queue-Daten/Jobs im Staging getestet",
+        "Fremder Tenant kann keine Connection-Konfiguration, Usage oder Metadaten lesen",
+        "Runbook für Restore/Rotation/Entzug dokumentiert"
+      ],
+      "dependsOn": [
+        "K01",
+        "S02"
+      ],
+      "failureCases": [
+        "Bei Token-Refresh, Support-Logs und Test-Aufrufen dürfen Credentials nicht über falsche Origin/Redirects ausgeleitet werden"
+      ],
+      "focus": "Backend/Security"
+    },
+    {
+      "id": "K04",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P0",
+      "title": "Modellkatalog und verifizierbare Capability-Matrix statt Namensheuristik",
+      "goal": "Die Plattform kennt pro Provider/Modell, welche Aufgaben tatsächlich möglich sind.",
+      "scope": [
+        "Models-List-Caching/Refresh mit TTL, paginierten Antworten, manuellen Overrides und gesondertem Probe-Status",
+        "Fähigkeiten für Text, Vision, JSON-Schema, Tool Calls, Streaming, Embeddings, Context Window, max Output, Reasoning/Timeout/Usage unterscheiden",
+        "Fähigkeitenerkennung über dokumentierte Provider-Metadaten oder synthetische Probes, unbekannt bleibt unbekannt",
+        "Modellversionswechsel, Deprecation, Retired/Unavailable, Tenant-Freigabe und Fallbacks klar darstellen"
+      ],
+      "acceptance": [
+        "Task mit notwendiger Vision/JSON-Output-Fähigkeit kann nicht still auf inkompatibles Modell geleitet werden",
+        "Fehlende /models-Route blockiert nicht manuell genehmigte Modellkonfiguration",
+        "Cache/Refresh und Modellentfernung haben definierte Fallback-/Stale-Semantik",
+        "Keinerlei Capability wird allein aus dem Modellnamen garantiert"
+      ],
+      "dependsOn": [
+        "K02"
+      ],
+      "failureCases": [
+        "Bisherige heuristische Vision-Erkennung anhand Model-ID darf nicht als endgültige Wahrheit gelten"
+      ],
+      "focus": "Backend/AI/Frontend"
+    },
+    {
+      "id": "K05",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P0",
+      "title": "Provider-Probes, Health, Timeouts, Retries und Circuit Breaker",
+      "goal": "Backend-Störungen werden früh erkannt und fachliche Vorgänge bleiben handlungsfähig.",
+      "scope": [
+        "Konfigurationsprobe (TLS/Auth/Health/Capabilities) von kostenpflichtigem Inference-Probe unterscheiden",
+        "Verbindung-/Request-/Streaming-Timeout, AbortSignal, begrenzte Retries mit Jitter/Retry-After und Service-Budget",
+        "Circuit-Breaker mit half-open, Healthstatus, Cooldown, Fallback-Status pro Provider/Deployment und Tenant",
+        "Fehlerklassen normalisieren (auth, permission, quota, rate-limit, timeout, offline, unsupported, server error, content refused)"
+      ],
+      "acceptance": [
+        "Provider 429/Timeout/5xx erzeugt keine unendliche Retry- oder Fallback-Schleife",
+        "Getrennter Probe-/Echtbetrieb mit Grenzen und Warnung vor Kosten, ohne Bürgerprompt",
+        "Healthstatus und letzter anonymer Fehler für Admin sichtbar, Credentials verdeckt",
+        "Staging-Fehlersimulation zeigt klare Degradation und wiederherstellbaren Betrieb"
+      ],
+      "dependsOn": [
+        "K02"
+      ],
+      "failureCases": [
+        "Provider-Test darf keine öffentlichen Endpoints ansprechen, die nicht explizit freigegeben wurden"
+      ],
+      "focus": "Backend/Ops"
+    },
+    {
+      "id": "K06",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P0",
+      "title": "Deterministisches Task-Routing mit Fallback-Pools, Prioritäten und Governance",
+      "goal": "Der richtige unterstützte Modellweg wird pro Aufgabenklasse bewusst ausgewählt statt zufällig.",
+      "scope": [
+        "Routing-Entscheid aus Task-Key, Modellfähigkeiten, Tenant-Policy, Datenschutzklasse, Budget/Limit und Health",
+        "Primär-/Sekundär-Provider, Modellversion, Qualitätsklasse, fail-closed/optional-fallback, manuelle Bestätigung",
+        "Config-Preview und Dry-Run für beispielhafte Tasks, korrelierte Routing-Decision-ID ohne PII",
+        "Kein automatisches Retriggering externer Side Effects; Persistenz der tatsächlich gewählten Verbindung und Modellversion"
+      ],
+      "acceptance": [
+        "Deterministische Tests mit vordefinierten Kandidaten und Störfällen liefern nachvollziehbare Auswahlbegründung",
+        "Abgeschaltetes Modul, Tenant-Fremdkontext oder unbekannte Fähigkeit verhindern Ausführung",
+        "Failover überschreitet weder Datenschutz-/Residenzfreigabe noch Budgetgrenze",
+        "Kein heimlicher Wechsel auf teureren oder datenexternen Provider"
+      ],
+      "dependsOn": [
+        "K04",
+        "K05",
+        "M04",
+        "R04"
+      ],
+      "failureCases": [
+        "Routing muss bei explizit verbotenen externen Datenflüssen abbrechen statt automatisch Cloud-Fallback zu wählen"
+      ],
+      "focus": "Backend/Architektur/Security"
+    },
+    {
+      "id": "K07",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P0",
+      "title": "Sichere KI-Endpunktkonfiguration und kontrollierter Netzwerkzugang",
+      "goal": "Konfigurierbare Backend-URLs sollen produktiv sicher und nachvollziehbar nutzbar sein.",
+      "scope": [
+        "Endpoint-Policy: zugelassene Schemes, TLS, vertrauenswürdige DNS-/IP-/Netzbereiche, optional private On-Prem-Verbindungen nach expliziter Betreiberfreigabe",
+        "Validierung an Konfiguration, Verbindungsaufbau und Redirects samt Authheader-Isolation",
+        "Kein Token-Replay an andere Origins, keine unspezifizierte Provider-Model-Discovery über fremde URLs",
+        "Sicherheits- und Betriebsdokumentation für Proxy/Egress, Rotation und auditierte Netzfreigaben"
+      ],
+      "acceptance": [
+        "Konfigurations- und HTTP-Clienttests decken erlaubte und abgelehnte Zielklassen ab",
+        "Connection-Ping kann keine unautorisierten internen Ressourcen erreichen oder Secret auf nicht genehmigtes Ziel senden",
+        "On-Prem-Server nur nach eindeutig konfigurierter, eng begrenzter Freigabe erreichbar",
+        "Kein externer Redirect erhält Authorization-Header"
+      ],
+      "dependsOn": [
+        "K02",
+        "S02"
+      ],
+      "failureCases": [
+        "Ungeprüfter Proxy/Redirect oder DNS-Änderung darf nicht die Verbindung in unautorisierten Bereich verschieben"
+      ],
+      "focus": "Security/Backend"
+    },
+    {
+      "id": "K08",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P0",
+      "title": "Fachliche Prompt-/Task-Verträge mit strukturierten Versionen",
+      "goal": "Jede KI-Aufgabe hat erwartete Eingaben, Grenzen, Outputs, Evaluation und klare Verantwortlichkeit.",
+      "scope": [
+        "TypeScript-/Schema-basierte Task-Registry mit InputShape, OutputShape, Locale, Sensitivity, Capability, Promptversion, Sampling-Grenzen",
+        "Task-Policy für Klassifikation, Übersetzung, Zuständigkeit, Formulierung, Bild-Analyse, Assistenz und Lagebild",
+        "Structured Output wenn vom Modell unterstützt, sonst kontrollierte Parse-/Repair-Grenze mit Fehlerstatus",
+        "Vorhersehbare User-/System-/Developer-Grenzen und menschlicher Freigabepunkt für außengewirkte Aktionen"
+      ],
+      "acceptance": [
+        "Mindestens fünf priorisierte fachliche Tasks besitzen Schema- und Grenzwert-/Negativtests",
+        "Unvertrauenswürdige Bürger-/Anhangs-/Mailboxtexte werden nicht zu Systeminstruktionen",
+        "Schema-Verletzung löst kontrollierten Fallback statt unvalidierter Speicherung aus",
+        "Promptänderung ist versioniert und evaluierbar"
+      ],
+      "dependsOn": [
+        "K02",
+        "F03"
+      ],
+      "failureCases": [
+        "LLM-Text darf keine Rollen-, Tenant-, Org- oder Toolberechtigung anfordern oder gewähren"
+      ],
+      "focus": "Backend/AI/QA"
+    },
+    {
+      "id": "K09",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P1",
+      "title": "Validierte KI-Ausgaben, Confidence/Provenance und kontrollierte Reparatur",
+      "goal": "KI-Vorschläge werden fachlich plausibilisiert und verständlich präsentiert.",
+      "scope": [
+        "Zod-/JSON-Schema-Outputvalidierung, bounded repair/reask, allowed values, Quellen-/Provenance-Felder",
+        "Normalisierung von Refusal/Empty/Partial JSON und unbekanntem Modelloutput",
+        "Confidence nur als kalibrierte Messgröße verwenden, nicht als garantierte Genauigkeit behaupten",
+        "Fachliche Review und nachvollziehbare Ausnahmebehandlung je Task"
+      ],
+      "acceptance": [
+        "Nicht parsebarer/erfundener Tenant-/Kategorie-/Workflowwert kann keine Fachaktion auslösen",
+        "Fachvalidierung unterscheidet AI-vorgeschlagen und menschlich freigegeben",
+        "Audit enthält Entscheidung/Modell-/Promptversion ohne Roh-PII",
+        "E2E-Fall zeigt sichere manuelle Fortsetzung bei Anbieterfehler"
+      ],
+      "dependsOn": [
+        "K08",
+        "S04"
+      ],
+      "failureCases": [
+        "Halluzination und scheinbare Gewissheit dürfen nicht als behördliche Tatsache dargestellt werden"
+      ],
+      "focus": "Backend/AI/QA"
+    },
+    {
+      "id": "K10",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P1",
+      "title": "Multimodale KI-Backends für Bilder und Dokumente mit Datenschutz-Gates",
+      "goal": "Vision-Aufgaben funktionieren nur bei nachweislich kompatiblen Modellen und erlaubtem Datentransfer.",
+      "scope": [
+        "Mime-/Bildgrößen-, Datei-/EXIF-, Thumbnail-/Pseudonymisierungs- und Provider-Limits definieren",
+        "Capability-/Transportadapter für lokale Images, URL-vs-Base64 und mehrere Modelle mit Safe Fallback",
+        "Bildbefund als getrennten, überprüfbaren Vorschlag darstellen; Modell-/Promptversion und Quellenkette erhalten",
+        "Stagingtests mit synthetischen Fotos, Fehlern, schlechten Bildern und fehlendem Vision-Support"
+      ],
+      "acceptance": [
+        "Provider ohne Vision oder nicht unterstütztes Bildformat wird sicher ausgeschlossen",
+        "Kein Originalbild an nicht autorisierten Provider oder unbegrenzte Log-/Retry-Kette",
+        "Sichtbare Fehl- und manuelle Alternative für den Sachbearbeiter",
+        "Auswertung kann mit synthetischer Golden-Image-Suite regressionsgeprüft werden"
+      ],
+      "dependsOn": [
+        "K04",
+        "K09",
+        "S05"
+      ],
+      "failureCases": [
+        "Bildmetadaten können Personen-/Standortinformationen enthalten und müssen vor Ausleitung geprüft werden"
+      ],
+      "focus": "AI/Backend/Security"
+    },
+    {
+      "id": "K11",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P1",
+      "title": "Streaming-Antworten mit Abbruch, Limits und verständlicher Admin-UX",
+      "goal": "Lange Assistenz-Antworten bleiben bedienbar und Ressourcen werden beim Abbruch freigegeben.",
+      "scope": [
+        "Optionales token-/chunk-basiertes Streaming mit konsistentem UI-Status und robustem Parser",
+        "Backpressure, Abort bei Navigationswechsel, Auth-/Tenantwechsel, Zeitbudget und zulässige Zeichenmenge",
+        "Teilantworten als unvollständig kennzeichnen, erst nach finaler Outputvalidierung Fachverwendung",
+        "Markdown-/Tool-Output XSS-sicher darstellen und sicher exportieren"
+      ],
+      "acceptance": [
+        "Clientabbruch/Timeout beendet Providerrequest und kann keinen Hintergrundprozess unbemerkt fortsetzen",
+        "Teilstrings und malformed Streams bleiben sichtbar fehlersicher, keine Tool-/Fachaktion auf Partial Output",
+        "Mehrfach-Clients und langsame Netze führen nicht zu Zombie-Sessions",
+        "Tests mit Retry, 401/403 und Scopewechsel"
+      ],
+      "dependsOn": [
+        "K02",
+        "R02"
+      ],
+      "failureCases": [
+        "Streaming darf keine vertraulichen internen Metadaten oder ungeprüfte Toolcalls vorab rendern"
+      ],
+      "focus": "Backend/Frontend"
+    },
+    {
+      "id": "K12",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P1",
+      "title": "KI-Queue: idempotente Ausführung und sichere Provider-Failover-Semantik",
+      "goal": "Persistierte KI-Arbeit überlebt Neustarts, Duplikate und providerseitige Fehler kontrolliert.",
+      "scope": [
+        "Einheitlicher Queue-TaskEnvelope mit Prompt-/Task-/Model-/Policyversion und deterministischem Idempotency-Key",
+        "Leases, Dead Letter, RetryAt, Cancellation, Budgetreservierung und genau definierte Delivery-Semantik",
+        "Ergebnisregistrierung mit verwendeter Route, Modell und Latency/Usage; Übergang zu Fachaktions-Review getrennt",
+        "Kein rückwirkendes Umrouten bereits genehmigter Datensensitivitäts- oder Tenantpolicy"
+      ],
+      "acceptance": [
+        "Crash nach Providerantwort und vor Queue-Ack wird ohne unkontrollierte Doppelaktion wiederaufgenommen",
+        "Timeout/Abbruch/429/CircuitOpen haben sichtbaren fachlichen Status und begrenzte Retries",
+        "Worker ändern keine Aufgabe eines deaktivierten Tenantmoduls ohne ausdrückliche Drain-Regel",
+        "Fehler-Profil als Staging-Test und Runbook nachgewiesen"
+      ],
+      "dependsOn": [
+        "R04",
+        "K06"
+      ],
+      "failureCases": [
+        "Provider-Fallback darf Prompt nicht mehrfach an neu unfreigegebene Empfänger senden"
+      ],
+      "focus": "Backend/Ops/AI"
+    },
+    {
+      "id": "K13",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P0",
+      "title": "KI-Qualitäts-Evaluationsframework mit synthetischen Golden Cases",
+      "goal": "Modelle werden nach tatsächlicher Fachgüte und Risiken ausgewählt, nicht nach Marketing oder Preis allein.",
+      "scope": [
+        "Synthetische Referenzfälle für Klassifikation, Zuständigkeit, Übersetzung, Workflow-Vorschlag, Pseudonymisierung und Halluzination",
+        "Präzisions-/Recall-/Fachplausibilitätsmetriken, Halluzination, Policy-/Schema-Verstöße, Latenz, Kostenschätzung pro Task",
+        "Deterministische Test-Doubles für CI und getrennte opt-in Live-Providerproben in geschützter Stagingumgebung",
+        "Schwellen als Review-Entscheidung festhalten, qualitative Fehlerkategorien und Regressionstrend"
+      ],
+      "acceptance": [
+        "Baseline für mindestens fünf Kernaufgaben reproduzierbar und mit Reviewer-Kommentar hinterlegt",
+        "Eine absichtlich fehlerhafte Modell-/Promptänderung wird im Gate als Regression erkannt",
+        "Keine produktiven Bürgerdaten in Goldens, Evals oder Logs",
+        "Bewertung unterscheidet manuelle menschliche Stichprobe und automatisches Urteil"
+      ],
+      "dependsOn": [
+        "K08",
+        "F04"
+      ],
+      "failureCases": [
+        "Ein LLM darf seinen eigenen sicherheitskritischen Output nicht allein als korrekt zertifizieren"
+      ],
+      "focus": "AI/QA"
+    },
+    {
+      "id": "K14",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P1",
+      "title": "Mantine-KI-Cockpit: Verbindungen, Modelle, Routing, Test und Diagnose",
+      "goal": "Administration und Betrieb erhalten eine verständliche, sichere Steuerzentrale für KI-Funktionen.",
+      "scope": [
+        "Mantine UI für Connection-Wizard, Health, Freigabe/Tenant, Model Catalog, Capabilities und Kosten-/Providerhinweise",
+        "Task-Routing-Builder mit Dry-Run, Explain-Why, Testprompt mit synthetischem Fall, Compare-Model-Diff",
+        "Audits, Masked Credentials, Version-/LastUpdated/LastError, Credentialrotation und safe disable/rollback",
+        "Klarer visueller Zusammenhang AI-Modul an/aus, Provider erreicht/nicht, Nutzerrecht und Task-Grund"
+      ],
+      "acceptance": [
+        "Rollen-/Tenantgetrennte Admin-Screens und gesperrte Controls ohne Datenleck",
+        "Fehlerzustände (401/403/429/Timeout/Unreachable), Tastatur, 360px/Tablet und Contrast geprüft",
+        "Testen zeigt erwartete Kosten und führt keine Außenaktion aus",
+        "Provider- und Routingänderung protokolliert, Version/409-Konflikt behandelt"
+      ],
+      "dependsOn": [
+        "D02",
+        "M05",
+        "K04",
+        "K06"
+      ],
+      "failureCases": [
+        "Unberechtigte dürfen keine Connection-Secrets oder vertraulichen Prompt-/Ergebnisdaten einsehen"
+      ],
+      "focus": "Frontend/AI/UX"
+    },
+    {
+      "id": "K15",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P1",
+      "title": "KI-Nutzung, Tokenkosten, Budgets und datensparsames Monitoring",
+      "goal": "Administrierende sehen echte Nutzung und können unerwartete Kosten begrenzen.",
+      "scope": [
+        "Per Provider/Modell/Task/Tenant pseudonymisierte Usage/latency/cache/retry/failure erfassen",
+        "Preis-/Tarifversionen als konfigurierbare Schätzwerte mit Gültigkeit, keine rückwirkend willkürlich fiktiven Kosten",
+        "Hard/Soft Quotas, Burst- und Daily/Tenant-Budgets, Alarm und zentraler AI-Kill-Switch",
+        "Trace- und Audit-Verknüpfung ohne Rohprompt-/Bürgerdaten und nachvollziehbare Provider-Abrechnungsdifferenzen"
+      ],
+      "acceptance": [
+        "Queue/Retry rechnet Usage ohne unbeabsichtigte Doppelzählung an",
+        "Für Modell ohne Usage-Auskunft wird Unsicherheit statt exakter Zahl angezeigt",
+        "Tenant kann fremde Nutzungs-/Kostenwerte nicht sehen",
+        "BudgetExceeded führt zu sichtbarem Abbruch/Review statt heimlichem Cloud-Fallback"
+      ],
+      "dependsOn": [
+        "K06",
+        "R07"
+      ],
+      "failureCases": [
+        "Tokenkosten sind nicht identisch mit Rechnungskosten; Preise und Cache-Tarife können variieren"
+      ],
+      "focus": "AI/Ops/FinOps"
+    },
+    {
+      "id": "K16",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P0",
+      "title": "KI-Datenschutz- und Egress-Governance je Task und Mandant",
+      "goal": "Datenübertragung an Provider folgt expliziten, nachweisbaren Sicherheits- und Datenschutzregeln.",
+      "scope": [
+        "Datenklassifikation für öffentliche Texte, interne Fachinhalte, Anhänge und Kontaktdaten im AI-TaskEnvelope",
+        "Per Tenant/Task erlaubte Provider-/Region-/Retention-/DPA-/Subprocessor-Liste samt Zweck und Löschpfad",
+        "Pseudonymisierung/Redaktion und Need-to-know vor Request, Protokoll des Auswahlgrunds",
+        "Anwendungs- und Providerdataflow als prüffähige Doku mit Verantwortlichen"
+      ],
+      "acceptance": [
+        "Verbotene externe Weitergabe fällt auf menschlichen Fallback zurück, nicht auf anderen Cloudanbieter",
+        "Vorab-/Nachher-Tests belegen, dass Personen-/Kontaktfelder nicht unabsichtlich im Prompt landen",
+        "Quelltext/Attachment wird nie als privilegierte Anweisung behandelt",
+        "Keine Daten für Training/Verarbeitung ohne dokumentierte Betriebsvereinbarung bzw. einschlägige Erlaubnis"
+      ],
+      "dependsOn": [
+        "K03",
+        "S03"
+      ],
+      "failureCases": [
+        "Datenschutz-Freigabe ist bei Providerwechsel erneut zu prüfen; Backendname allein ist keine Rechtsgrundlage"
+      ],
+      "focus": "Security/Datenschutz/AI"
+    },
+    {
+      "id": "K17",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P2",
+      "title": "Tenant-sichere Wissenskontexte und RAG für Assistenz",
+      "goal": "KI-Antworten können definierte Verwaltungsinhalte nutzen, ohne fremde Vorgänge zu durchsuchen.",
+      "scope": [
+        "Erlaubte Quellen/Chunks, ACL/Tenant-/Org-Filter, Version/TTL/Retention und Index-Lebenszyklus spezifizieren",
+        "Retrieval-/Embedding-Provider nach Fähigkeiten und Egresspolicy; Quellenbelege, Aktualität, Unsicherheit im UI zeigen",
+        "Tool-/RAG-Kontext von Systeminstruktionen trennen und Prompt-Injection-Fälle testen",
+        "Widerruf/Index-Rebuild/Löschanforderung und Deaktivieren des AI-Moduls sicher abbilden"
+      ],
+      "acceptance": [
+        "Fremdmandant-/Org-Treffer werden weder in Quellenliste noch Text/Kontext gefunden",
+        "Falsche/stale Quellen führen zu Warnung/Abbruch statt erfundenem Behördenwissen",
+        "Quellen und verwendeter Datenstand sind für menschliche Prüfung verfügbar",
+        "Löschung entzieht Inhalt auch aus Vektorindex und Caches"
+      ],
+      "dependsOn": [
+        "K16",
+        "K09",
+        "S01"
+      ],
+      "failureCases": [
+        "RAG ist optional und darf nicht implizit beliebige Ticketinhalte für alle Nutzer indexieren"
+      ],
+      "focus": "AI/Daten/UX"
+    },
+    {
+      "id": "K18",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P1",
+      "title": "Kompatible Legacy-Integration und risikofreier Parallelbetrieb",
+      "goal": "Bestandsinstallationen behalten KI-Funktionen während Umstellung der Provider-Verwaltung.",
+      "scope": [
+        "Migrationsmatrix legacy env/AskCodi, ai-client.ts, oauth_tokens, llmHub, imageAi, TaskRoutes und gespeicherte Queue-Einträge",
+        "Dual-Read-/Versioned-Write-Adapter, sichere Secret-Migration, Featureflag-/Pilot-Tenant und Rollbackkonzept",
+        "Stufenweise Umstellung einzelner Task-Keys mit reproduzierbarer Vergleichsevaluation",
+        "Deprecation/Removal mit Messwerten, Changelog, Upgrade- und Support-Runbook"
+      ],
+      "acceptance": [
+        "Alter Datensatz/Task/Queue-Eintrag wird ohne Datenverlust in neue Runtime übersetzt",
+        "Rollback der Codepfade verschickt keine Nachricht doppelt und lässt historische Reports lesbar",
+        "Bei fehlender Providerkonfiguration erscheint sichere manuelle Aufgabe",
+        "Wiederholbarer Staging-Upgrade-Test eines älteren Schemas plus Regression der alten TaskRoutes"
+      ],
+      "dependsOn": [
+        "K02",
+        "K06",
+        "K13",
+        "P02"
+      ],
+      "failureCases": [
+        "Alte konfigurationsseitige Fallbackwerte dürfen durch Migration nicht unbemerkt freigeschaltet werden"
+      ],
+      "focus": "Backend/Ops"
+    },
+    {
+      "id": "K19",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P1",
+      "title": "On-Prem-KI-Backends: Ollama, vLLM, LM Studio kontrolliert integrieren",
+      "goal": "Mandanten können zulässige lokale/selbst betriebene Inferenz nutzen, ohne einen ungesicherten Localhost-Sonderpfad.",
+      "scope": [
+        "OpenAI-kompatible Subset-Matrix pro Ollama/vLLM/LM-Studio-Version, Auth/Reverse-Proxy/Health/DNS und lokale Modellnamen",
+        "Installation über Infrastrukturverantwortliche, GPU/CPU/VRAM-/Concurrency-/Cold-Start- und Netzwerklimits dokumentieren",
+        "Chat, Image, JSON/Tools/Streaming nur nach realer Capabilityprobe freischalten",
+        "Staging-Contract-Suite und Fallback ohne Datenübertragung an Cloud bei Local-only-Policy"
+      ],
+      "acceptance": [
+        "Lokale Provider laufen hinter expliziter Netzfreigabe und kontrolliertem Zugriff",
+        "Ausfall, Modell nicht geladen, zu wenig Speicher, Queue-Überlast erzeugen sichere UX/Retry",
+        "Keine unbekannten Modellfähigkeiten aus /models-List garantieren",
+        "Performance/Qualität mit identischen synthetischen Testfällen gegen Cloudvariante vergleichbar"
+      ],
+      "dependsOn": [
+        "K02",
+        "K04",
+        "K07",
+        "K05"
+      ],
+      "failureCases": [
+        "vLLM-/Ollama-Endpunkt-Kompatibilität ist hersteller-/versionsabhängig und darf nicht als vollständige API-Identität behandelt werden"
+      ],
+      "focus": "AI/Ops/Backend"
+    },
+    {
+      "id": "K20",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P1",
+      "title": "KI-gestützte Facharbeit: Provenance, Human-in-the-loop und Vieraugenfreigabe",
+      "goal": "Bei Vorschlägen zu Verwaltungsentscheidungen wissen Menschen immer, was KI getan hat und was sie selbst bestätigen müssen.",
+      "scope": [
+        "Kennzeichnung Vorschlag/Entwurf/ungeprüft sowie Modell-/Promptversion, sichtbare Unsicherheit und erforderliche Datenquellen",
+        "Mitarbeiter kann Vorschlag bearbeiten/ablehnen, begründen und manuell fortfahren",
+        "Freigaben für automatische externe Meldungen, Zuordnung, Workflowwechsel, Löschung oder Veröffentlichung rollen-/policygebunden",
+        "Audit und UI zeigen Entscheidung und Actor, aber keine unrechtmäßige Veröffentlichung von Interna"
+      ],
+      "acceptance": [
+        "KI-Antwort allein ändert keine autorisierungspflichtige Fachentscheidung",
+        "Teil-/fehlerhafte Ergebnisse sind erkennbar und lassen sich manuell korrigieren",
+        "Menschliche Bestätigung wird serverseitig validiert und auditierbar",
+        "Tenant, Modul-off und abgelaufene Rechte verhindern spätere Aktion"
+      ],
+      "dependsOn": [
+        "K09",
+        "S04",
+        "A02"
+      ],
+      "failureCases": [
+        "Nicht den Eindruck erwecken, KI habe behördliche Freigabekompetenz oder kenne vollständige Hintergründe"
+      ],
+      "focus": "AI/Produkt/UX"
+    },
+    {
+      "id": "K21",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P1",
+      "title": "Herstellerspezifische Adapter und Azure-/Native-API-Support",
+      "goal": "Das Provider-Modell erlaubt echte Unterschiede, statt alle Backends auf Chat-Completions zu verbiegen.",
+      "scope": [
+        "Nach Nutzerbedarf Azure OpenAI, direkte Provider-APIs oder Responses/Chat/Tool-Familien via eigene Adapter statt Scheinkompatibilität anbieten",
+        "API-Version, Deploymentname, Region, Reasoning-/Tool-/JSON-Schema-Unterstützung und Auth pro Adapter modellieren",
+        "Kompatibilitätsmatrix, Provider-Herstellerdocs und Smoke-Tests dokumentieren; Provider nicht als implementiert markieren, bevor Contract-Suite läuft",
+        "Graceful Capability Degradation und pro Task erlaubte Adapter-Features"
+      ],
+      "acceptance": [
+        "Mindestens zwei unterschiedliche Protokollfamilien besitzen Contract-Tests mit synthetischen Daten",
+        "Rate-Limit/Usage/Response-Shape/Streaming-Errors werden einheitlich gemappt",
+        "Fehlendes natives Feature führt zu sichtbarem unsupported statt stiller Falschinterpretation",
+        "Providerwechsel nicht ohne konkrete Tenant-/Security-/Kostenfreigabe"
+      ],
+      "dependsOn": [
+        "K02",
+        "K04",
+        "K07"
+      ],
+      "failureCases": [
+        "Native API- und SDK-Versionen können sich ändern; Modell-ID allein ist keine Capabilitygarantie"
+      ],
+      "focus": "Backend/AI/Architektur"
+    },
+    {
+      "id": "K22",
+      "kind": "task",
+      "epic": "K",
+      "priority": "P1",
+      "title": "Provider-Contract-, Chaos- und Qualitätsregressionen als Release-Gate",
+      "goal": "KI-Anbindung bleibt nach SDK-/Provider-/Modellwechsel zuverlässig und fachlich korrekt.",
+      "scope": [
+        "Fake-/Contract-Testmatrix für Fehler, Streaming, Schema, Token Usage, JSON, Vision, Auth, Model-Discovery, Cancellation und Retriability",
+        "Offline/Staging-Tests für Provider-Unreachability, Slow Response, Flaky Network, Rate-Limit, BudgetExceeded, Tenant Policy und laufende Queue",
+        "Golden-Evaluationen werden mit konkretem Modell-/Prompt-/Testdatensatzstempel verknüpft",
+        "Release-Gates und Probe-/Mock-Profile ohne echte Credentials für reguläre CI"
+      ],
+      "acceptance": [
+        "Neue Adapterversion besteht gemeinsamen Contract und definiert/markiert ununterstützte Features",
+        "Regresstests erkennen fachlich riskante Modelländerung vor rollout",
+        "Staging-Runbook dokumentiert nachweisbare Recovery/Degraded Mode ohne Doppelaktion",
+        "Pflichtgates blockieren nachweisliche Sicherheits-/Konsistenzfehler"
+      ],
+      "dependsOn": [
+        "K13",
+        "K19",
+        "K21",
+        "R04"
+      ],
+      "failureCases": [
+        "Keine unkontrollierten Live-Provider-Aufrufe in gewöhnlicher PR-CI; Staging-Probes bleiben explizit"
+      ],
+      "focus": "QA/AI/Ops"
     }
   ]
 }
