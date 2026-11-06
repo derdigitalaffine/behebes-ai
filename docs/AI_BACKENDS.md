@@ -141,3 +141,9 @@ Bei Bürger-/Verwaltungsdaten: expliziter Zweck, minimale Felder, sinnvolle Pseu
 Ein Provider wird nur als „unterstützt“ dokumentiert, wenn konkrete Adapter- und Modellkonfigurationen diese Matrix bestehen. Ein neuer API-Key allein schaltet **keine** Freigaben frei.
 
 [Master-Roadmap](ROADMAP.md) · [Milestones](MILESTONES.md) · [Modularchitektur](MODULE_PLATFORM.md) · [Security und Privacy](SECURITY_PRIVACY.md) · [K01–K22 in Issue-Katalog](../planning/roadmap-issues.json)
+
+## K07-Implementierung: DNS-Pinning (PR #99)
+
+Nach dem isolierten Sicherheitsgateway aus PR #98 verbindet der neue HTTPS-Transport nun ausschließlich auf eine zuvor geprüfte und für den Request gepinnte IP. Er prüft **sämtliche A-/AAAA-DNS-Antworten** und lehnt Spezial-/Privatadressen, gemischte Antworten und ungeprüfte Origins ab. TLS validiert weiterhin das Zertifikat für den ursprünglichen Provider-Hostnamen, nicht für die gepinnte IP. Die Secret-Referenz wird erst nach erfolgreicher DNS-/Endpoint-/Tenantprüfung geladen.
+
+**Status:** technisch implementierter, aber **nicht im produktiven LLM-Hub eingeschalteter** Baustein. Infrastruktur-Egress-Firewall, Secret-Lifecycle, datenschutzrechtlich geprüfte Providerfreigaben, Integrations-/Netzwerkausfalltests und ein unabhängiger Security-Review bleiben Pflicht. [ADR-0008](ADR-0008-AI-PINNED-EGRESS.md) · [PR #99](https://github.com/derdigitalaffine/behebes-ai/pull/99).

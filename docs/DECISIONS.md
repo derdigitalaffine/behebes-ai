@@ -51,6 +51,12 @@
 - **Entscheidung:** ausdrückliche Tenant-/Task-/Region-/Datenklassen-Freigabe **vor** Secret-Auflösung und Provideraufruf; statische Endpoint-Prüfung und dokumentierte DNS/IP-Transportgrenze.
 - **Details:** [ADR-0007](ADR-0007-AI-EGRESS-GOVERNANCE.md). **Issues:** [K03 #75](https://github.com/derdigitalaffine/behebes-ai/issues/75), [K07 #79](https://github.com/derdigitalaffine/behebes-ai/issues/79), [K16 #88](https://github.com/derdigitalaffine/behebes-ai/issues/88).
 
+## ADR-0008 – DNS-gepinnte KI-Verbindungen statt DNS-Preflight allein
+
+- **Datum:** 2026-11-06; **Status:** implementiert im isolierten Gate, produktive Integration/Review offen.
+- **Entscheidung:** Alle DNS-Adressen bewerten, geprüfte IP am HTTPS-Socket pinnen und ursprünglichen Providerhostname für TLS/SNI/Host belassen.
+- **Details:** [ADR-0008](ADR-0008-AI-PINNED-EGRESS.md), [K07 #79](https://github.com/derdigitalaffine/behebes-ai/issues/79).
+
 ## Neues ADR-Template
 
 ```text

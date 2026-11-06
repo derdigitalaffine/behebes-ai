@@ -2,8 +2,8 @@
  * K03/K07/K16: governed, opt-in facade for the isolated K02 chat adapter.
  *
  * This is NOT installed in the existing LLM Hub. The application must supply
- * trusted tenant/task/actor policies and an independently restricted egress
- * transport before it can be integrated. No inline credential values are
+ * trusted tenant/task/actor policies and an independently restricted deployment
+ * egress firewall before it can be integrated. No inline credential values are
  * accepted as connection metadata.
  */
 import {
@@ -11,6 +11,7 @@ import {
   ProviderAdapterError,
 } from './ai-provider-adapter.js';
 import { assessProviderEndpoint } from './ai-provider-endpoint.js';
+import { createPinnedHttpsFetcher, resolvePinnedAiDestination, type AiDnsResolver } from './ai-pinned-egress.js';
 import {
   assessAiEgress, type AiEgressContext, type AiTenantEgressGrant,
 } from './ai-egress-policy.js';
@@ -50,8 +51,10 @@ export interface GovernedGeneration {
   request: ProviderGenerationRequest;
   credentials: AiCredentialResolver;
   signal?: AbortSignal;
-  /** Synthetic transport only; production transport needs K07 egress controls. */
+  /** Fake transport for server-side unit tests ONLY; never accept from user input. */
   fetcher?: typeof fetch;
+  /** Synthetic DNS resolver for internal tests only. Never expose through API requests. */
+  dnsResolver?: AiDnsResolver;
   nowMs?: number;
 }
 
@@ -73,6 +76,18 @@ export async function generateGovernedChat(
   if (!assessProviderEndpoint(connection.baseUrl, connection.allowedOrigins).allowed) {
     throw new AiGatewayError('endpoint_denied');
   }
+  // Runtime transport: resolve and vet every A/AAAA record before loading a
+  // credential; pin the approved IP for TLS so DNS cannot change at connect.
+  // A supplied fake fetcher is reserved for trusted deterministic test harnesses.
+  let transport = input.fetcher;
+  if (!transport) {
+    try {
+      const pinned = await resolvePinnedAiDestination(connection.baseUrl, connection.allowedOrigins, input.dnsResolver);
+      transport = createPinnedHttpsFetcher(pinned);
+    } catch {
+      throw new AiGatewayError('endpoint_denied');
+    }
+  }
   if (!/^ai-provider\/[a-z0-9][a-z0-9-]{1,63}$/.test(connection.credentialRef)) {
     throw new AiGatewayError('credential_unavailable');
   }
@@ -93,7 +108,7 @@ export async function generateGovernedChat(
     models: connection.models,
     apiKey: token,
     timeoutMs: connection.timeoutMs,
-    fetcher: input.fetcher,
+    fetcher: transport,
   });
   try {
     return await adapter.generate(request, { signal: input.signal });

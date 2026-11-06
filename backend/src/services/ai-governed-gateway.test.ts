@@ -81,6 +81,22 @@ describe('K03/K07/K16: governed AI connection facade', () => {
     }
     expect(resolve).not.toHaveBeenCalled();
   });
+  it('rejects a private DNS result before resolving any credential or opening a socket', async () => {
+    const resolve = vi.fn(async () => 'fake-secret-never-log');
+    const dnsResolver = vi.fn(async () => [
+      { address: '1.1.1.1', family: 4 },
+      { address: '169.254.169.254', family: 4 },
+    ]);
+    await expect(generateGovernedChat({
+      ...payload,
+      fetcher: undefined,
+      dnsResolver,
+      credentials: { resolve },
+    })).rejects.toMatchObject({ code: 'endpoint_denied' });
+    expect(dnsResolver).toHaveBeenCalledTimes(1);
+    expect(resolve).not.toHaveBeenCalled();
+  });
+
   it('does not accept a task mismatch even with a valid tenant grant', async () => {
     const resolve = vi.fn(async () => 'fake-secret-never-log');
     await expect(generateGovernedChat({
