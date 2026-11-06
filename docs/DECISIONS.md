@@ -39,6 +39,12 @@
 - **Entscheidung:** Kontrollierter HTTPS-Chat-Transport mit strikt vorher zugelassenem Endpoint, Modellfähigkeiten, Abbruch/Timeout und redigierten Fehlern. Keine automatische Runtime-Migration.
 - **Details:** [ADR-0005](ADR-0005-PROVIDER-ADAPTER.md). **Issues:** [K02 #74](https://github.com/derdigitalaffine/behebes-ai/issues/74), [F02 #14](https://github.com/derdigitalaffine/behebes-ai/issues/14).
 
+## ADR-0006 – Modellfähigkeit mit Nachweis und Verfall statt Namensheuristik
+
+- **Datum:** 2026-11-06; **Status:** K04-PR, Review erforderlich.
+- **Entscheidung:** Fähigkeitsprüfung gegen expliziten, vertrauenswürdigen Modellkatalog; stale/unknown-Probes führen vor dem Provideraufruf zu einem kontrollierten Fehler.
+- **Details:** [ADR-0006](ADR-0006-MODEL-CAPABILITIES.md), [Issue #76](https://github.com/derdigitalaffine/behebes-ai/issues/76).
+
 ## Neues ADR-Template
 
 ```text
