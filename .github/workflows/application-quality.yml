@@ -1,0 +1,73 @@
+name: M0 application quality baseline
+on:
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'admin/**'
+      - 'ops/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/report-test-inventory.mjs'
+      - '.github/workflows/application-quality.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'backend/**'
+      - 'frontend/**'
+      - 'admin/**'
+      - 'ops/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'scripts/report-test-inventory.mjs'
+      - '.github/workflows/application-quality.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: app-quality-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build:
+    name: Build / ${{ matrix.workspace }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        workspace: [backend, frontend, admin, ops]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Reproducible install from root lockfile
+        run: npm ci --no-audit --no-fund
+      - name: Build workspace
+        run: npm run build --workspace=${{ matrix.workspace }}
+  backend-unit:
+    name: Backend deterministic unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Reproducible install from root lockfile
+        run: npm ci --no-audit --no-fund
+      - name: Run Vitest without watch or pass-with-no-tests
+        run: npm test --workspace=backend -- --run
+  test-inventory:
+    name: Test inventory (missing suites are reported)
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Inventory actual test suites across four workspaces
+        run: node scripts/report-test-inventory.mjs
