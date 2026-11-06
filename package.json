@@ -26,6 +26,7 @@
     "lint": "npm run lint --workspaces"
   },
   "devDependencies": {
-    "playwright": "^1.58.2"
+    "playwright": "^1.58.2",
+    "vitest": "^1.1.0"
   }
 }
