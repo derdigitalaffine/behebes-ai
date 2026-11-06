@@ -33,6 +33,12 @@
 - **Kontext und Risiken:** [ADR-0004](ADR-0004-AI-PROVIDER-BASELINE.md).
 - **Tickets:** [#14 F02](https://github.com/derdigitalaffine/behebes-ai/issues/14), [#73 K01](https://github.com/derdigitalaffine/behebes-ai/issues/73), vorbereitend [#74 K02](https://github.com/derdigitalaffine/behebes-ai/issues/74).
 
+## ADR-0005 – Isolierter, geprüfter KI-Provideradapter
+
+- **Datum:** 2026-11-06; **Status:** PR #96 zur Architektur- und Security-Review.
+- **Entscheidung:** Kontrollierter HTTPS-Chat-Transport mit strikt vorher zugelassenem Endpoint, Modellfähigkeiten, Abbruch/Timeout und redigierten Fehlern. Keine automatische Runtime-Migration.
+- **Details:** [ADR-0005](ADR-0005-PROVIDER-ADAPTER.md). **Issues:** [K02 #74](https://github.com/derdigitalaffine/behebes-ai/issues/74), [F02 #14](https://github.com/derdigitalaffine/behebes-ai/issues/14).
+
 ## Neues ADR-Template
 
 ```text

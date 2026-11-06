@@ -80,3 +80,25 @@ node scripts/report-test-inventory.mjs
 ```
 
 Die ersten Backend-Tests prüfen **nur synthetische KI-Provider-Fehlerfälle**. Es gibt noch keine Aussage über API-/DB-/Queue-/Tenant-/Offline-/Browser-Funktion und keine vollständige ESLint-/Typecheck-/E2E-Freigabe. Fehler in der Baseline-CI bleiben als echte Findings sichtbar, nicht als still übergangene grüne Checks. [ADR-0004](ADR-0004-AI-PROVIDER-BASELINE.md).
+
+## K02/F02 – Provideradapter und erste UI-Unit-Gates
+
+PR [#96](https://github.com/derdigitalaffine/behebes-ai/pull/96) erweitert die Backend-Vitest-Suite um synthetische OpenAI-kompatible Chat-Transport-Tests (URL-/Capability-/Input-/Output-Gates, HTTP-Fehler, Redaction, Timeout und Cancel). Der Adapter ist **noch nicht** in die bestehende Runtime eingebaut.
+
+Zusätzlich führen drei Workspace-spezifische CI-Jobs folgende realen Unit-Tests aus:
+
+- Bürgerfrontend: PWA-Deep-Link-Prüfung einschließlich mehrstufig kodierter Separatoren und Backslashes.
+- Admin: bestehende und unbekannte KI-Aufgabenschlüssel korrekt beschriften.
+- OPS: Tenant- und Capability-Auswahl ohne erfundene globale oder fremde Client-Scopes.
+
+Lokal reproduzierbar nach Installation mit npm ci:
+
+~~~bash
+npm test --workspace=backend -- --run
+npm test --workspace=frontend -- --run
+npm test --workspace=admin -- --run
+npm test --workspace=ops -- --run
+npm run build --workspaces
+~~~
+
+Diese Checks sind **keine** vollständigen E2E-/API-/Datenbank-/Mobilscreen- oder Datenschutztests; vor K02-Integration sind Security- und Architektur-Review, DNS-/IP-Egresspolicy, Tenant-/Org-/Credential-Gates und fachliche Regressionen erforderlich. [ADR-0005](ADR-0005-PROVIDER-ADAPTER.md).
