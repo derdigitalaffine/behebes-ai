@@ -7,6 +7,11 @@ import {
   loadImageAiSettings,
   setSetting,
 } from './settings.js';
+import {
+  assessLlmHubPilotEligibility,
+  type LlmHubPilotDecision,
+  type LlmHubPilotRequest,
+} from './ai-llm-hub-pilot.js';
 
 const LLM_HUB_SETTING_KEY = 'llmHub';
 const MODEL_CACHE_TTL_MS = 6 * 60 * 60 * 1000;
@@ -881,4 +886,27 @@ export async function resolveLlmRuntimeSelection(input?: {
 export async function listVisionCapableModels(connectionId: string): Promise<LlmModelEntry[]> {
   const models = await getConnectionModels(connectionId, { refresh: false });
   return models.filter((entry) => entry.vision);
+}
+
+
+/**
+ * Opt-in read-only pilot bridge. Never executes a provider request.
+ *
+ * The flag is only a preview switch, NOT permission to route real prompts.
+ * We read the raw saved LLM Hub state instead of loadLlmHubState(), which
+ * can perform a legacy migration write, so this preview has no DB mutations.
+ * Callers must provide server-verified approval/tenant/actor grants.
+ */
+export async function previewGuardedLlmHubUiTranslationPilot(
+  input: LlmHubPilotRequest
+): Promise<LlmHubPilotDecision> {
+  if (process.env.AI_LLM_HUB_GUARDED_PILOT_MODE !== 'preview') {
+    return { eligible: false, reason: 'disabled' };
+  }
+  try {
+    const saved = await getSetting<LlmHubState>(LLM_HUB_SETTING_KEY);
+    return assessLlmHubPilotEligibility(saved, input);
+  } catch {
+    return { eligible: false, reason: 'route_not_configured' };
+  }
 }
