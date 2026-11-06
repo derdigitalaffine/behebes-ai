@@ -10,6 +10,8 @@ on:
       - 'planning/**'
       - 'scripts/check-roadmap.mjs'
       - 'scripts/import-roadmap-issues.mjs'
+      - 'scripts/check-milestones.mjs'
+      - 'scripts/sync-roadmap-milestones.mjs'
       - '.github/workflows/docs.yml'
   push:
     branches: [main]
@@ -40,3 +42,4 @@ jobs:
           node scripts/check-docs.mjs
           node scripts/check-agent-orchestration.mjs
           node scripts/check-roadmap.mjs
+          node scripts/check-milestones.mjs
