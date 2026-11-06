@@ -19,7 +19,7 @@
 
 ## Operative Milestones statt bloßer Phasen
 
-**Acht deklarative und technisch geordnete Meilensteine M0–M7** sind in [MILESTONES.md](MILESTONES.md) beschrieben und in [planning/milestones.json](../planning/milestones.json) versioniert. Alle 81 Arbeitspakete haben genau einen Milestone, der erst nach dokumentierten Exit-Gates abgeschlossen werden darf. Due Dates werden nicht ohne Teamkapazität erfunden.
+**Acht tatsächlich angelegte GitHub-Meilensteine M0–M7** sind unter [GitHub Milestones](https://github.com/derdigitalaffine/behebes-ai/milestones) und in [MILESTONES.md](MILESTONES.md) beschrieben und in [planning/milestones.json](../planning/milestones.json) versioniert. Alle 81 Arbeitspakete haben genau einen Milestone, der erst nach dokumentierten Exit-Gates abgeschlossen werden darf. Due Dates werden nicht ohne Teamkapazität erfunden.
 
 **Neuer wesentlicher Querschnitt:** [KI-Backend-/Provider-Fabric](AI_BACKENDS.md) mit 22 priorisierten Aufgaben K01–K22, sicheren Credentials, mehrteiliger Provider-Kompatibilität, Tenant-Egress-Policies, Modellfähigkeiten, robustem Failover, Queue und Qualitäts-Evaluationen. Die ursprüngliche LLM-Hub-/Legacy-Provider-Migration muss kompatibel bleiben.
 

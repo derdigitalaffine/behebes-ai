@@ -103,6 +103,17 @@ Bei Bürger-/Verwaltungsdaten: expliziter Zweck, minimale Felder, sinnvolle Pseu
 - **Budget:** Soft/Hard per Tenant/Task/Provider, Kosten-/Quota-Rückmeldung im Admin, AI-Kill-Switch, kein stiller teurer Fallback.
 - **UX:** Mantine-KI-Cockpit für Health, Connections, Capability, Test mit synthetischen Daten, Routing-Dry-Run, Kosten, Changes/Audit, verständliche Fehler und human approvals.
 
+## Direkter Arbeitsvorrat auf GitHub
+
+- [Epic #72: KI-Backend-Plattform](https://github.com/derdigitalaffine/behebes-ai/issues/72)
+- [K01 #73: Ist-Aufnahme und Providerarchitektur](https://github.com/derdigitalaffine/behebes-ai/issues/73)
+- [K02 #74: Typisierte Provideradapter](https://github.com/derdigitalaffine/behebes-ai/issues/74)
+- [K03 #75: Sichere KI-Credentials und Tenant-Scope](https://github.com/derdigitalaffine/behebes-ai/issues/75)
+- [K06 #78: Deterministisches Task-Routing](https://github.com/derdigitalaffine/behebes-ai/issues/78)
+- [K13 #85: Qualitätsevaluation](https://github.com/derdigitalaffine/behebes-ai/issues/85)
+- [K14 #86: Mantine-KI-Cockpit](https://github.com/derdigitalaffine/behebes-ai/issues/86)
+- [K22 #94: Provider- und Chaos-Regressionen](https://github.com/derdigitalaffine/behebes-ai/issues/94)
+
 ## Implementierungsreihenfolge nach Milestones
 
 | Milestone | KI-Lieferziel |

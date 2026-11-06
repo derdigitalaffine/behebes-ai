@@ -12,18 +12,18 @@ M0 baut Sicherheit, Tests und Evidenz auf. M1 konsolidiert KI-Providergrundlagen
 
 | ID | Outcome | Tasks | Wesentliche Exit-Gates |
 | --- | --- | ---: | --- |
-| M0 | **Grundlagen, Produktqualität und Sicherheitsbaseline** | 16 | Vier-Workspace-CI und relevante negative Auth-/Tenant-/Org-Tests mit echtem Laufnachweis; Synthetischer End-to-End-Datenbestand, Messbaseline für Web/API/DB/Queue und UX-/Service-Blueprint |
-| M1 | **KI-Provider-Fabric und kontrollierter Backendzugang** | 8 | Typisierte Provider-Adapter und verpflichtende Contract-/Fault-Tests für API, Auth, Fehler und Limits; Geprüfte Connection-/Credential-/Endpoint-Richtlinien mit Maskierung, Rotation und Tenant-/Data-Egress-Gates |
-| M2 | **Modulplattform und deterministisches KI-Routing** | 8 | Core-Module bleiben unveränderlich aktiv; optionale Module und Dependencies sind validiert, auditierbar und sicher an-/abschaltbar; Direkt-API, UI, Deep-Link, SSE, Queue und externe Aktionen respektieren Tenant-/Capability-/Module-Off-Policy |
-| M3 | **Mantine-Designsystem und Admin-Bedienfundament** | 7 | Mantine-/React-Versionenentscheidung und Provider-/CSS-Koexistenz technisch geprüft; Design-Tokens, Primitive, AppShell, Formular-/Tabellenstandards mit Tests und Referenzscreens |
-| M4 | **Goldener Bürger–Verwaltung–OPS-Prozess** | 14 | Bürger-Meldung, Standort/Medien, Status, i18n und Admin-Task-Workspace sind durchgängig nutzbar; OPS mit Offline-Queue, Touch, QR/Push, sicheren Konflikten und robustem Wiederanlauf |
-| M5 | **Fachmodule, Workflows und KI-Exzellenz** | 11 | Workflow-Versionierung, AI-/Mail-Queue-Verhalten und externe Integrationen mit Vertrags-/Regressionstests; KI-Cockpit für Connectors/Models/Routes/Tests mit auditierter, tenant-sicherer Konfiguration |
-| M6 | **Performance, Telemetrie und Resilienz unter Last** | 10 | Web-Vitals und API-/DB-/Queue-p95/99 mit identischem Stagingprofil vor/nach Optimierung; SSE-Snapshot-/Reconnect-Recovery, KI-Streaming-Abbruch, kontrollierte Backpressure und Dead-Letter-Fälle geprüft |
-| M7 | **Gesamtpolish, Security-Audit und Release-Freigabe** | 7 | A11y-/Mobile-/Dialog-/Error-/Offline-Polish und verbleibende P1/P2-UX-Slices fachlich abgenommen; Individuelle Berechtigungen, KI-/Provider-/Supply-Chain- und Datenschutz-Security-Reviews abgeschlossen |
+| [M0](https://github.com/derdigitalaffine/behebes-ai/milestone/1) | **Grundlagen, Produktqualität und Sicherheitsbaseline** | 16 | Vier-Workspace-CI und relevante negative Auth-/Tenant-/Org-Tests mit echtem Laufnachweis; Synthetischer End-to-End-Datenbestand, Messbaseline für Web/API/DB/Queue und UX-/Service-Blueprint |
+| [M1](https://github.com/derdigitalaffine/behebes-ai/milestone/2) | **KI-Provider-Fabric und kontrollierter Backendzugang** | 8 | Typisierte Provider-Adapter und verpflichtende Contract-/Fault-Tests für API, Auth, Fehler und Limits; Geprüfte Connection-/Credential-/Endpoint-Richtlinien mit Maskierung, Rotation und Tenant-/Data-Egress-Gates |
+| [M2](https://github.com/derdigitalaffine/behebes-ai/milestone/3) | **Modulplattform und deterministisches KI-Routing** | 8 | Core-Module bleiben unveränderlich aktiv; optionale Module und Dependencies sind validiert, auditierbar und sicher an-/abschaltbar; Direkt-API, UI, Deep-Link, SSE, Queue und externe Aktionen respektieren Tenant-/Capability-/Module-Off-Policy |
+| [M3](https://github.com/derdigitalaffine/behebes-ai/milestone/4) | **Mantine-Designsystem und Admin-Bedienfundament** | 7 | Mantine-/React-Versionenentscheidung und Provider-/CSS-Koexistenz technisch geprüft; Design-Tokens, Primitive, AppShell, Formular-/Tabellenstandards mit Tests und Referenzscreens |
+| [M4](https://github.com/derdigitalaffine/behebes-ai/milestone/5) | **Goldener Bürger–Verwaltung–OPS-Prozess** | 14 | Bürger-Meldung, Standort/Medien, Status, i18n und Admin-Task-Workspace sind durchgängig nutzbar; OPS mit Offline-Queue, Touch, QR/Push, sicheren Konflikten und robustem Wiederanlauf |
+| [M5](https://github.com/derdigitalaffine/behebes-ai/milestone/6) | **Fachmodule, Workflows und KI-Exzellenz** | 11 | Workflow-Versionierung, AI-/Mail-Queue-Verhalten und externe Integrationen mit Vertrags-/Regressionstests; KI-Cockpit für Connectors/Models/Routes/Tests mit auditierter, tenant-sicherer Konfiguration |
+| [M6](https://github.com/derdigitalaffine/behebes-ai/milestone/7) | **Performance, Telemetrie und Resilienz unter Last** | 10 | Web-Vitals und API-/DB-/Queue-p95/99 mit identischem Stagingprofil vor/nach Optimierung; SSE-Snapshot-/Reconnect-Recovery, KI-Streaming-Abbruch, kontrollierte Backpressure und Dead-Letter-Fälle geprüft |
+| [M7](https://github.com/derdigitalaffine/behebes-ai/milestone/8) | **Gesamtpolish, Security-Audit und Release-Freigabe** | 7 | A11y-/Mobile-/Dialog-/Error-/Offline-Polish und verbleibende P1/P2-UX-Slices fachlich abgenommen; Individuelle Berechtigungen, KI-/Provider-/Supply-Chain- und Datenschutz-Security-Reviews abgeschlossen |
 
 ## Gates, Verantwortliche und Risiken
 
-### M0 · Grundlagen, Produktqualität und Sicherheitsbaseline
+### [M0](https://github.com/derdigitalaffine/behebes-ai/milestone/1) · Grundlagen, Produktqualität und Sicherheitsbaseline
 
 **Ziel:** Produktnutzen, Risiken und messbare Ausgangslage erfassen. CI, synthetisches Staging, Tenant-Schutz, Restore/Upgrade und Architekturentscheidungen vor riskanten Umbauten absichern.
 
@@ -37,7 +37,7 @@ M0 baut Sicherheit, Tests und Evidenz auf. M1 konsolidiert KI-Providergrundlagen
 
 **Übergabe:** Blockierende Vorgänger abgeschlossen oder ausdrücklich mit fachlich genehmigter Ausnahme dokumentiert. Keine offene P0-Datenintegritäts-/Tenant-/Privacy-Blockade, kein Einsatz von echten Bürgerdaten zu Tests. Ein Milestone ist nicht durch „alle Issues geschlossen“ automatisch produktiv ausgerollt.
 
-### M1 · KI-Provider-Fabric und kontrollierter Backendzugang
+### [M1](https://github.com/derdigitalaffine/behebes-ai/milestone/2) · KI-Provider-Fabric und kontrollierter Backendzugang
 
 **Ziel:** Die bestehenden LLM-/Legacy-Konfigurationen auf vertragliche, sichere und testbare Provider-, Modell- und Datenschutzgrundlagen heben – ohne Fachfunktionen umzuschreiben.
 
@@ -51,7 +51,7 @@ M0 baut Sicherheit, Tests und Evidenz auf. M1 konsolidiert KI-Providergrundlagen
 
 **Übergabe:** Blockierende Vorgänger abgeschlossen oder ausdrücklich mit fachlich genehmigter Ausnahme dokumentiert. Keine offene P0-Datenintegritäts-/Tenant-/Privacy-Blockade, kein Einsatz von echten Bürgerdaten zu Tests. Ein Milestone ist nicht durch „alle Issues geschlossen“ automatisch produktiv ausgerollt.
 
-### M2 · Modulplattform und deterministisches KI-Routing
+### [M2](https://github.com/derdigitalaffine/behebes-ai/milestone/3) · Modulplattform und deterministisches KI-Routing
 
 **Ziel:** Modul-Registry und serverseitiges tenant-sicheres On/Off mit Job-/Event-Gates; KI-Ausführung über nachvollziehbare Task-Policies, Quality Gates und ausfallsichere Queue.
 
@@ -65,7 +65,7 @@ M0 baut Sicherheit, Tests und Evidenz auf. M1 konsolidiert KI-Providergrundlagen
 
 **Übergabe:** Blockierende Vorgänger abgeschlossen oder ausdrücklich mit fachlich genehmigter Ausnahme dokumentiert. Keine offene P0-Datenintegritäts-/Tenant-/Privacy-Blockade, kein Einsatz von echten Bürgerdaten zu Tests. Ein Milestone ist nicht durch „alle Issues geschlossen“ automatisch produktiv ausgerollt.
 
-### M3 · Mantine-Designsystem und Admin-Bedienfundament
+### [M3](https://github.com/derdigitalaffine/behebes-ai/milestone/4) · Mantine-Designsystem und Admin-Bedienfundament
 
 **Ziel:** Ein konsistentes, barrierearmes Mantine-Designsystem, Modulverwaltung, Navigation, Formulare und Tabellen samt UX-Regressionsgates für einen produktiven Referenzslice bereitstellen.
 
@@ -79,7 +79,7 @@ M0 baut Sicherheit, Tests und Evidenz auf. M1 konsolidiert KI-Providergrundlagen
 
 **Übergabe:** Blockierende Vorgänger abgeschlossen oder ausdrücklich mit fachlich genehmigter Ausnahme dokumentiert. Keine offene P0-Datenintegritäts-/Tenant-/Privacy-Blockade, kein Einsatz von echten Bürgerdaten zu Tests. Ein Milestone ist nicht durch „alle Issues geschlossen“ automatisch produktiv ausgerollt.
 
-### M4 · Goldener Bürger–Verwaltung–OPS-Prozess
+### [M4](https://github.com/derdigitalaffine/behebes-ai/milestone/5) · Goldener Bürger–Verwaltung–OPS-Prozess
 
 **Ziel:** Die Kernphilosophie als Ende-zu-Ende-Produkt nachweisen: Bürger meldet, Admin priorisiert, OPS bearbeitet, Bürger erhält Rückmeldung – auch offline und bei Fehlern.
 
@@ -93,7 +93,7 @@ M0 baut Sicherheit, Tests und Evidenz auf. M1 konsolidiert KI-Providergrundlagen
 
 **Übergabe:** Blockierende Vorgänger abgeschlossen oder ausdrücklich mit fachlich genehmigter Ausnahme dokumentiert. Keine offene P0-Datenintegritäts-/Tenant-/Privacy-Blockade, kein Einsatz von echten Bürgerdaten zu Tests. Ein Milestone ist nicht durch „alle Issues geschlossen“ automatisch produktiv ausgerollt.
 
-### M5 · Fachmodule, Workflows und KI-Exzellenz
+### [M5](https://github.com/derdigitalaffine/behebes-ai/milestone/6) · Fachmodule, Workflows und KI-Exzellenz
 
 **Ziel:** KI-Modelle wirklich in fachliche Abläufe integrieren und den monolithischen Code kontrolliert nach Modulen und Workflows entflechten; Administration auf Mantine konsolidieren.
 
@@ -107,7 +107,7 @@ M0 baut Sicherheit, Tests und Evidenz auf. M1 konsolidiert KI-Providergrundlagen
 
 **Übergabe:** Blockierende Vorgänger abgeschlossen oder ausdrücklich mit fachlich genehmigter Ausnahme dokumentiert. Keine offene P0-Datenintegritäts-/Tenant-/Privacy-Blockade, kein Einsatz von echten Bürgerdaten zu Tests. Ein Milestone ist nicht durch „alle Issues geschlossen“ automatisch produktiv ausgerollt.
 
-### M6 · Performance, Telemetrie und Resilienz unter Last
+### [M6](https://github.com/derdigitalaffine/behebes-ai/milestone/7) · Performance, Telemetrie und Resilienz unter Last
 
 **Ziel:** Echte Engpässe messen und nachweislich beheben; robuste Realtime-/Streaming- und Queue-Ausführung sowie kostentransparente KI-Nutzung schaffen.
 
@@ -121,7 +121,7 @@ M0 baut Sicherheit, Tests und Evidenz auf. M1 konsolidiert KI-Providergrundlagen
 
 **Übergabe:** Blockierende Vorgänger abgeschlossen oder ausdrücklich mit fachlich genehmigter Ausnahme dokumentiert. Keine offene P0-Datenintegritäts-/Tenant-/Privacy-Blockade, kein Einsatz von echten Bürgerdaten zu Tests. Ein Milestone ist nicht durch „alle Issues geschlossen“ automatisch produktiv ausgerollt.
 
-### M7 · Gesamtpolish, Security-Audit und Release-Freigabe
+### [M7](https://github.com/derdigitalaffine/behebes-ai/milestone/8) · Gesamtpolish, Security-Audit und Release-Freigabe
 
 **Ziel:** Produktqualität über alle Workflows und Rollen konsolidieren, Betrieb/Security härten und echte Go/No-Go-Gates für Rollout und Support nachweisen.
 
@@ -135,6 +135,12 @@ M0 baut Sicherheit, Tests und Evidenz auf. M1 konsolidiert KI-Providergrundlagen
 
 **Übergabe:** Blockierende Vorgänger abgeschlossen oder ausdrücklich mit fachlich genehmigter Ausnahme dokumentiert. Keine offene P0-Datenintegritäts-/Tenant-/Privacy-Blockade, kein Einsatz von echten Bürgerdaten zu Tests. Ein Milestone ist nicht durch „alle Issues geschlossen“ automatisch produktiv ausgerollt.
 
+
+## Native GitHub-Milestones – Status und Fortschritt
+
+**Die acht Meilensteine wurden im Fork tatsächlich erstellt.** Alle 81 Umsetzungstickets sind zugeordnet; die Master-Roadmap und die zehn fachlichen Epics bleiben bewusst meilensteinübergreifend. GitHub bildet den operativen Fortschritt über die jeweilige Milestone-Seite ab. Der Erfüllungsgrad ist noch **kein** Nachweis der Produktivfähigkeit.
+
+[Alle Milestones in GitHub](https://github.com/derdigitalaffine/behebes-ai/milestones) · [Master-Roadmap #3](https://github.com/derdigitalaffine/behebes-ai/issues/3) · [KI-Epic #72](https://github.com/derdigitalaffine/behebes-ai/issues/72)
 
 ## Milestones in GitHub synchronisieren
 
