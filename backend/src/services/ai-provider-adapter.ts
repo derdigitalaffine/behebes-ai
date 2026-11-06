@@ -12,6 +12,7 @@ import {
   type ProviderGenerationResult,
   type ProviderModelCapabilities,
 } from './ai-provider-contract.js';
+import { assessModelSupport } from './ai-model-capabilities.js';
 
 export interface ProviderAdapter {
   readonly kind: string;
@@ -88,8 +89,8 @@ function validateRequest(
       !Array.isArray(request.messages) || request.messages.length === 0 ||
       request.messages.length > 64) return invalid();
   const allowedModel = models.find(model => model.modelId === request.modelId);
-  if (!allowedModel || allowedModel.evidence === 'unknown' ||
-      !allowedModel.supported.includes('text')) {
+  const capability = assessModelSupport(allowedModel, ['text']);
+  if (!capability.allowed) {
     throw new ProviderAdapterError({ kind: 'unsupported', retryable: false });
   }
   let aggregate = 0;

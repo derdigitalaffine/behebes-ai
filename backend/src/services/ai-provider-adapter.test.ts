@@ -16,7 +16,7 @@ const approved = {
   allowedOrigins: ['https://ai.example.invalid'],
   apiKey: 'synthetic-test-only',
   models: [
-    { modelId: 'reviewed-model', supported: ['text' as const], evidence: 'probed' as const },
+    { modelId: 'reviewed-model', supported: ['text' as const], evidence: 'declared' as const },
   ],
 };
 const reply = (json: unknown, status = 200) => new Response(JSON.stringify(json), {
@@ -112,6 +112,17 @@ describe('K02 OpenAI-compatible chat adapter (no real network)', () => {
   ])('refuses model with %s', async (_why, models) => {
     const send = vi.fn(async () => reply(success));
     await expectFailure(make(send, { models }).generate(request), 'unsupported', false);
+    expect(send).not.toHaveBeenCalled();
+  });
+  it('rejects stale capability probes without calling the provider', async () => {
+    const send = vi.fn(async () => reply(success));
+    const model = {
+      modelId: 'reviewed-model',
+      supported: ['text' as const],
+      evidence: 'probed' as const,
+      observedAt: '2000-01-01T00:00:00.000Z',
+    };
+    await expectFailure(make(send, { models: [model] }).generate(request), 'unsupported', false);
     expect(send).not.toHaveBeenCalled();
   });
   it('refuses model ID not in preapproved capabilities', async () => {
