@@ -84,7 +84,8 @@ const defaultResolver: AiDnsResolver = hostname =>
 export async function resolvePinnedAiDestination(
   baseUrl: string,
   allowedOrigins: ReadonlyArray<string>,
-  resolver: AiDnsResolver = defaultResolver
+  resolver: AiDnsResolver = defaultResolver,
+  dnsTimeoutMs = 3000
 ): Promise<PinnedAiDestination> {
   const decision = assessProviderEndpoint(baseUrl, allowedOrigins);
   if (!decision.allowed) throw new AiEgressTransportError('endpoint_rejected');
@@ -92,11 +93,22 @@ export async function resolvePinnedAiDestination(
   if (url.protocol !== 'https:' || url.port !== '' || isIP(url.hostname) !== 0) {
     throw new AiEgressTransportError('endpoint_rejected');
   }
+  if (!Number.isSafeInteger(dnsTimeoutMs) || dnsTimeoutMs < 100 || dnsTimeoutMs > 10000) {
+    throw new AiEgressTransportError('dns_unavailable');
+  }
   let records: ReadonlyArray<ResolvedAddress>;
+  let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    records = await resolver(url.hostname);
+    records = await Promise.race([
+      Promise.resolve().then(() => resolver(url.hostname)),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new AiEgressTransportError('dns_unavailable')), dnsTimeoutMs);
+      }),
+    ]);
   } catch {
     throw new AiEgressTransportError('dns_unavailable');
+  } finally {
+    if (timer) clearTimeout(timer);
   }
   if (!Array.isArray(records) || records.length === 0 || records.length > 32 ||
       records.some(record =>

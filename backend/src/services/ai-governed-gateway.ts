@@ -11,7 +11,7 @@ import {
   ProviderAdapterError,
 } from './ai-provider-adapter.js';
 import { assessProviderEndpoint } from './ai-provider-endpoint.js';
-import { createPinnedHttpsFetcher, resolvePinnedAiDestination } from './ai-pinned-egress.js';
+import { createPinnedHttpsFetcher, resolvePinnedAiDestination, type AiDnsResolver } from './ai-pinned-egress.js';
 import {
   assessAiEgress, type AiEgressContext, type AiTenantEgressGrant,
 } from './ai-egress-policy.js';
@@ -53,6 +53,8 @@ export interface GovernedGeneration {
   signal?: AbortSignal;
   /** Fake transport for server-side unit tests ONLY; never accept from user input. */
   fetcher?: typeof fetch;
+  /** Synthetic DNS resolver for internal tests only. Never expose through API requests. */
+  dnsResolver?: AiDnsResolver;
   nowMs?: number;
 }
 
@@ -80,7 +82,7 @@ export async function generateGovernedChat(
   let transport = input.fetcher;
   if (!transport) {
     try {
-      const pinned = await resolvePinnedAiDestination(connection.baseUrl, connection.allowedOrigins);
+      const pinned = await resolvePinnedAiDestination(connection.baseUrl, connection.allowedOrigins, input.dnsResolver);
       transport = createPinnedHttpsFetcher(pinned);
     } catch {
       throw new AiGatewayError('endpoint_denied');

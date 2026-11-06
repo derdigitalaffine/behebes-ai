@@ -76,6 +76,14 @@ describe('K07: address classes and DNS rebinding controls', () => {
       async () => { throw new Error('private provider DNS record'); }), 'dns_unavailable');
   });
 
+  it('bounds DNS resolution time, without contacting a provider or reading a secret', async () => {
+    const resolver = vi.fn(async () => new Promise<Array<{ address: string; family: number }>>(() => {}));
+    await expectDenied(resolvePinnedAiDestination(base, [origin], resolver, 100), 'dns_unavailable');
+    expect(resolver).toHaveBeenCalledTimes(1);
+    await expectDenied(resolvePinnedAiDestination(base, [origin], resolver, 0), 'dns_unavailable');
+    expect(resolver).toHaveBeenCalledTimes(1);
+  });
+
   it('never contacts DNS for an unapproved origin or literal-IP endpoint', async () => {
     const resolver = vi.fn(async () => [{ address: '1.1.1.1', family: 4 }]);
     await expectDenied(resolvePinnedAiDestination('https://evil.invalid/v1', [origin], resolver),
