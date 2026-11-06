@@ -108,7 +108,11 @@ function validateRequest(
 
 async function readBoundedBody(response: Response, limit: number): Promise<string> {
   const len = response.headers.get('content-length');
-  if (len !== null && Number.isFinite(Number(len)) && Number(len) > limit) return malformed();
+  if (len !== null && Number.isFinite(Number(len)) && Number(len) > limit) {
+    // Avoid leaving an oversized HTTP body in flight after refusing it.
+    await response.body?.cancel();
+    return malformed();
+  }
   if (!response.body) return malformed();
   const reader = response.body.getReader();
   const parts: Uint8Array[] = [];
@@ -119,7 +123,10 @@ async function readBoundedBody(response: Response, limit: number): Promise<strin
       if (next.done) break;
       const chunk = next.value;
       size += chunk.byteLength;
-      if (size > limit) return malformed();
+      if (size > limit) {
+        await reader.cancel();
+        return malformed();
+      }
       parts.push(chunk);
     }
   } finally {

@@ -153,6 +153,15 @@ describe('K02 OpenAI-compatible chat adapter (no real network)', () => {
     const big = 'x'.repeat(5000);
     await expectFailure(make(async () => new Response(big), { maxResponseBytes: 1024 }).generate(request), 'unknown', false);
   });
+  it('rejects oversized advertised bodies without exposing content', async () => {
+    const response = new Response('synthetic provider response', {
+      status: 200,
+      headers: { 'content-length': '10000000' },
+    });
+    await expectFailure(make(async () => response, { maxResponseBytes: 1024 }).generate(request),
+      'unknown', false);
+    expect(response.bodyUsed).toBe(true);
+  });
   it('handles unsupported/partial provider finish metadata without inventing success', async () => {
     const fetcher = async () => reply({
       choices: [{ message: { content: '' }, finish_reason: 'content_filter' }],
